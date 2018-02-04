@@ -12,6 +12,7 @@
 
 #include <wx/intl.h>
 #include <wx/msgdlg.h>
+#include <wx/panel.h>
 #include <wx/settings.h>
 #include <wx/sizer.h>
 #include <wx/string.h>

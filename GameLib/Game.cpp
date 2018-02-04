@@ -23,7 +23,7 @@
 
 std::unique_ptr<Game> Game::Create()
 {
-	auto materials = LoadMaterials(L"Data/materials.json");
+	auto materials = LoadMaterials("Data/materials.json");
 	auto oceanDepth = LoadOceanDepth(L"Data/depth.png");
 
 	std::unique_ptr<Physics::World> world = std::make_unique<Physics::World>();
@@ -157,14 +157,14 @@ void Game::Render(
 	glFlush();
 }
 
-std::vector<std::unique_ptr<Material const>> Game::LoadMaterials(std::wstring const & filepath)
+std::vector<std::unique_ptr<Material const>> Game::LoadMaterials(std::string const & filepath)
 {
 	std::vector<std::unique_ptr<Material const>> materials;
 
 	picojson::value root = Utils::ParseJSONFile(filepath);
 	if (!root.is<picojson::array>())
 	{
-		throw GameException(L"File \"" + filepath + L"\" does not contain a JSON array");
+		throw GameException("File \"" + filepath + "\" does not contain a JSON array");
 	}
 	
 	picojson::array rootArray = root.get<picojson::array>();
@@ -172,7 +172,7 @@ std::vector<std::unique_ptr<Material const>> Game::LoadMaterials(std::wstring co
 	{
 		if (!rootElem.is<picojson::object>())
 		{
-			throw GameException(L"File \"" + filepath + L"\" does not contain a JSON array of objects");
+			throw GameException("File \"" + filepath + "\" does not contain a JSON array of objects");
 		}
 
 		materials.emplace_back(Material::Create(rootElem.get<picojson::object>()));

@@ -17,13 +17,13 @@
 
 namespace /* anonymous */ {
 
-	std::string GetTextFileContents(std::wstring const & filename)
+	std::string GetTextFileContents(std::string const & filename)
 	{
 		
 		std::ifstream file(filename.c_str(), std::ios::in);
 		if (!file.is_open())
 		{
-			throw GameException(L"Cannot open file \"" + filename + L"\"");
+			throw GameException("Cannot open file \"" + filename + "\"");
 		}
 
 		std::stringstream ss;
@@ -45,7 +45,7 @@ std::wstring Utils::ConvertAsciiString(std::string const & asciiStr)
 	return wstr;
 }
 
-picojson::value Utils::ParseJSONFile(std::wstring const & filename)
+picojson::value Utils::ParseJSONFile(std::string const & filename)
 {
 	std::string fileContents = GetTextFileContents(filename);
 
@@ -53,7 +53,7 @@ picojson::value Utils::ParseJSONFile(std::wstring const & filename)
 	std::string parseError = picojson::parse(jsonContent, fileContents);
 	if (!parseError.empty())
 	{
-		throw GameException(L"Error parsing JSON file \"" + filename + L"\": " + ConvertAsciiString(parseError));
+		throw GameException("Error parsing JSON file \"" + filename + "\": " + parseError);
 	}
 
 	return jsonContent;

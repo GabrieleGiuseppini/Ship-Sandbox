@@ -55,6 +55,7 @@ if (MSVC)
 elseif(CMAKE_COMPILER_IS_GNUCXX)
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 -O3 -ffast-math -fno-math-errno -funsafe-math-optimizations -ffinite-math-only -fno-trapping-math")
 	set(CMAKE_CXX_STANDARD 17)
+	add_definitions("-D_UNICODE")
 endif()
  
 

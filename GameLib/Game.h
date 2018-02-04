@@ -53,7 +53,7 @@ private:
 	{
 	}
 
-	static std::vector<std::unique_ptr<Material const>> LoadMaterials(std::wstring const & filepath);
+	static std::vector<std::unique_ptr<Material const>> LoadMaterials(std::string const & filepath);
 	static std::vector<float> LoadOceanDepth(std::wstring const & filepath);
 
 private:

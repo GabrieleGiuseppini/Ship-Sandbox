@@ -20,7 +20,7 @@ public:
 
 	static std::wstring ConvertAsciiString(std::string const & asciiStr);
 
-	static picojson::value ParseJSONFile(std::wstring const & filename);
+	static picojson::value ParseJSONFile(std::string const & filename);
 
 	template<typename T>
 	static T const & GetOptionalJsonMember(

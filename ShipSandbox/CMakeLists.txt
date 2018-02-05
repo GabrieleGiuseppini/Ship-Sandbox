@@ -24,16 +24,12 @@ source_group("Resources" FILES ${RESOURCE_FILES})
 
 add_executable (ShipSandbox ${SHIP_SANDBOX_SOURCES} ${RESOURCE_FILES})
 
-target_include_directories (ShipSandbox	PRIVATE	
-	${WXWIDGETS_INCLUDE_DIRS})
-
+target_include_directories(ShipSandbox PRIVATE ${wxWidgets_INCLUDE_DIRS})
+target_compile_definitions(ShipSandbox PRIVATE "${wxWidgets_DEFINITIONS}")
 target_link_libraries (ShipSandbox
 	GameLib
 	${OPENGL_LIBRARIES}
-	debug ${WXWIDGETS_WXMSW_LIBRARY_DEBUG}
-	optimized ${WXWIDGETS_WXMSW_LIBRARY_RELEASE}
-	debug ${WXWIDGETS_WXBASE_LIBRARY_DEBUG}
-	optimized ${WXWIDGETS_WXBASE_LIBRARY_RELEASE}
+	${wxWidgets_LIBRARIES}
 	${ADDITIONAL_LIBRARIES})
 
 if (MSVC)

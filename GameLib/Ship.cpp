@@ -637,6 +637,9 @@ void Ship::DrawTo(
     vec2f const & targetPos,
     float strength)
 {
+    // TODOTEST: based off numIterations being 8
+    strength *= 8.0f;
+
     // Attract all points to a single position
     for (Point & point : mAllPoints)
     {
@@ -644,7 +647,7 @@ void Ship::DrawTo(
         {
             vec2f displacement = (targetPos - point.GetPosition());
             float forceMagnitude = strength / sqrtf(0.1f + displacement.length());
-            point.AddForce(displacement.normalise() * forceMagnitude);
+            point.AddToForce(displacement.normalise() * forceMagnitude);
         }
     }
 }
@@ -680,30 +683,19 @@ void Ship::Update(
     IGameEventHandler * const gameEventHandler = mParentWorld->GetGameEventHandler();
 
     //
-    // Advance simulation for points (velocity and forces)
+    // Update dynamics
     //
 
-    float dragCoefficient = (1.0f - powf(0.6f, dt));
-
-    for (Point & point : mAllPoints)
-    {
-        // We can safely update all points, even deleted ones
-        point.Update(
-            dt, 
-            dragCoefficient, 
-            gameParameters);
-    }
+    UpdateDynamics(
+        dt,
+        gameParameters);
 
 
     //
-    // Update springs dynamics
-    //
-
-    // Iterate the spring relaxation
-    DoSpringsRelaxation(dt, gameParameters);
-
     // Update strain for all springs; might cause springs to break
     // (which would flag elements as dirty)
+    //
+
     for (Spring & spring : mAllSprings)
     {
         // Avoid breaking deleted springs
@@ -885,8 +877,10 @@ void Ship::Render(
         // Upload stressed springs
         //
 
+        renderContext.UploadShipElementStressedSpringsStart(mId);
+
         if (renderContext.GetShowStressedSprings())
-        {
+        {            
             for (Spring const & spring : mAllSprings)
             {
                 if (!spring.IsDeleted())
@@ -904,6 +898,8 @@ void Ship::Render(
                 }
             }
         }
+
+        renderContext.UploadShipElementStressedSpringsEnd(mId);
     }        
 
 
@@ -919,48 +915,164 @@ void Ship::Render(
 // Private Helpers
 ///////////////////////////////////////////////////////////////////////////////////
 
-void Ship::DoSpringsRelaxation(
+void Ship::UpdateDynamics(
     float dt,
     GameParameters const & gameParameters)
 {
-    //
-    // Relax
-    //
+    // Update point forces
+    // (taking into account eventual forces from Draw tool)
+    // TODOTEST
+    //UpdatePointForces(dt, gameParameters);
+    //Integrate(dt);
 
-    // Run iterations
-    //
-    // The higher the number of iterations, the stiffer the world becomes.
-    // Note: the effective stiffness coefficient used for relaxations depends also (exponentially) on the number
-    // of iterations - the more the iterations, the higher the effective coefficient becomes.
-    for (int iter = 0; iter < 24; ++iter)
+    // TODOTEST: 8 is OK, 4 becomes softer (with higher constant for K) but can't get it less soft without exploding
+    //static constexpr int NumIterations = 8;
+    static constexpr int NumIterations = 8;
+    float iterDt = dt / static_cast<float>(NumIterations);
+    for (int iter = 0; iter < NumIterations; ++iter)
     {
-        for (Spring & spring : mAllSprings)
+        // Update point forces
+        UpdatePointForces(iterDt, gameParameters);
+
+        // Update springs forces
+        UpdateSpringForces(iterDt, gameParameters);
+
+        // Integrate
+        Integrate(iterDt);
+
+
+        // Collisions with sea floor
+        // TODOHERE
+        ////float const floorheight = GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x, gameParameters);
+        ////if (mPosition.y < floorheight)
+        ////{
+        ////    // Calculate normal to surface
+        ////    vec2f surfaceNormal = vec2f(
+        ////        floorheight - GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x + 0.01f, gameParameters),
+        ////        0.01f).normalise();
+
+        ////    // Move point back along normal (this is *not* a bounce)
+        ////    mPosition += surfaceNormal * (floorheight - mPosition.y);
+        ////}
+    }
+}
+
+void Ship::UpdatePointForces(
+    float dt,
+    GameParameters const & gameParameters)
+{
+    // TODO
+    //float const waterDragCoefficient = (1.0f - powf(0.6f, dt));
+    float const waterDragCoefficient = (1.0f - powf(0.6f, 0.02f));
+
+    for (Point & point : mAllPoints)
+    {
+        // Get height of water at this point
+        float const waterHeightAtThisPoint = mParentWorld->GetWaterHeight(point.GetPosition().x, gameParameters);
+
+        //
+        // 1. Add gravity and buoyance
+        //
+
+        float const effectiveBuoyancy = gameParameters.BuoyancyAdjustment * point.GetBuoyancy();
+
+        // Mass = own + contained water (clamped to 1)
+        float effectiveMassMultiplier = 1.0f + fminf(point.GetWater(), 1.0f) * effectiveBuoyancy;
+        if (point.GetPosition().y < waterHeightAtThisPoint)
         {
-            // Don't relax destroyed springs, or we run the risk of being affected by destroyed connected points
-            if (!spring.IsDeleted())
-            {
-                spring.Relax();
-            }
+            // Also consider buoyancy of own mass (i.e. 1 * effectiveBuoyancy)
+            effectiveMassMultiplier -= effectiveBuoyancy;
+        }
+
+        point.AddToForce(gameParameters.Gravity * point.GetMaterial()->Mass * effectiveMassMultiplier);
+
+
+        //
+        // 2. Apply water drag
+        //
+        // TBD: should probably consider normal to surface at this point, so that masses
+        // would also have a horizontal movement component when sinking
+        //
+
+        if (point.GetPosition().y < waterHeightAtThisPoint)
+        {
+            point.AddToForce(point.GetVelocity() * (-waterDragCoefficient));
         }
     }
+}
 
-
-    //
-    // Damp
-    //
-
-    // Run iterations
-    for (int iter = 0; iter < 3; ++iter)
+void Ship::UpdateSpringForces(
+    float dt,
+    GameParameters const & gameParameters)
+{
+    for (Spring & spring : mAllSprings)
     {
-        for (Spring & spring : mAllSprings)
+        // Don't update destroyed springs, or we run the risk of being affected by destroyed connected points
+        if (!spring.IsDeleted())
         {
-            // Don't damp destroyed springs, or we run the risk of being affected by destroyed connected points
-            if (!spring.IsDeleted())
-            {
-                spring.Damp(gameParameters.SpringDampingFactor);
-            }
+            //
+            // 1. Hooke's law
+            //
+
+            // For the time being, let's use the same k that Luke's position-based code was implicitly using,
+            // assuming an over/undercorrection of 1.0
+            // TODOTEST
+            //float kSpring = spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass() / ((spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) * dt * dt);
+            // OK (4 iters): 80'000'000.0f
+            // OK (8 iters): float kSpring = 2'500.0f / (dt * dt);
+            // Soft much, but OK (4 iters): float kSpring = 2'500.0f / (dt * dt);
+            // Soft less, but OK (4 iters): float kSpring = 3'500.0f / (dt * dt);
+            // Soft less less, but OK (4 iters): float kSpring = 4'000.0f / (dt * dt);
+            float kSpring = 4'000.0f / (dt * dt);
+
+            vec2f const displacement = (spring.GetPointB()->GetPosition() - spring.GetPointA()->GetPosition());
+            float const displacementLength = displacement.length();
+            vec2f const springDir = displacement.normalise(displacementLength);
+
+            vec2f const fSpringA = springDir * (displacementLength - spring.GetRestLength()) * kSpring;
+
+            spring.GetPointA()->AddToForce(fSpringA);
+            spring.GetPointB()->AddToForce(-fSpringA);
+
+
+            //
+            // 2. Damper forces
+            //
+            // Damp the velocities of the two points, as if the points were also connected by a damper
+            // along the same direction as the spring
+            //
+
+            // TODOTEST
+            //OK, soft-ish: float const kDamp = 10.0f / dt;
+            //OK, less soft: float const kDamp = 40.0f / dt;
+            //OK, quite rigid: float const kDamp = 100.0f / dt;
+            //Not ok, breaks with grab and oscillates: float const kDamp = 500.0f / dt;
+            float const kDamp = 150.0f / dt;
+
+            vec2f const relVelocity = (spring.GetPointB()->GetVelocity() - spring.GetPointA()->GetVelocity());
+
+            vec2f const fDampA = springDir * relVelocity.dot(springDir) * kDamp;
+
+            spring.GetPointA()->AddToForce(fDampA);
+            spring.GetPointB()->AddToForce(-fDampA);
         }
     }
+}
+
+void Ship::Integrate(float dt)
+{
+    // TODO: test runge-kutta
+    for (Point & point : mAllPoints)
+    {
+        // Verlet (fourth order, with velocity being first order)
+        auto const oldPosition = point.GetPosition();
+        // TODOTEST: fixed mass, 10K
+        // point.SetPosition(point.GetPosition() + point.GetVelocity() * iterDt + point.GetForce() * iterDt * iterDt / point.GetMass());
+        point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / 10000.0f);
+        point.SetVelocity((point.GetPosition() - oldPosition) / dt);
+        point.ZeroForce();
+    }
+
 }
 
 void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)

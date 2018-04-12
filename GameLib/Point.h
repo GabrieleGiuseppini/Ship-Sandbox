@@ -33,37 +33,45 @@ public:
 
     void Destroy();
 
+    void Breach();
+
+    inline AABB GetAABB() const noexcept
+    {
+        return AABB(mPosition - AABBRadius, mPosition + AABBRadius);
+    }
+
+
+    //
+    // Physics
+    //
+
 	inline vec2 const & GetPosition() const {  return mPosition;  }	
+    inline void SetPosition(vec2f const & newPosition) { mPosition = newPosition; }
     inline void AddToPosition(vec2 const & dPosition) { mPosition += dPosition; }    
 	
-	inline vec2 const & GetLastPosition() const { return mLastPosition; }    
-    inline void AddToLastPosition(vec2 const & dPosition) { mLastPosition += dPosition; }
+	inline vec2 const & GetVelocity() const { return mVelocity; }    
+    inline void SetVelocity(vec2f const & newVelocity) { mVelocity = newVelocity; }
+    inline void AddToVelocity(vec2 const & dVelocity) { mVelocity += dVelocity; }
+
+    inline vec2 const & GetForce() const { return mForce; }
+    inline void ZeroForce() { mForce = vec2(0, 0); }
+    inline void AddToForce(vec2 const & dForce) { mForce += dForce; }    
+
 
 	inline Material const * GetMaterial() const { return mMaterial; }
 
-
 	inline float GetMass() const { return mMaterial->Mass; }
-
-
-	inline vec2 const & GetForce() const { return mForce; }	
-
-    inline void AddForce(vec2 const & force)
-    {
-        mForce += force;
-    }
-
-    inline void ZeroForce() { mForce = vec2(0, 0); }
-
 	
     inline float GetBuoyancy() const { return mBuoyancy;  }
 
 
-    inline bool IsLeaking() const { return mIsLeaking; }
 
-    inline void SetLeaking() { mIsLeaking = true; }
-
-
+    //
+    // Water
+    //
     // Dimensionally akin to Water Pressure
+    //
+
 	inline float GetWater() const { return mWater; }
 
 	inline void AddWater(float dWater) 
@@ -71,6 +79,25 @@ public:
         mWater += dWater; 
     }
 
+    float GetExternalWaterPressure(
+        float waterLevel,
+        GameParameters const & gameParameters) const
+    {
+        // Negative Y == under water line
+        if (mPosition.y < waterLevel)
+        {
+            return gameParameters.GravityMagnitude * (waterLevel - mPosition.y) * 0.1f;  // 0.1 = scaling constant, represents 1/ship width
+        }
+        else
+        {
+            return 0.0f;
+        }
+    }
+
+
+    //
+    // Light
+    //
 
     inline float GetLight() const { return mLight; }
 
@@ -86,6 +113,15 @@ public:
             mLight = light;
         }
     }
+
+
+    //
+    // Structural
+    //
+
+    inline bool IsLeaking() const { return mIsLeaking; }
+
+    inline void SetLeaking() { mIsLeaking = true; }
 
     inline int GetElementIndex() const { return mElementIndex; }
 
@@ -146,52 +182,34 @@ public:
     inline uint64_t GetCurrentConnectedComponentDetectionStepSequenceNumber() const { return mCurrentConnectedComponentDetectionStepSequenceNumber; }
     inline void SetConnectedComponentDetectionStepSequenceNumber(uint64_t connectedComponentDetectionStepSequenceNumber) { mCurrentConnectedComponentDetectionStepSequenceNumber = connectedComponentDetectionStepSequenceNumber; }
 
-    float GetExternalWaterPressure(
-        float waterLevel,
-        GameParameters const & gameParameters) const
-    {
-        // Negative Y == under water line
-        if (mPosition.y < waterLevel)
-        {
-            return gameParameters.GravityMagnitude * (waterLevel - mPosition.y) * 0.1f;  // 0.1 = scaling constant, represents 1/ship width
-        }
-        else
-        {
-            return 0.0f;
-        }
-    }
-
-	inline AABB GetAABB() const noexcept
-	{
-		return AABB(mPosition - AABBRadius, mPosition + AABBRadius);
-	}
-
-	void Breach();
-
-	void Update(
-		float dt,
-        float dragCoefficient,
-		GameParameters const & gameParameters);
-
 private:
 
 	static vec2 const AABBRadius;	
 
+    //
+    // Physics
+    //
+
 	vec2 mPosition;
-	vec2 mLastPosition;
+	vec2 mVelocity;
     vec2 mForce;
 
 	Material const * mMaterial;
 	
 	float mBuoyancy;
 
-    bool mIsLeaking;
-
 	// Total quantity of water, 0.0->+INF (== internal water pressure)
 	float mWater;
 
     // Total illumination, 0.0->1.0
     float mLight;
+
+
+    //
+    // Structure
+    //
+
+    bool mIsLeaking;
 
     // The ID of this point, used by graphics elements to refer to vertices
     int const mElementIndex;

@@ -142,6 +142,11 @@ public:
         ++(mElementBufferSizes[connectedComponentIndex].triangleCount);
     }
 
+    void UploadElementsEnd();
+
+
+    void UploadElementStressedSpringsStart();
+
     inline void UploadElementStressedSpring(
         int pointIndex1,
         int pointIndex2,
@@ -161,7 +166,7 @@ public:
         ++(mElementBufferSizes[connectedComponentIndex].stressedSpringCount);
     }
 
-    void UploadElementsEnd();
+    void UploadElementStressedSpringsEnd();
 
 
     //

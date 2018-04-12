@@ -32,20 +32,19 @@ Point::Point(
     int elementIndex)
 	: ShipElement(parentShip)
 	, mPosition(position)
-	, mLastPosition(position)
-	, mMaterial(material)
-	, mForce(0.0f, 0.0f)
+	, mVelocity(0.0f, 0.0f)
+    , mForce(0.0f, 0.0f)
+	, mMaterial(material)	
 	, mBuoyancy(buoyancy)
-    , mIsLeaking(false)
 	, mWater(0.0f)
     , mLight(0.0f)
+    , mIsLeaking(false)
     , mElementIndex(elementIndex)
     , mConnectedSprings()
     , mConnectedTriangles()
     , mConnectedElectricalElement(nullptr)
     , mConnectedComponentId(0u)
     , mCurrentConnectedComponentDetectionStepSequenceNumber(0u)
-
 {
 }
 
@@ -96,95 +95,6 @@ void Point::Breach()
 
     // Destroy all of our connected triangles
     DestroyConnectedTriangles();
-}
-
-void Point::Update(
-	float dt,
-    float dragCoefficient,
-	GameParameters const & gameParameters)
-{    
-    // Save current position, which will be the next LastPosition
-    vec2f const newLastPosition = mPosition;
-
-    // Get height of water at this point
-    float const waterHeightAtThisPoint = GetParentShip()->GetParentWorld()->GetWaterHeight(mPosition.x, gameParameters);
-
-    // Get our mass
-	float const mass = mMaterial->Mass;
-
-    // Calculate current velocity (already relative to dt, not to 1.0 sec)
-    vec2f velocity = mPosition - mLastPosition;
-
-    //
-    // 1 - Apply forces:
-    //  Force1: Gravity on (point mass + water mass) (for all points)
-    //  Force2: Buoyancy of point mass (only for underwater points)
-    //
-
-    // Clamp water to 1, so high pressure areas are not heavier
-    float const effectiveBuoyancy = gameParameters.BuoyancyAdjustment * mBuoyancy;
-    float effectiveMassMultiplier = 1.0f + fminf(mWater, 1.0f) * effectiveBuoyancy; 
-    if (mPosition.y < waterHeightAtThisPoint)
-    {
-        // Also consider buoyancy of own mass
-        effectiveMassMultiplier -= effectiveBuoyancy;        
-    }
-
-    AddForce(gameParameters.Gravity * mass * effectiveMassMultiplier);
-
-
-    //
-    // 2 - Apply water drag:
-    //  Proportional to current velocity
-    //
-    // TBD: should probably consider normal to surface at this point, so that masses
-    // would also have a horizontal movement component when sinking
-    //
-
-    if (mPosition.y < waterHeightAtThisPoint)
-    {
-        // TODO: ain't this a force?
-        velocity -= velocity * dragCoefficient;
-    }
-
-
-    //
-	// 3 - Apply verlet integration
-    //
-    // x += v*dt + a*dt^2
-    //
-    // (Note: to be checked)
-    //
-
-	mPosition += velocity + (mForce / mass) * (dt * dt );
-
-
-    //
- 	// 4 - Handle collision with seafloor
-    //
-
-	float const floorheight = GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x, gameParameters);
-	if (mPosition.y < floorheight)
-	{
-        // Calculate normal to surface
-		vec2f surfaceNormal = vec2f(
-            floorheight - GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x + 0.01f, gameParameters), 
-            0.01f).normalise();   
-
-        // Move point back along normal (this is *not* a bounce)
-		mPosition += surfaceNormal * (floorheight - mPosition.y);
- 	}
-	
- 
-	//
-	// Finalize
-	//
-
-    // Remember previous position
-    mLastPosition = newLastPosition;
-
-    // Reset force
-    ZeroForce();
 }
 
 void Point::DestroyConnectedTriangles()

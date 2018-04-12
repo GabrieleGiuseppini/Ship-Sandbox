@@ -113,9 +113,19 @@ private:
         DetectConnectedComponents(currentStepSequenceNumber);
     }
 
-    void DoSpringsRelaxation(
+    void UpdateDynamics(
         float dt,
         GameParameters const & gameParameters);
+
+    void UpdatePointForces(
+        float dt,
+        GameParameters const & gameParameters);
+
+    void UpdateSpringForces(
+        float dt,
+        GameParameters const & gameParameters);
+
+    void Integrate(float dt);
 
     void DetectConnectedComponents(uint64_t currentStepSequenceNumber);
 

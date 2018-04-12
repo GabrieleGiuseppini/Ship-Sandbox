@@ -34,6 +34,12 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 	- Ship::Render: 29.19% (Incl) 0.47% (Excl)
 =================================================
 
+- Bugs to fix in master: 
+	- Ship::Render: when there are no changes to elements and we keep uploading stressed springs, we don't reset the count
+	  in ShipRenderContext::mElementBufferSizes
+		- Fix simply by having Start and End for uploading stressed springs
+	- No default args @ vec cctors
+
 - Release:
 	+ Do structure first (above)
 	+ Check if less rope mass makes empress of britain not break
@@ -98,20 +104,24 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 						- TODO
 	- Test completely force-driven dynamics:
 		+ Create branch
-		- Each iteration (test initially with 1 iteration per step; then see with more, but scale dt)
-			- Apply forces: 
-				- For each spring:
-					- Spring force (Stooke's law - need k, try fixed at first)
-					- Damping (try along spring first - like now)
-					- see https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf for equations
-			- For each point:
-				- Gravity (with buoyance)
-				- Drag
-				- Apply verlet integration
-				- Zero force
-				- Do ocean floor crash and bounce
-			- ...do tension strain check...
-			- ...electrical and water...
+		= Each iteration (test initially with 1 iteration per step; then see with more, but scale dt)
+			+ Apply forces: 
+				+ For each spring:
+					+ Spring force (Stooke's law - need k, try fixed at first)
+					+ Damping (try along spring first - like now)
+					+ see https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf for equations
+			+ For each point:
+				+ Gravity (with buoyance)
+				+ Drag
+			+ Apply verlet integration
+			+ Zero force
+			- Do ocean floor crash and bounce
+			+ ...do tension strain check...
+			+ ...electrical and water...
+		- Re-introduce:
+			- Masses
+				- Check ropes afterwards
+			- Adjust better grab force based off game parameter: numIterations
 		- If it works (!!!):
 			- Set springs' K in material
 				- Fix Titanic masts
@@ -138,6 +148,7 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 		- The one already there assumes velocity always normal to surface, but we should consider surface normal instead
 
 - Controls:
+	- Reset view (ESC) should also reset camera pan
 	- SettingsDialog: save settings, and defaults
 		- JSON for both game & render params, assembled & saved by gamecontroller, who also loads it on startup if exists 
 		- GameParameters::ToJson()->picojson::value

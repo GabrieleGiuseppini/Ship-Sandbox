@@ -107,57 +107,13 @@ public:
     inline Point * GetPointB() { return mPointB; }
 	inline Point const * GetPointB() const { return mPointB; }
 
+    inline float GetRestLength() const { return mRestLength; }
+
     inline bool IsHull() const { return 0 != (static_cast<int>(mCharacteristics) & static_cast<int>(Characteristics::Hull)); }
     inline bool IsRope() const { return 0 != (static_cast<int>(mCharacteristics) & static_cast<int>(Characteristics::Rope)); }
 
 	inline Material const * GetMaterial() const { return mMaterial; };
 
-    inline void Relax()
-    {
-        //
-        // Try to space the two points by the equilibrium length 
-        // (need to iterate to actually achieve this for all points, but it's FAAAAST for each step)
-        //
-
-        // 0.8 => Spring returns in dt to 80% of the equilibrium length, not all the way; the world is soft
-        // 1.0 => Spring returns in dt to the equilibrium length; the world is stiff
-        // 1.5 => Spring overshoots in dt by 50%; the world is unstable and tends to explode
-        static const float stiffness = 0.95f;
-
-        vec2f const displacement = (mPointB->GetPosition() - mPointA->GetPosition());
-        float const displacementLength = displacement.length();
-        vec2f correction = displacement.normalise(displacementLength);
-        correction *= stiffness * (mRestLength - displacementLength) / (mPointA->GetMass() + mPointB->GetMass());
-
-        // correction > 0 -> compressed, & correction is oriented towards B
-        mPointA->AddToPosition(-correction * mPointB->GetMass()); // If mPointB is heavier, mPointA moves more...
-        mPointB->AddToPosition(correction * mPointA->GetMass()); // ...and vice versa
-    }
-
-
-    /*
-     * Damps the velocities of the two points, as if the points were also connected by a damper
-     * along the same direction as the spring.
-     *
-     * Rather than modeling an actual damping force (whose deceleration would be inversely proportional
-     * to a point's mass), this function simply models a decrease of the velocity.
-     */
-    inline void Damp(float amount)
-    {
-        // Get damp direction
-        vec2f dampCorrection = (mPointA->GetPosition() - mPointB->GetPosition()).normalise();
-
-        // Relative velocity dot spring direction = projected velocity;
-        // amount = amount of projected velocity that damping reduces by;
-        // result is oriented along the spring
-        //
-        // dampCorrection > 0 -> point A is faster
-        dampCorrection *= ((mPointA->GetPosition() - mPointA->GetLastPosition()) - (mPointB->GetPosition() - mPointB->GetLastPosition())).dot(dampCorrection) * amount;   
-
-        // Update velocities - slow down A by dampCorrection and speed up B by dampCorrection
-        mPointA->AddToLastPosition(dampCorrection);
-        mPointB->AddToLastPosition(-dampCorrection);
-    }
 
 private:
 

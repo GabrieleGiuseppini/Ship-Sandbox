@@ -632,6 +632,20 @@ void ShipRenderContext::UploadElementsEnd()
     // Nop
 }
 
+void ShipRenderContext::UploadElementStressedSpringsStart()
+{
+    // Zero-out counts of stressed springs
+    for (auto & counts : mElementBufferSizes)
+    {
+        counts.stressedSpringCount = 0;
+    }
+}
+
+void ShipRenderContext::UploadElementStressedSpringsEnd()
+{
+    // Nop
+}
+
 void ShipRenderContext::UploadLampsStart(size_t connectedComponents)
 {
     mLampBuffers.clear();

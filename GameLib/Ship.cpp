@@ -1019,11 +1019,17 @@ void Ship::UpdateSpringForces(
             // TODOTEST
             //float kSpring = spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass() / ((spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) * dt * dt);
             // OK (4 iters): 80'000'000.0f
-            // OK (8 iters): float kSpring = 2'500.0f / (dt * dt);
-            // Soft much, but OK (4 iters): float kSpring = 2'500.0f / (dt * dt);
-            // Soft less, but OK (4 iters): float kSpring = 3'500.0f / (dt * dt);
-            // Soft less less, but OK (4 iters): float kSpring = 4'000.0f / (dt * dt);
-            float kSpring = 4'000.0f / (dt * dt);
+            // OK (8 iters, fixed 10K mass): float kSpring = 2'500.0f / (dt * dt);
+            // Soft much, but OK (4 iters, fixed 10K mass): float kSpring = 2'500.0f / (dt * dt);
+            // Soft less, but OK (4 iters, fixed 10K mass): float kSpring = 3'500.0f / (dt * dt);
+            // Soft less less, but OK (4 iters, fixed 10K mass): float kSpring = 4'000.0f / (dt * dt);
+            // Ok (8 iters, fixed 10K mass): float kSpring = 4'000.0f / (dt * dt);
+            // Explodes (8 iters, free masses): float kSpring = 4'000.0f / (dt * dt);
+            // Explodes less (8 iters, free masses): float kSpring = (4'000.0f / 20'000.0f) * (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass())  / (dt * dt);
+            // Explodes less less (8 iters, free masses): float kSpring = (1'000.0f / 20'000.0f) * (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
+            // Explodes less less less, but collapses: float kSpring = (100.0f / 20'000.0f) * (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
+            // Explodes less less less, no collapse, but jelly: float kSpring = (4'000.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
+            float kSpring = (4'000.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
 
             vec2f const displacement = (spring.GetPointB()->GetPosition() - spring.GetPointA()->GetPosition());
             float const displacementLength = displacement.length();
@@ -1046,8 +1052,11 @@ void Ship::UpdateSpringForces(
             //OK, soft-ish: float const kDamp = 10.0f / dt;
             //OK, less soft: float const kDamp = 40.0f / dt;
             //OK, quite rigid: float const kDamp = 100.0f / dt;
-            //Not ok, breaks with grab and oscillates: float const kDamp = 500.0f / dt;
-            float const kDamp = 150.0f / dt;
+            //OK, quite rigid: float const kDamp = 150.0f / dt;
+            //Not ok, breaks with grab and oscillates (fixed 10K mass): float const kDamp = 500.0f / dt;
+            //Explodes a little (free masses): float const kDamp = 150.0f / sqrt(20'000.0f) * sqrt(spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
+            //Explodes less less less, no collapse, but jelly: float const kDamp = 50.0f / sqrt(20'000.0f) * sqrt(spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
+            float const kDamp = (150.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
 
             vec2f const relVelocity = (spring.GetPointB()->GetVelocity() - spring.GetPointA()->GetVelocity());
 
@@ -1067,8 +1076,8 @@ void Ship::Integrate(float dt)
         // Verlet (fourth order, with velocity being first order)
         auto const oldPosition = point.GetPosition();
         // TODOTEST: fixed mass, 10K
-        // point.SetPosition(point.GetPosition() + point.GetVelocity() * iterDt + point.GetForce() * iterDt * iterDt / point.GetMass());
-        point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / 10000.0f);
+        // point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / 10000.0f);
+        point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / point.GetMass());
         point.SetVelocity((point.GetPosition() - oldPosition) / dt);
         point.ZeroForce();
     }

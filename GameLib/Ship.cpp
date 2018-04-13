@@ -959,9 +959,7 @@ void Ship::UpdatePointForces(
     float dt,
     GameParameters const & gameParameters)
 {
-    // TODO
-    //float const waterDragCoefficient = (1.0f - powf(0.6f, dt));
-    float const waterDragCoefficient = (1.0f - powf(0.6f, 0.02f));
+    constexpr float WaterDragCoefficient = 0.01f; // 1.0f - powf(0.6f, 0.02f)
 
     for (Point & point : mAllPoints)
     {
@@ -969,7 +967,7 @@ void Ship::UpdatePointForces(
         float const waterHeightAtThisPoint = mParentWorld->GetWaterHeight(point.GetPosition().x, gameParameters);
 
         //
-        // 1. Add gravity and buoyance
+        // 1. Add gravity and buoyancy
         //
 
         float const effectiveBuoyancy = gameParameters.BuoyancyAdjustment * point.GetBuoyancy();
@@ -978,7 +976,8 @@ void Ship::UpdatePointForces(
         float effectiveMassMultiplier = 1.0f + fminf(point.GetWater(), 1.0f) * effectiveBuoyancy;
         if (point.GetPosition().y < waterHeightAtThisPoint)
         {
-            // Also consider buoyancy of own mass (i.e. 1 * effectiveBuoyancy)
+            // Apply buoyancy of own mass (i.e. 1 * effectiveBuoyancy), which is
+            // opposite to gravity
             effectiveMassMultiplier -= effectiveBuoyancy;
         }
 
@@ -988,13 +987,14 @@ void Ship::UpdatePointForces(
         //
         // 2. Apply water drag
         //
-        // TBD: should probably consider normal to surface at this point, so that masses
-        // would also have a horizontal movement component when sinking
+        // TBD: should replace with directional water drag, which acts on frontier points only, 
+        // proportional to angle between velocity and normal to surface at this point;
+        // this would ensure that masses would also have a horizontal velocity component when sinking
         //
 
         if (point.GetPosition().y < waterHeightAtThisPoint)
         {
-            point.AddToForce(point.GetVelocity() * (-waterDragCoefficient));
+            point.AddToForce(point.GetVelocity() * (-WaterDragCoefficient));
         }
     }
 }
@@ -1078,12 +1078,18 @@ void Ship::Integrate(float dt)
     // Point has preparedMass = dt / point.GetMass() (dt from game params, passed at cctor)
     //
     // point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / point.GetMass());
-    // m, m, a, d/2, m, m, a = 4*m + 2*a + 0.5d
+    // 1 component = m, m, a, d/2, m, m, a = 4*m + 2*a + 0.5d
     //
     // becomes:
     //
     // point.SetPosition(point.GetPosition() + (point.GetVelocity() + point.GetForce() * point.GetPreparedMass()) * dt
-    // m, a, m, a = 2*m + 2*a, saves 2*m + 0.5d
+    // 1 component = m, a, m, a = 2*m + 2*a, saves 2*m + 0.5d
+
+    // Global drag - lowers velocity uniformly, damping oscillations originating between gravity and buoyancy
+    // Note: it's extremely sensitive, big difference between 0.9995 and 0.9998
+    // Note: it's not technically a drag force, it's just a dimensionless deceleration
+    //float constexpr GlobalDragCoefficient = 0.9995f;
+    float constexpr GlobalDragCoefficient = 0.9995;
 
     // TODO: test runge-kutta
     for (Point & point : mAllPoints)
@@ -1093,7 +1099,7 @@ void Ship::Integrate(float dt)
         // TODOTEST: was fixed mass, 10K
         // point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / 10000.0f);
         point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / point.GetMass());
-        point.SetVelocity((point.GetPosition() - oldPosition) / dt);
+        point.SetVelocity((point.GetPosition() - oldPosition) * GlobalDragCoefficient / dt);
         point.ZeroForce();
     }
 
@@ -1307,7 +1313,7 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
 
                 assert(!lampPoint->IsDeleted());
 
-                // TODO: this needs to be replaced with getting the light from the lamp itself
+                // TODO: this needs to be replaced with getting Light from the lamp itself
                 float const lampLight = 1.0f;
 
                 float squareDistance = std::max(

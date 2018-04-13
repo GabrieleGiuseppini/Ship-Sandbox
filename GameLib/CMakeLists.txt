@@ -15,6 +15,7 @@ set  (GAME_SOURCES
 	GameMath.h
 	GameOpenGL.cpp
 	GameOpenGL.h
+	GameParameters.cpp
 	GameParameters.h
 	IGameEventHandler.h
 	ImageData.h

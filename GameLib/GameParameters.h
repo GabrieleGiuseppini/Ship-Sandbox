@@ -15,6 +15,10 @@ struct GameParameters
     // The dt of each step
     static constexpr float SimulationStepTimeDuration = 0.02f;
 
+    //
+    // The tunable parameters
+    //
+
 	vec2 const Gravity;
 	vec2 const GravityNormal;
 	float const GravityMagnitude;
@@ -43,28 +47,11 @@ struct GameParameters
 	static constexpr float MinDestroyRadius = 0.1f;
 	static constexpr float MaxDestroyRadius = 10.0f;
 
-    float SpringDampingFactor;
-
     float LightDiffusionAdjustment;
 
     size_t NumberOfClouds;
 
     float WindSpeed;
 
-	GameParameters()
-		: Gravity(0.0f, -9.8f)
-		, GravityNormal(Gravity.normalise())
-		, GravityMagnitude(Gravity.length())
-		, StrengthAdjustment(0.0048f)
-		, BuoyancyAdjustment(4.0f)
-		, WaterPressureAdjustment(0.75f)
-		, WaveHeight(2.5f)
-		, SeaDepth(150.0f)
-		, DestroyRadius(0.55f)
-        , SpringDampingFactor(0.8f)
-        , LightDiffusionAdjustment(0.5f)
-        , NumberOfClouds(50)
-        , WindSpeed(3.0f)
-	{
-	}
+    GameParameters();
 };

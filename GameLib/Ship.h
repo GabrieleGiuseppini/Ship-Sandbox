@@ -30,6 +30,7 @@ public:
         World * parentWorld,
         ShipDefinition const & shipDefinition,
         MaterialDatabase const & materials,
+        GameParameters const & gameParameters,
         uint64_t currentStepSequenceNumber);
 
     ~Ship();
@@ -65,7 +66,6 @@ public:
         float radius) const;
 
     void Update(
-        float dt,
         uint64_t currentStepSequenceNumber,
         GameParameters const & gameParameters);
 
@@ -129,19 +129,13 @@ private:
 
     void DetectConnectedComponents(uint64_t currentStepSequenceNumber);
 
-    void LeakWater(
-        float dt,
-        GameParameters const & gameParameters);
+    void LeakWater(GameParameters const & gameParameters);
 
-    void GravitateWater(
-        float dt,
-        GameParameters const & gameParameters);
+    void GravitateWater(GameParameters const & gameParameters);
 
-    void BalancePressure(float dt);
+    void BalancePressure(GameParameters const & gameParameters);
 
-    void DiffuseLight(
-        float dt,
-        GameParameters const & gameParameters);
+    void DiffuseLight(GameParameters const & gameParameters);
 
 private:
 

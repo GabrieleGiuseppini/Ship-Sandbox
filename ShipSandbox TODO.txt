@@ -104,9 +104,9 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 						- If one of the connected points is already a frontier, then the new frontier points
 						  take that frontierId
 						- TODO
-	- Test completely force-driven dynamics:
+	= Test completely force-driven dynamics:
 		+ Create branch
-		= Each iteration (test initially with 1 iteration per step; then see with more, but scale dt)
+		+ Each iteration (test initially with 1 iteration per step; then see with more, but scale dt)
 			+ Apply forces: 
 				+ For each spring:
 					+ Spring force (Stooke's law - need k, try fixed at first)
@@ -117,14 +117,34 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 				+ Drag
 			+ Apply verlet integration
 			+ Zero force
-			- Do ocean floor crash and bounce
 			+ ...do tension strain check...
 			+ ...electrical and water...
 		- Re-introduce:
-			- Masses
+			= Masses				
+				- Gamma - from original
 				- Check ropes afterwards
-			- Collision with sea floor
-			- Adjust better grab force based off game parameter: numIterations
+			- Collision with sea floor and (original) "bounce"
+			- Adjust better grab force based off new static game parameter: NumIterations
+				- Also, all non-static GameParameters initialized at cctor in cpp
+				- Should spread grab force over iterations? Otherwise it's pulses
+					- Could have optional<float force, vec2f position>; at each iteration, if not none:
+						- Do force spreading with force/NumIterations
+		- Perf:
+			- Get baseline (fps and trace)
+			- Do Point.PreparedMass
+				- const calc'd at cctor via dt passed to cctor, which was passed by Ship::Create via gameParameters
+			- Get baseline (fps)
+			- Do Spring.PreparedXYZ
+			- Get baseline (fps and trace)
+			- To enable SSE2, should use 4 floats (or 2 doubles)
+					- Test 4 floats:
+						- Test 1: Integrate: 
+							- 1a: Do two points at a time, with twin instructions
+							- 1b: pack Pos, Vel, Force from 2 points into vec4f
+							- If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
+					- If we go for doubles:
+						- SimulationStep: templated constant (double and float)
+						- If ok, should expand to Mass, Buoyancy? 
 		- If it works (!!!):
 			- Set springs' K in material
 				- Fix Titanic masts

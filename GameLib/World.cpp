@@ -62,7 +62,8 @@ World::World(
 
 int World::AddShip(
     ShipDefinition const & shipDefinition,
-    MaterialDatabase const & materials)
+    MaterialDatabase const & materials,
+    GameParameters const & gameParameters)
 {
     int shipId = static_cast<int>(mAllShips.size());
 
@@ -71,6 +72,7 @@ int World::AddShip(
         this,
         shipDefinition,
         materials,
+        gameParameters,
         mCurrentStepSequenceNumber);
 
     mAllShips.push_back(std::move(newShip));
@@ -160,12 +162,10 @@ Point const * World::GetNearestPointAt(
     return bestPoint;
 }
 
-void World::Update(
-    float dt,
-    GameParameters const & gameParameters)
+void World::Update(GameParameters const & gameParameters)
 {
     // Update current time
-    mCurrentTime += dt;
+    mCurrentTime += GameParameters::SimulationStepTimeDuration;
 
     // Generate a new step sequence number
     ++mCurrentStepSequenceNumber;
@@ -176,7 +176,6 @@ void World::Update(
     for (auto & ship : mAllShips)
     {
         ship->Update(
-            dt,
             mCurrentStepSequenceNumber,
             gameParameters);
     }

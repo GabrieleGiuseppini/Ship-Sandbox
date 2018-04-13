@@ -46,11 +46,11 @@ public:
     //
 
 	inline vec2 const & GetPosition() const {  return mPosition;  }	
-    inline void SetPosition(vec2f const & newPosition) { mPosition = newPosition; }
+    inline void SetPosition(vec2 const & newPosition) { mPosition = newPosition; }
     inline void AddToPosition(vec2 const & dPosition) { mPosition += dPosition; }    
 	
 	inline vec2 const & GetVelocity() const { return mVelocity; }    
-    inline void SetVelocity(vec2f const & newVelocity) { mVelocity = newVelocity; }
+    inline void SetVelocity(vec2 const & newVelocity) { mVelocity = newVelocity; }
     inline void AddToVelocity(vec2 const & dVelocity) { mVelocity += dVelocity; }
 
     inline vec2 const & GetForce() const { return mForce; }

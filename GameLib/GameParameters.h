@@ -12,6 +12,9 @@
 */
 struct GameParameters
 {
+    // The dt of each step
+    static constexpr float SimulationStepTimeDuration = 0.02f;
+
 	vec2 const Gravity;
 	vec2 const GravityNormal;
 	float const GravityMagnitude;

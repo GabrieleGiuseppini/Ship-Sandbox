@@ -53,6 +53,7 @@ std::unique_ptr<Ship> Ship::Create(
     World * parentWorld,
     ShipDefinition const & shipDefinition,
     MaterialDatabase const & materials,
+    GameParameters const & gameParameters,
     uint64_t currentStepSequenceNumber)
 {
     //
@@ -676,7 +677,6 @@ Point const * Ship::GetNearestPointAt(
 }
 
 void Ship::Update(
-    float dt,
     uint64_t currentStepSequenceNumber,
     GameParameters const & gameParameters)
 {
@@ -687,7 +687,7 @@ void Ship::Update(
     //
 
     UpdateDynamics(
-        dt,
+        GameParameters::SimulationStepTimeDuration,
         gameParameters);
 
 
@@ -720,15 +720,15 @@ void Ship::Update(
     // Update water dynamics
     //
 
-    LeakWater(dt, gameParameters);
+    LeakWater(gameParameters);
 
     for (int i = 0; i < 4; i++)
-        BalancePressure(dt);
+        BalancePressure(gameParameters);
 
     for (int i = 0; i < 4; i++)
     {
-        BalancePressure(dt);
-        GravitateWater(dt, gameParameters);
+        BalancePressure(gameParameters);
+        GravitateWater(gameParameters);
     }
 
 
@@ -740,9 +740,7 @@ void Ship::Update(
     // during or before this update step
     mAllElectricalElements.shrink_to_fit();
 
-    DiffuseLight(
-        dt,
-        gameParameters);
+    DiffuseLight(gameParameters);
 }
 
 void Ship::Render(
@@ -1029,7 +1027,10 @@ void Ship::UpdateSpringForces(
             // Explodes less less (8 iters, free masses): float kSpring = (1'000.0f / 20'000.0f) * (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
             // Explodes less less less, but collapses: float kSpring = (100.0f / 20'000.0f) * (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
             // Explodes less less less, no collapse, but jelly: float kSpring = (4'000.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
-            float kSpring = (4'000.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
+            // Quite good: float kSpring = (4'000.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
+            // Equivalent to: float kSpring = 0.8f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
+            // Luke's original would be 0.95f, but it explodes
+            float kSpring = 0.8f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
 
             vec2f const displacement = (spring.GetPointB()->GetPosition() - spring.GetPointA()->GetPosition());
             float const displacementLength = displacement.length();
@@ -1049,14 +1050,17 @@ void Ship::UpdateSpringForces(
             //
 
             // TODOTEST
-            //OK, soft-ish: float const kDamp = 10.0f / dt;
-            //OK, less soft: float const kDamp = 40.0f / dt;
-            //OK, quite rigid: float const kDamp = 100.0f / dt;
-            //OK, quite rigid: float const kDamp = 150.0f / dt;
-            //Not ok, breaks with grab and oscillates (fixed 10K mass): float const kDamp = 500.0f / dt;
-            //Explodes a little (free masses): float const kDamp = 150.0f / sqrt(20'000.0f) * sqrt(spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
-            //Explodes less less less, no collapse, but jelly: float const kDamp = 50.0f / sqrt(20'000.0f) * sqrt(spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
-            float const kDamp = (150.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
+            // OK, soft-ish: float const kDamp = 10.0f / dt;
+            // OK, less soft: float const kDamp = 40.0f / dt;
+            // OK, quite rigid: float const kDamp = 100.0f / dt;
+            // OK, quite rigid: float const kDamp = 150.0f / dt;
+            // Not ok, breaks with grab and oscillates (fixed 10K mass): float const kDamp = 500.0f / dt;
+            // Explodes a little (free masses): float const kDamp = 150.0f / sqrt(20'000.0f) * sqrt(spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
+            // Explodes less less less, no collapse, but jelly: float const kDamp = 50.0f / sqrt(20'000.0f) * sqrt(spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
+            // Quite good, similar to original: float const kDamp = (150.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
+            // Equivalent to: float const kDamp = 0.03f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
+            // Luke's original would be 0.8f, but explodes
+            float const kDamp = 0.03f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
 
             vec2f const relVelocity = (spring.GetPointB()->GetVelocity() - spring.GetPointA()->GetVelocity());
 
@@ -1070,12 +1074,23 @@ void Ship::UpdateSpringForces(
 
 void Ship::Integrate(float dt)
 {
+    // TODO To test perf:
+    // Point has preparedMass = dt / point.GetMass() (dt from game params, passed at cctor)
+    //
+    // point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / point.GetMass());
+    // m, m, a, d/2, m, m, a = 4*m + 2*a + 0.5d
+    //
+    // becomes:
+    //
+    // point.SetPosition(point.GetPosition() + (point.GetVelocity() + point.GetForce() * point.GetPreparedMass()) * dt
+    // m, a, m, a = 2*m + 2*a, saves 2*m + 0.5d
+
     // TODO: test runge-kutta
     for (Point & point : mAllPoints)
     {
         // Verlet (fourth order, with velocity being first order)
         auto const oldPosition = point.GetPosition();
-        // TODOTEST: fixed mass, 10K
+        // TODOTEST: was fixed mass, 10K
         // point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / 10000.0f);
         point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / point.GetMass());
         point.SetVelocity((point.GetPosition() - oldPosition) / dt);
@@ -1151,9 +1166,7 @@ void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)
     }
 }
 
-void Ship::LeakWater(
-    float dt,
-    GameParameters const & gameParameters)
+void Ship::LeakWater(GameParameters const & gameParameters)
 {
     for (Point & point : mAllPoints)
     {
@@ -1174,7 +1187,7 @@ void Ship::LeakWater(
 
             if (externalWaterPressure > point.GetWater())
             {
-                float newWater = dt * gameParameters.WaterPressureAdjustment * (externalWaterPressure - point.GetWater());
+                float newWater = GameParameters::SimulationStepTimeDuration * gameParameters.WaterPressureAdjustment * (externalWaterPressure - point.GetWater());
                 point.AddWater(newWater);
                 mTotalWater += newWater;
             }
@@ -1194,9 +1207,7 @@ void Ship::LeakWater(
     }
 }
 
-void Ship::GravitateWater(
-    float dt,
-    GameParameters const & gameParameters)
+void Ship::GravitateWater(GameParameters const & gameParameters)
 {
     //
     // Water flows into adjacent nodes in a quantity proportional to the cos of angle the spring makes
@@ -1222,7 +1233,7 @@ void Ship::GravitateWater(
                 float cos_theta = (pointB->GetPosition() - pointA->GetPosition()).normalise().dot(gameParameters.GravityNormal);
 
                 // The 0.60 can be tuned, it's just to stop all the water being stuffed into the lowest node...
-                float correction = 0.60f * cos_theta * dt * (cos_theta > 0.0f ? pointA->GetWater() : pointB->GetWater());
+                float correction = 0.60f * cos_theta * GameParameters::SimulationStepTimeDuration * (cos_theta > 0.0f ? pointA->GetWater() : pointB->GetWater());
                 pointA->AddWater(-correction);
                 pointB->AddWater(correction);
             }
@@ -1230,7 +1241,7 @@ void Ship::GravitateWater(
     }
 }
 
-void Ship::BalancePressure(float dt)
+void Ship::BalancePressure(GameParameters const & gameParameters)
 {
     //
     // If there's too much water in this node, try and push it into the others
@@ -1259,7 +1270,7 @@ void Ship::BalancePressure(float dt)
                     continue;
 
                 // Move water from more wet to less wet
-                float correction = (bWater - aWater) * 2.5f * dt; // can tune this number; value of 1 means will equalise in 1 second.
+                float correction = (bWater - aWater) * 2.5f * GameParameters::SimulationStepTimeDuration; // can tune this number; value of 1 means will equalise in 1 second.
                 pointA->AddWater(correction);
                 pointB->AddWater(-correction);
             }
@@ -1267,9 +1278,7 @@ void Ship::BalancePressure(float dt)
     }
 }
 
-void Ship::DiffuseLight(
-    float dt,
-    GameParameters const & gameParameters)
+void Ship::DiffuseLight(GameParameters const & gameParameters)
 {
     //
     // Diffuse light from each lamp to the closest adjacent (i.e. spring-connected) points,

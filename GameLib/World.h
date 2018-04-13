@@ -35,7 +35,8 @@ public:
 
     int AddShip(
         ShipDefinition const & shipDefinition,
-        MaterialDatabase const & materials);
+        MaterialDatabase const & materials,
+        GameParameters const & gameParameters);
 
 	float GetWaterHeight(		
 		float x,
@@ -67,9 +68,7 @@ public:
         vec2 const & targetPos,
         float radius) const;
 
-	void Update(
-		float dt,
-		GameParameters const & gameParameters);
+	void Update(GameParameters const & gameParameters);
 
 	void Render(		
         GameParameters const & gameParameters,

@@ -165,7 +165,7 @@ Point const * World::GetNearestPointAt(
 void World::Update(GameParameters const & gameParameters)
 {
     // Update current time
-    mCurrentTime += GameParameters::SimulationStepTimeDuration;
+    mCurrentTime += GameParameters::SimulationStepTimeDuration<float>;
 
     // Generate a new step sequence number
     ++mCurrentStepSequenceNumber;

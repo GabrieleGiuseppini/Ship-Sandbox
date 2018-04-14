@@ -12,11 +12,35 @@
 */
 struct GameParameters
 {
+    //
     // The dt of each step
-    static constexpr float SimulationStepTimeDuration = 0.02f;
+    //
+
+    template <typename T>
+    static constexpr T SimulationStepTimeDuration = 0.02f;
+
 
     //
-    // The tunable parameters
+    // The number of iterations we run in the dynamics step
+    //
+    // The number of iterations dictates how stiff bodies are:
+    // - Less iterations => softer (jelly) body
+    // - More iterations => hard body (never breaks though) 
+    //
+
+    template <typename T>
+    static constexpr T NumDynamicIterations = 8;
+
+    //
+    // The dt of each iteration in the dynamics step
+    //
+
+    template <typename T>
+    static constexpr T DynamicsSimulationStepTimeDuration = SimulationStepTimeDuration<T> / NumDynamicIterations<T>;
+
+
+    //
+    // Tunable parameters
     //
 
 	vec2 const Gravity;

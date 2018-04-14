@@ -678,7 +678,7 @@ void Ship::Update(
     //
 
     UpdateDynamics(
-        GameParameters::SimulationStepTimeDuration,
+        GameParameters::SimulationStepTimeDuration<float>,
         gameParameters);
 
 
@@ -908,15 +908,10 @@ void Ship::UpdateDynamics(
     float dt,
     GameParameters const & gameParameters)
 {
-    //
-    // The number of iterations alone controls how stiff bodies are
-    // - Less iterations => softer (jelly) body
-    // - More iterations => hard body (never breaks though) 
-    //
     
     static constexpr int NumIterations = 8;
 
-    float iterDt = dt / static_cast<float>(NumIterations);
+    float iterDt = dt / GameParameters::NumDynamicIterations<float>;
     for (int iter = 0; iter < NumIterations; ++iter)
     {
         // Update draw forces
@@ -1013,36 +1008,28 @@ void Ship::UpdateSpringForces(
         // Don't update destroyed springs, or we run the risk of being affected by destroyed connected points
         if (!spring.IsDeleted())
         {
-            //
-            // 1. Hooke's law
-            //
-
-            // For the time being, let's use the same k that Luke's position-based code was implicitly using,
-            // assuming an over/undercorrection of 1.0
-            // TODOTEST
-            //float kSpring = spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass() / ((spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) * dt * dt);
-            // OK (4 iters): 80'000'000.0f
-            // OK (8 iters, fixed 10K mass): float kSpring = 2'500.0f / (dt * dt);
-            // Soft much, but OK (4 iters, fixed 10K mass): float kSpring = 2'500.0f / (dt * dt);
-            // Soft less, but OK (4 iters, fixed 10K mass): float kSpring = 3'500.0f / (dt * dt);
-            // Soft less less, but OK (4 iters, fixed 10K mass): float kSpring = 4'000.0f / (dt * dt);
-            // Ok (8 iters, fixed 10K mass): float kSpring = 4'000.0f / (dt * dt);
-            // Explodes (8 iters, free masses): float kSpring = 4'000.0f / (dt * dt);
-            // Explodes less (8 iters, free masses): float kSpring = (4'000.0f / 20'000.0f) * (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass())  / (dt * dt);
-            // Explodes less less (8 iters, free masses): float kSpring = (1'000.0f / 20'000.0f) * (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
-            // Explodes less less less, but collapses: float kSpring = (100.0f / 20'000.0f) * (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
-            // Explodes less less less, no collapse, but jelly: float kSpring = (4'000.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
-            // Quite good: float kSpring = (4'000.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
-            // Equivalent to: float kSpring = 0.8f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
-            // Luke's original would be 0.95f, but it explodes
-            float kSpring = 0.8f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
-
             vec2f const displacement = (spring.GetPointB()->GetPosition() - spring.GetPointA()->GetPosition());
             float const displacementLength = displacement.length();
             vec2f const springDir = displacement.normalise(displacementLength);
 
+            //
+            // 1. Hooke's law
+            //
+
+            // The empirical coefficient for the spring stiffness
+            //
+            // The simulation is quite sensitive to this value:
+            // - 0.80 is almost fine (though bodies are sometimes soft)
+            // - 0.95 makes everything explode (this was the equivalent of Luke's original code)
+            static constexpr float kSpringCoefficient = 0.8f;
+
+            // Calculate actual spring K
+            float kSpring = kSpringCoefficient * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
+
+            // Calculate spring force on point A
             vec2f const fSpringA = springDir * (displacementLength - spring.GetRestLength()) * kSpring;
 
+            // Apply force 
             spring.GetPointA()->AddToForce(fSpringA);
             spring.GetPointB()->AddToForce(-fSpringA);
 
@@ -1054,23 +1041,21 @@ void Ship::UpdateSpringForces(
             // along the same direction as the spring
             //
 
-            // TODOTEST
-            // OK, soft-ish: float const kDamp = 10.0f / dt;
-            // OK, less soft: float const kDamp = 40.0f / dt;
-            // OK, quite rigid: float const kDamp = 100.0f / dt;
-            // OK, quite rigid: float const kDamp = 150.0f / dt;
-            // Not ok, breaks with grab and oscillates (fixed 10K mass): float const kDamp = 500.0f / dt;
-            // Explodes a little (free masses): float const kDamp = 150.0f / sqrt(20'000.0f) * sqrt(spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
-            // Explodes less less less, no collapse, but jelly: float const kDamp = 50.0f / sqrt(20'000.0f) * sqrt(spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
-            // Quite good, similar to original: float const kDamp = (150.0f / ((10'000.0f * 10'000.0f) / 20'000.0f)) * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
-            // Equivalent to: float const kDamp = 0.03f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
-            // Luke's original would be 0.8f, but explodes
+            // The empirical coefficient for the spring damping
+            //
+            // The simulation is quite sensitive to this value:
+            // - 0.03 is almost fine (though bodies are sometimes soft)
+            // - 0.8 makes everything explode (this was the equivalent of Luke's original code)
+            static constexpr float kDampCoefficient = 0.03f;
+
+            // Calculate actual damp K
             float const kDamp = 0.03f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
 
+            // Calculate damp force on point A
             vec2f const relVelocity = (spring.GetPointB()->GetVelocity() - spring.GetPointA()->GetVelocity());
-
             vec2f const fDampA = springDir * relVelocity.dot(springDir) * kDamp;
 
+            // Apply force
             spring.GetPointA()->AddToForce(fDampA);
             spring.GetPointB()->AddToForce(-fDampA);
         }
@@ -1218,7 +1203,7 @@ void Ship::LeakWater(GameParameters const & gameParameters)
 
             if (externalWaterPressure > point.GetWater())
             {
-                float newWater = GameParameters::SimulationStepTimeDuration * gameParameters.WaterPressureAdjustment * (externalWaterPressure - point.GetWater());
+                float newWater = GameParameters::SimulationStepTimeDuration<float> * gameParameters.WaterPressureAdjustment * (externalWaterPressure - point.GetWater());
                 point.AddWater(newWater);
                 mTotalWater += newWater;
             }
@@ -1264,7 +1249,7 @@ void Ship::GravitateWater(GameParameters const & gameParameters)
                 float cos_theta = (pointB->GetPosition() - pointA->GetPosition()).normalise().dot(gameParameters.GravityNormal);
 
                 // The 0.60 can be tuned, it's just to stop all the water being stuffed into the lowest node...
-                float correction = 0.60f * cos_theta * GameParameters::SimulationStepTimeDuration * (cos_theta > 0.0f ? pointA->GetWater() : pointB->GetWater());
+                float correction = 0.60f * cos_theta * GameParameters::SimulationStepTimeDuration<float> * (cos_theta > 0.0f ? pointA->GetWater() : pointB->GetWater());
                 pointA->AddWater(-correction);
                 pointB->AddWater(correction);
             }
@@ -1301,7 +1286,7 @@ void Ship::BalancePressure(GameParameters const & gameParameters)
                     continue;
 
                 // Move water from more wet to less wet
-                float correction = (bWater - aWater) * 2.5f * GameParameters::SimulationStepTimeDuration; // can tune this number; value of 1 means will equalise in 1 second.
+                float correction = (bWater - aWater) * 2.5f * GameParameters::SimulationStepTimeDuration<float>; // can tune this number; value of 1 means will equalise in 1 second.
                 pointA->AddWater(correction);
                 pointB->AddWater(-correction);
             }

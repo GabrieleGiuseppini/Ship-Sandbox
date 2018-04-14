@@ -119,7 +119,7 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 			+ Zero force
 			+ ...do tension strain check...
 			+ ...electrical and water...
-		= Improve:
+		+ Improve:
 			+ Masses				
 			+ Gamma - from original (NOT from original, doesn't work)
 			+ Better grab force:
@@ -130,8 +130,8 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 			+ Collision with sea floor and (original) "bounce"
 				+ v += adjusted Pos - pre-adjusted Pos
 				+ Double-check new V
-			- Make SimulationStep a templated constant (double and float)
-			- Clean up code
+			+ Make SimulationStep a templated constant (double and float)
+			+ Clean up code
 		- Perf:
 			- Get baseline (fps and trace)
 			- Do Point.MassFactor

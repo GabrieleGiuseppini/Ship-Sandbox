@@ -129,11 +129,9 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 				+ Check ropes afterwards
 			+ Collision with sea floor and (original) "bounce"
 				+ v += adjusted Pos - pre-adjusted Pos
+				+ Double-check new V
 			- Make SimulationStep a templated constant (double and float)
 			- Clean up code
-		- Test:
-			- Self-adjustment of kDamp based off paper's formula (H and L bounds)
-				- Debug to see if bounds ever exceeded
 		- Perf:
 			- Get baseline (fps and trace)
 			- Do Point.MassFactor
@@ -164,9 +162,13 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 					
 						
 		- If it works (!!!):
-			- Fix ropes (don't move as fluid and continuous as before)
+			- See more iterations to decrease jellying 
+				- More iterations => becomes extremely strong, hence requires adjusting stiffness and possibly damping
+				- Test:
+					- Self-adjustment of kDamp based off paper's formula (H and L bounds)
+					- Debug to see if bounds ever exceeded
+			- Fix ropes (they don't move as fluid and continuous as before)
 				- Make test ship for it, need two floating bases with masts
-				- See more iterations (becomes extremely strong, hence requires adjusting stiffness and possibly damping)
 			- Set springs' K in material
 				- Fix Titanic masts
 			- Damping: experiment with global velocities

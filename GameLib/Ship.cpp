@@ -963,8 +963,8 @@ void Ship::UpdatePointForces(
     float dt,
     GameParameters const & gameParameters)
 {
-    // Underwater points feel this amounf of water drag
-    constexpr float WaterDragCoefficient = 0.018f; // Luke's was 0.010f == 1.0f - powf(0.6f, 0.02f)
+    // Underwater points feel this amount of water drag
+    constexpr float WaterDragCoefficient = 0.010f; //1.0f - powf(0.6f, 0.02f)
     
     for (Point & point : mAllPoints)
     {
@@ -1109,10 +1109,6 @@ void Ship::HandleCollisionsWithSeaFloor(
     float dt,
     GameParameters const & gameParameters)
 {
-    // We damp bounced velocities to avoid oscillating back and forth between hitting the floor 
-    // and bouncing back 
-    constexpr float BounceDamp = 0.95f;
-
     for (Point & point : mAllPoints)
     {
         // Check if point is now below the sea floor
@@ -1124,11 +1120,12 @@ void Ship::HandleCollisionsWithSeaFloor(
                 floorheight - mParentWorld->GetOceanFloorHeight(point.GetPosition().x + 0.01f, gameParameters),
                 0.01f).normalise();
 
-            // Move point back along normal
-            point.AddToPosition(seaFloorNormal * (floorheight - point.GetPosition().y));
+            // Calculate displacement to move point back to sea floor, along the normal to the floor
+            vec2f bounceDisplacement = seaFloorNormal * (floorheight - point.GetPosition().y);
 
-            // Bounce back velocity along normal, damping it a bit
-            point.SetVelocity(seaFloorNormal * (-point.GetVelocity()).dot(seaFloorNormal) * BounceDamp);
+            // Move point back along normal
+            point.AddToPosition(bounceDisplacement);
+            point.SetVelocity(bounceDisplacement / dt);
         }
     }
 }

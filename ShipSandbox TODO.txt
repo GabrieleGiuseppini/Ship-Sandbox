@@ -119,48 +119,53 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 			+ Zero force
 			+ ...do tension strain check...
 			+ ...electrical and water...
-		- Re-introduce:
+		= Improve:
 			+ Masses				
 			+ Gamma - from original (NOT from original, doesn't work)
-			- Better grab force:
-				- Have optional<float force, vec2f position>; at each iteration, if not none:
+			+ Better grab force:
+				+ Have optional<float force, vec2f position>; at each iteration, if not none:
 					- Do force spreading with force/NumIterations
 				+ Also, all non-static GameParameters initialized at cctor in cpp				
-				- Check ropes afterwards
-			- Put spring damping factor in GameParameters as well
+				+ Check ropes afterwards
 			- Collision with sea floor and (original) "bounce"
 				- v += adjusted Pos - pre-adjusted Pos
+			- Make SimulationStep a templated constant (double and float)
 		- Test:
 			- Self-adjustment of kDamp based off paper's formula (H and L bounds)
 				- Debug to see if bounds ever exceeded
 		- Perf:
 			- Get baseline (fps and trace)
 			- Do Point.MassFactor
-				- const calc'd at cctor via dt passed to cctor, which was passed by Ship::Create via gameParameters
+				- const calc'd at cctor via GameParameters::dt and GameParameters::numIterations
+				- See if can get rid of dt parameter in funcs
 			- Get baseline (fps)
 			- Do Spring.XYZFactor/s
+				- See if can get rid of dt parameter in funcs
 			- Get baseline (fps and trace)
-			- To enable SSE2, should use 4 floats (or 2 doubles)
-					- Test 4 floats:
-						- Test 1: Integrate: 
-							- 1a: Do two points at a time, with twin instructions
-								- For int loop step 2 points, no remainder - see below
-							- 1b: pack Pos, Vel, Force from 2 points into vec4f
-								- Same for loop
-						- If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
-							- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
-							  Positions, Velocities, Forces, and Masses (or MassFactors), all
-							  allocated and calc'd at Initialize()
-								- Masses have another union, with 4 separate floats, and are const
-								- Rounded to 2 (static constexpr = 16 / 2*sizeof(float) (16 = 128bit SSE, 2 = coordinates in 2D) with 0's
-								- Masses are rounded to 4 (static constexpr = 16 / 1*sizeof(float) (16 = 128bit SSE, 1 = #masses) with 0's
-							- Point has vec2f* Position, vec2f* Velocity, vec2f* Force 
-								- But own float Mass, it's const anyway, and better for storage and CPU to store
-							- Integrate builds own vector of TimeSteps(/Factors)
-					- If we want to test for doubles:
-						- SimulationStep: templated constant (double and float)
+			- To enable SSE2, should use 4 floats:
+					- Test first: Integrate: 
+						- 1a: Do two points at a time, with twin instructions
+							- For int loop step 2 points, no remainder - see below
+						- 1b: pack Pos, Vel, Force from 2 points into vec4f
+							- Same for loop
+					- If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
+						- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
+						  Positions, Velocities, Forces, and Masses (or MassFactors), all
+						  allocated and populated at Ship::Create() 
+							- Mass of a point is copied to x and y
+							- Rounded to 2 (static constexpr = 16 / 2*sizeof(float) (16 = 128bit SSE, 2 = coordinates in 2D) with 0's
+						- Point has vec2f* Position, vec2f* Velocity, vec2f* Force 
+							- But own float Mass, it's const anyway
+						- Integrate:
+							- Builds own vector of TimeSteps(and/or Factors)
+							- Test with simple 1-Point loop, compiler should make times two
+						- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force
+					
 						
 		- If it works (!!!):
+			- Fix ropes (don't move as fluid and continuous as before)
+				- Make test ship for it, need two floating bases with masts
+				- See more iterations (becomes extremely strong, hence requires adjusting stiffness and possibly damping)
 			- Set springs' K in material
 				- Fix Titanic masts
 			- Damping: experiment with global velocities

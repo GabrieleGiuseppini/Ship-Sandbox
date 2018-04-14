@@ -596,6 +596,7 @@ Ship::Ship(
     , mAreElementsDirty(true)
     , mIsSinking(false)
     , mTotalWater(0.0)
+    , mCurrentDrawForce(std::nullopt)
 {
 }
 
@@ -638,19 +639,9 @@ void Ship::DrawTo(
     vec2f const & targetPos,
     float strength)
 {
-    // TODOTEST: based off numIterations being 8
-    strength *= 8.0f;
-
-    // Attract all points to a single position
-    for (Point & point : mAllPoints)
-    {
-        if (!point.IsDeleted())
-        {
-            vec2f displacement = (targetPos - point.GetPosition());
-            float forceMagnitude = strength / sqrtf(0.1f + displacement.length());
-            point.AddToForce(displacement.normalise() * forceMagnitude);
-        }
-    }
+    // Store
+    assert(!mCurrentDrawForce);
+    mCurrentDrawForce.emplace(targetPos, strength);
 }
 
 Point const * Ship::GetNearestPointAt(
@@ -917,18 +908,25 @@ void Ship::UpdateDynamics(
     float dt,
     GameParameters const & gameParameters)
 {
-    // Update point forces
-    // (taking into account eventual forces from Draw tool)
-    // TODOTEST
-    //UpdatePointForces(dt, gameParameters);
-    //Integrate(dt);
-
-    // TODOTEST: 8 is OK, 4 becomes softer (with higher constant for K) but can't get it less soft without exploding
-    //static constexpr int NumIterations = 8;
+    //
+    // The number of iterations alone controls how stiff bodies are
+    // - Less iterations => softer (jelly) body
+    // - More iterations => hard body (never breaks though) 
+    //
+    
     static constexpr int NumIterations = 8;
+
     float iterDt = dt / static_cast<float>(NumIterations);
     for (int iter = 0; iter < NumIterations; ++iter)
     {
+        // Update draw forces
+        if (!!mCurrentDrawForce)
+        {
+            UpdateDrawForces(
+                mCurrentDrawForce->Position,
+                mCurrentDrawForce->Strength);
+        }
+
         // Update point forces
         UpdatePointForces(iterDt, gameParameters);
 
@@ -938,20 +936,26 @@ void Ship::UpdateDynamics(
         // Integrate
         Integrate(iterDt);
 
+        // Handle collisions with sea floor
+        HandleCollisionsWithSeaFloor(iterDt, gameParameters);
+    }
 
-        // Collisions with sea floor
-        // TODOHERE
-        ////float const floorheight = GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x, gameParameters);
-        ////if (mPosition.y < floorheight)
-        ////{
-        ////    // Calculate normal to surface
-        ////    vec2f surfaceNormal = vec2f(
-        ////        floorheight - GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x + 0.01f, gameParameters),
-        ////        0.01f).normalise();
+    //
+    // Reset draw force
+    //
 
-        ////    // Move point back along normal (this is *not* a bounce)
-        ////    mPosition += surfaceNormal * (floorheight - mPosition.y);
-        ////}
+    mCurrentDrawForce.reset();
+}
+
+void Ship::UpdateDrawForces(
+    vec2f const & position,
+    float strength)
+{
+    for (Point & point : mAllPoints)
+    {
+        vec2f displacement = (position - point.GetPosition());
+        float forceMagnitude = strength / sqrtf(0.1f + displacement.length());
+        point.AddToForce(displacement.normalise() * forceMagnitude);
     }
 }
 
@@ -1096,13 +1100,31 @@ void Ship::Integrate(float dt)
     {
         // Verlet (fourth order, with velocity being first order)
         auto const oldPosition = point.GetPosition();
-        // TODOTEST: was fixed mass, 10K
-        // point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / 10000.0f);
         point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / point.GetMass());
         point.SetVelocity((point.GetPosition() - oldPosition) * GlobalDragCoefficient / dt);
         point.ZeroForce();
     }
+}
 
+void Ship::HandleCollisionsWithSeaFloor(
+    float dt,
+    GameParameters const & gameParameters)
+{
+    for (Point & point : mAllPoints)
+    {
+        // TODOHERE
+        ////float const floorheight = GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x, gameParameters);
+        ////if (mPosition.y < floorheight)
+        ////{
+        ////    // Calculate normal to surface
+        ////    vec2f surfaceNormal = vec2f(
+        ////        floorheight - GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x + 0.01f, gameParameters),
+        ////        0.01f).normalise();
+
+        ////    // Move point back along normal (this is *not* a bounce)
+        ////    mPosition += surfaceNormal * (floorheight - mPosition.y);
+        ////}
+    }
 }
 
 void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)

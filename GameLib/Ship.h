@@ -113,9 +113,19 @@ private:
         DetectConnectedComponents(currentStepSequenceNumber);
     }
 
+public:
+
+    /////////////////////////////////////////////////////////////////////////
+    // Dynamics
+    /////////////////////////////////////////////////////////////////////////
+
     void UpdateDynamics(
         float dt,
         GameParameters const & gameParameters);
+
+    void UpdateDrawForces(
+        vec2f const & position,
+        float strength);
 
     void UpdatePointForces(
         float dt,
@@ -123,9 +133,13 @@ private:
 
     void UpdateSpringForces(
         float dt,
-        GameParameters const & gameParameters);
+        GameParameters const & gameParameters);    
 
     void Integrate(float dt);
+
+    void HandleCollisionsWithSeaFloor(
+        float dt,
+        GameParameters const & gameParameters);
 
     void DetectConnectedComponents(uint64_t currentStepSequenceNumber);
 
@@ -168,6 +182,25 @@ private:
     // Sinking detection
     bool mIsSinking;
     float mTotalWater;
+
+    //
+    // Draw force to apply to next iteration
+    //
+
+    struct DrawForce
+    {
+        vec2f Position;
+        float Strength;
+
+        DrawForce(
+            vec2f position,
+            float strength)
+            : Position(position)
+            , Strength(strength)
+        {}
+    };
+
+    std::optional<DrawForce> mCurrentDrawForce;
 };
 
 template<>

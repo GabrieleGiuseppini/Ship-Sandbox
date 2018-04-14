@@ -127,9 +127,10 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 					- Do force spreading with force/NumIterations
 				+ Also, all non-static GameParameters initialized at cctor in cpp				
 				+ Check ropes afterwards
-			- Collision with sea floor and (original) "bounce"
-				- v += adjusted Pos - pre-adjusted Pos
+			+ Collision with sea floor and (original) "bounce"
+				+ v += adjusted Pos - pre-adjusted Pos
 			- Make SimulationStep a templated constant (double and float)
+			- Clean up code
 		- Test:
 			- Self-adjustment of kDamp based off paper's formula (H and L bounds)
 				- Debug to see if bounds ever exceeded
@@ -193,6 +194,10 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 - Controls:
 	- Set max and min zoom (or monsters awaken when you zoom out too much)
 	- Reset view (ESC) should also reset camera pan
+	- Tool cursors: cursor should change when mouse down
+		- Just the cursors used with the strength bar
+		- Hammer
+		- Draw
 	- SettingsDialog: save settings, and defaults
 		- JSON for both game & render params, assembled & saved by gamecontroller, who also loads it on startup if exists 
 		- GameParameters::ToJson()->picojson::value

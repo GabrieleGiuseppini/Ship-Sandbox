@@ -963,8 +963,9 @@ void Ship::UpdatePointForces(
     float dt,
     GameParameters const & gameParameters)
 {
-    constexpr float WaterDragCoefficient = 0.01f; // 1.0f - powf(0.6f, 0.02f)
-
+    // Underwater points feel this amounf of water drag
+    constexpr float WaterDragCoefficient = 0.018f; // Luke's was 0.010f == 1.0f - powf(0.6f, 0.02f)
+    
     for (Point & point : mAllPoints)
     {
         // Get height of water at this point
@@ -1092,10 +1093,8 @@ void Ship::Integrate(float dt)
     // Global drag - lowers velocity uniformly, damping oscillations originating between gravity and buoyancy
     // Note: it's extremely sensitive, big difference between 0.9995 and 0.9998
     // Note: it's not technically a drag force, it's just a dimensionless deceleration
-    //float constexpr GlobalDragCoefficient = 0.9995f;
     float constexpr GlobalDragCoefficient = 0.9995;
 
-    // TODO: test runge-kutta
     for (Point & point : mAllPoints)
     {
         // Verlet (fourth order, with velocity being first order)
@@ -1110,20 +1109,27 @@ void Ship::HandleCollisionsWithSeaFloor(
     float dt,
     GameParameters const & gameParameters)
 {
+    // We damp bounced velocities to avoid oscillating back and forth between hitting the floor 
+    // and bouncing back 
+    constexpr float BounceDamp = 0.95f;
+
     for (Point & point : mAllPoints)
     {
-        // TODOHERE
-        ////float const floorheight = GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x, gameParameters);
-        ////if (mPosition.y < floorheight)
-        ////{
-        ////    // Calculate normal to surface
-        ////    vec2f surfaceNormal = vec2f(
-        ////        floorheight - GetParentShip()->GetParentWorld()->GetOceanFloorHeight(mPosition.x + 0.01f, gameParameters),
-        ////        0.01f).normalise();
+        // Check if point is now below the sea floor
+        float const floorheight = mParentWorld->GetOceanFloorHeight(point.GetPosition().x, gameParameters);
+        if (point.GetPosition().y < floorheight)
+        {
+            // Calculate normal to sea floor
+            vec2f seaFloorNormal = vec2f(
+                floorheight - mParentWorld->GetOceanFloorHeight(point.GetPosition().x + 0.01f, gameParameters),
+                0.01f).normalise();
 
-        ////    // Move point back along normal (this is *not* a bounce)
-        ////    mPosition += surfaceNormal * (floorheight - mPosition.y);
-        ////}
+            // Move point back along normal
+            point.AddToPosition(seaFloorNormal * (floorheight - point.GetPosition().y));
+
+            // Bounce back velocity along normal, damping it a bit
+            point.SetVelocity(seaFloorNormal * (-point.GetVelocity()).dot(seaFloorNormal) * BounceDamp);
+        }
     }
 }
 

@@ -1042,6 +1042,7 @@ void Ship::Integrate()
     for (Point & point : mAllPoints)
     {
         // Verlet (fourth order, with velocity being first order)
+        // - For each point: 6 * mul + 4 * add
         auto const deltaPos = point.GetVelocity() * dt + point.GetForce() * point.GetMassFactor();
         point.SetPosition(point.GetPosition() + deltaPos);
         point.SetVelocity(deltaPos * GlobalDragCoefficient / dt);

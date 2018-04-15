@@ -182,17 +182,15 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 					- LeakWater: 0.22%
 				+ MainFrame::Render: 48.99%
 			+ test fma in Integrate
-				+ check assembly
-			= UpdateSpringForces:
+				+ check assembly: nope, it's function call!
+			+ UpdateSpringForces:
 				+ Don't check for IsDeleted, but just set coeff's to zero for deleted springs
-				= New FPS: 17.5
+				+ FPS: 17.4/17.5
 			- To enable SSE2, should use 4 floats:
 					- Test first: Integrate: 
-						- 1a: Do two points at a time, with twin instructions
-							- For int loop step 2 points, no remainder - see below
-						- 1b: pack Pos, Vel, Force from 2 points into vec4f
-							- Same for loop
-						- 1c: create buffers with all Pos, Vel, Force (see below) and call function with restricted pointers
+						- 1a: pack Pos, Vel, Force from 2 points into vec4f
+							- For loop with two points at a time
+						- 1b: create buffers with all Pos, Vel, Force (see below) and call function with restricted pointers
 					- If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
 						- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
 						  Positions, Velocities, Forces, and MassFactors, all
@@ -240,8 +238,8 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 		- Test: Spring::Destroy() only destroys triangles that contain A-B
 			- Should definitely make both A and B leak, as they both now have an adjacent hole
 	- Is Verlet implemented right?
-	- Review parallel calculation, it suffers from races
-		- Also See if can continue queueing tasks without waiting for all blocks of chunks
+	+ Review parallel calculation, it suffers from races
+		+ Also See if can continue queueing tasks without waiting for all blocks of chunks
 	- Water drag 
 		- The one already there assumes velocity always normal to surface, but we should consider surface normal instead
 

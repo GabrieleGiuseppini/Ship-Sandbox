@@ -197,7 +197,7 @@ private:
 	vec2 mVelocity;
     vec2 mForce;
 
-    // Mass divided by dt sqaured; used in our integration method to calculate deltaPos
+    // Mass divided by dt squared; used in our integration method to calculate deltaPos
     // due to force 
     float const mMassFactor;
 	

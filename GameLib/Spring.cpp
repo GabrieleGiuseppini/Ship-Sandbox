@@ -64,6 +64,12 @@ void Spring::Destroy(Point const * pointSource)
     if (mPointB != pointSource)
         mPointB->RemoveConnectedSpring(this);
 
+    // Zero out our factors, so that we can still calculate Hooke's 
+    // and damping forces for this spring without running the risk of 
+    // affecting non-deleted points
+    mStiffnessCoefficient = 0.0f;
+    mDampingCoefficient = 0.0f;
+
     // Remove ourselves
     ShipElement::Destroy();
 }

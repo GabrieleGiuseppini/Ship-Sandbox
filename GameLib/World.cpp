@@ -89,15 +89,13 @@ int World::AddShip(
 
 void World::DestroyAt(
     vec2 const & targetPos, 
-    float radius,
-    GameParameters const & gameParameters)
+    float radius)
 {
     for (auto & ship : mAllShips)
     {
         ship->DestroyAt(
             targetPos,
-            radius,
-            gameParameters);
+            radius);
     }
 }
 

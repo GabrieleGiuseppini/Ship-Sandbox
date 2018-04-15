@@ -29,14 +29,13 @@ namespace /* anonymous */ {
 	}
 
     template<typename T>
-    void _LogToNothing(T&& t)
+    void _LogToNothing(T&& /*t*/)
     {
     }
 
     template<typename T, typename... TArgs>
-    void _LogToNothing(T&& t, TArgs&&... args)
+    void _LogToNothing(T&& /*t*/, TArgs&&... args)
     {
-        (void)t;
         _LogToNothing(std::forward<TArgs>(args)...);
     }
 

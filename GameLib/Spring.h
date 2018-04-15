@@ -142,8 +142,8 @@ private:
 	Point * const mPointB;
 	
     float const mRestLength;
-    float const mStiffnessCoefficient;
-    float const mDampingCoefficient;
+    float mStiffnessCoefficient;
+    float mDampingCoefficient;
 
     Characteristics const mCharacteristics;
 	Material const * const mMaterial;

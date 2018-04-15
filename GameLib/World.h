@@ -60,8 +60,7 @@ public:
 
 	void DestroyAt(
 		vec2 const & targetPos, 
-		float radius,
-        GameParameters const & gameParameters);
+		float radius);
 
 	void DrawTo(
         vec2 const & targetPos,

@@ -610,8 +610,7 @@ Ship::~Ship()
 
 void Ship::DestroyAt(
     vec2 const & targetPos, 
-    float radius,
-    GameParameters const & gameParameters)
+    float radius)
 {
     // Destroy all points within the radius
     for (Point & point : mAllPoints)
@@ -924,7 +923,7 @@ void Ship::UpdateDynamics(GameParameters const & gameParameters)
         Integrate();
 
         // Handle collisions with sea floor
-        HandleCollisionsWithSeaFloor(gameParameters);
+        HandleCollisionsWithSeaFloor();
     }
 
     //
@@ -955,6 +954,7 @@ void Ship::UpdatePointForces(GameParameters const & gameParameters)
     {
         // Get height of water at this point
         float const waterHeightAtThisPoint = mParentWorld->GetWaterHeightAt(point.GetPosition().x);
+
 
         //
         // 1. Add gravity and buoyancy
@@ -993,40 +993,40 @@ void Ship::UpdateSpringForces(GameParameters const & /*gameParameters*/)
 {
     for (Spring & spring : mAllSprings)
     {
-        // Don't update destroyed springs, or we run the risk of being affected by destroyed connected points
-        if (!spring.IsDeleted())
-        {
-            vec2f const displacement = (spring.GetPointB()->GetPosition() - spring.GetPointA()->GetPosition());
-            float const displacementLength = displacement.length();
-            vec2f const springDir = displacement.normalise(displacementLength);
+        // No need to check whether the spring is deleted, as a deleted spring
+        // has zero coefficients
 
-            //
-            // 1. Hooke's law
-            //
-
-            // Calculate spring force on point A
-            vec2f const fSpringA = springDir * (displacementLength - spring.GetRestLength()) * spring.GetStiffnessCoefficient();
-
-            // Apply force 
-            spring.GetPointA()->AddToForce(fSpringA);
-            spring.GetPointB()->AddToForce(-fSpringA);
+        vec2f const displacement = (spring.GetPointB()->GetPosition() - spring.GetPointA()->GetPosition());
+        float const displacementLength = displacement.length();
+        vec2f const springDir = displacement.normalise(displacementLength);
 
 
-            //
-            // 2. Damper forces
-            //
-            // Damp the velocities of the two points, as if the points were also connected by a damper
-            // along the same direction as the spring
-            //
+        //
+        // 1. Hooke's law
+        //
 
-            // Calculate damp force on point A
-            vec2f const relVelocity = (spring.GetPointB()->GetVelocity() - spring.GetPointA()->GetVelocity());
-            vec2f const fDampA = springDir * relVelocity.dot(springDir) * spring.GetDampingCoefficient();
+        // Calculate spring force on point A
+        vec2f const fSpringA = springDir * (displacementLength - spring.GetRestLength()) * spring.GetStiffnessCoefficient();
 
-            // Apply force
-            spring.GetPointA()->AddToForce(fDampA);
-            spring.GetPointB()->AddToForce(-fDampA);
-        }
+        // Apply force 
+        spring.GetPointA()->AddToForce(fSpringA);
+        spring.GetPointB()->AddToForce(-fSpringA);
+
+
+        //
+        // 2. Damper forces
+        //
+        // Damp the velocities of the two points, as if the points were also connected by a damper
+        // along the same direction as the spring
+        //
+
+        // Calculate damp force on point A
+        vec2f const relVelocity = (spring.GetPointB()->GetVelocity() - spring.GetPointA()->GetVelocity());
+        vec2f const fDampA = springDir * relVelocity.dot(springDir) * spring.GetDampingCoefficient();
+
+        // Apply force
+        spring.GetPointA()->AddToForce(fDampA);
+        spring.GetPointB()->AddToForce(-fDampA);
     }
 }
 
@@ -1049,7 +1049,7 @@ void Ship::Integrate()
     }
 }
 
-void Ship::HandleCollisionsWithSeaFloor(GameParameters const & gameParameters)
+void Ship::HandleCollisionsWithSeaFloor()
 {
     for (Point & point : mAllPoints)
     {

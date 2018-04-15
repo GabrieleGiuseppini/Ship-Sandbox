@@ -183,7 +183,9 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 				+ MainFrame::Render: 48.99%
 			+ test fma in Integrate
 				+ check assembly
-			- Damping: experiment with global velocities (i.e. no spring damping but harder global damping)
+			= UpdateSpringForces:
+				+ Don't check for IsDeleted, but just set coeff's to zero for deleted springs
+				= New FPS: 17.5
 			- To enable SSE2, should use 4 floats:
 					- Test first: Integrate: 
 						- 1a: Do two points at a time, with twin instructions

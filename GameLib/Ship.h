@@ -54,8 +54,7 @@ public:
 
     void DestroyAt(
         vec2 const & targetPos,
-        float radius,
-        GameParameters const & gameParameters);
+        float radius);
 
     void DrawTo(
         vec2 const & targetPos,
@@ -131,7 +130,7 @@ public:
 
     void Integrate();
 
-    void HandleCollisionsWithSeaFloor(GameParameters const & gameParameters);
+    void HandleCollisionsWithSeaFloor();
 
     void DetectConnectedComponents(uint64_t currentStepSequenceNumber);
 

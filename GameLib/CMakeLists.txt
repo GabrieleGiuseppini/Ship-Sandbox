@@ -53,6 +53,8 @@ set  (PHYSICS_SOURCES
 	Generator.h
 	Lamp.cpp
 	Lamp.h
+	OceanFloor.cpp
+	OceanFloor.h
 	Physics.h
 	Point.cpp
 	Point.h

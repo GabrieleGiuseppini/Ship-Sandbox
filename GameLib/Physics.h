@@ -12,6 +12,7 @@ namespace Physics
     class ElectricalElement;
     class Generator;
     class Lamp;
+    class OceanFloor;
 	class Point;
 	class Ship;
 	class Spring;
@@ -24,6 +25,7 @@ namespace Physics
 
 #include "ElectricalElement.h"
 
+#include "OceanFloor.h"
 #include "WaterSurface.h"
 #include "World.h"
 #include "Cable.h"

@@ -48,9 +48,10 @@ public:
         return position.y < GetWaterHeightAt(position.x);
     }
 	
-    float GetOceanFloorHeight(
-		float x,
-		GameParameters const & gameParameters) const;
+    inline float GetOceanFloorHeightAt(float x) const
+    {
+        return mOceanFloor.GetFloorHeightAt(x);
+    }
 
     IGameEventHandler * GetGameEventHandler()
     {
@@ -92,6 +93,7 @@ private:
 	std::vector<std::unique_ptr<Ship>> mAllShips;
     std::vector<std::unique_ptr<Cloud>> mAllClouds;
     WaterSurface mWaterSurface;
+    OceanFloor mOceanFloor;
 
 	// The current time 
 	float mCurrentTime;

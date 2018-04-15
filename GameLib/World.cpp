@@ -49,6 +49,7 @@ World::World(
     : mAllShips()
     , mAllClouds()
     , mWaterSurface()
+    , mOceanFloor()
     , mCurrentTime(0.0f)
     , mCurrentStepSequenceNumber(1u)
     , mCollisionTree(BVHNode::AllocateTree())
@@ -60,6 +61,10 @@ World::World(
 
     // Initialize clouds
     UpdateClouds(gameParameters);
+
+    // Initialize water and ocean
+    mWaterSurface.Update(mCurrentTime, gameParameters);
+    mOceanFloor.Update(gameParameters);
 }
 
 int World::AddShip(
@@ -80,17 +85,6 @@ int World::AddShip(
     mAllShips.push_back(std::move(newShip));
 
     return shipId;
-}
-
-float World::GetOceanFloorHeight(
-    float x,
-    GameParameters const & gameParameters) const
-{
-    // Note: period is 20,000 * PI (lowering freq3 to 0.001 makes it 2,000 * PI)
-    float const c1 = sinf(x * 0.005f) * 10.f;
-    float const c2 = sinf(x * 0.015f) * 6.f;
-    float const c3 = sinf(x * 0.0011f) * 45.f;
-    return (c1 +  c2 - c3) - gameParameters.SeaDepth;
 }
 
 void World::DestroyAt(
@@ -279,7 +273,7 @@ void World::UploadLandAndWater(
     {
         renderContext.UploadLandAndWater(
             sliceX,
-            GetOceanFloorHeight(sliceX, gameParameters),
+            mOceanFloor.GetFloorHeightAt(sliceX),
             mWaterSurface.GetWaterHeightAt(sliceX),
             gameParameters.SeaDepth);
     }

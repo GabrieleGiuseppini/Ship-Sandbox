@@ -1054,12 +1054,12 @@ void Ship::HandleCollisionsWithSeaFloor(GameParameters const & gameParameters)
     for (Point & point : mAllPoints)
     {
         // Check if point is now below the sea floor
-        float const floorheight = mParentWorld->GetOceanFloorHeight(point.GetPosition().x, gameParameters);
+        float const floorheight = mParentWorld->GetOceanFloorHeightAt(point.GetPosition().x);
         if (point.GetPosition().y < floorheight)
         {
             // Calculate normal to sea floor
             vec2f seaFloorNormal = vec2f(
-                floorheight - mParentWorld->GetOceanFloorHeight(point.GetPosition().x + 0.01f, gameParameters),
+                floorheight - mParentWorld->GetOceanFloorHeightAt(point.GetPosition().x + 0.01f),
                 0.01f).normalise();
 
             // Calculate displacement to move point back to sea floor, along the normal to the floor

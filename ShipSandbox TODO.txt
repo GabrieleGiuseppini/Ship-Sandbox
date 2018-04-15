@@ -170,22 +170,20 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 					+ Remove gameParameters from World::GetWaterHeight and cleanup World.h
 				+ Optimize
 			+ Get baseline:
-				+ FPS: 16.9
-				+ GameController::DoStep: 44.17%
-					- UpdateDynamics: 29.32%
-						- UpdateSpringForces: 14.10%
-						- UpdatePointForces: 6.79%
-							- fminf: 1.33%
-						- SeaFloorCollisions: 4.58%
-							- GetOceanFloorHeight: 3.65%
-								- sinf: 2.41%
-						- Integrate: 3.84%
-					- BalancePressure: 7.13%
-					- GravitateWater: 5.22%
-					- LeakWater: 0.43%
-				+ MainFrame::Render: 49.57%
+				+ FPS: 17.0/17.2
+				+ GameController::DoStep: 41.85%
+					- UpdateDynamics: 28.10%
+						- UpdateSpringForces: 13.90%
+						- UpdatePointForces: 5.87%
+						- HandleCollisionsWithSeaFloor: 4.27%
+						- Integrate: 4.24%
+					- BalancePressure: 6.47%
+					- GravitateWater: 4.88%
+					- LeakWater: 0.22%
+				+ MainFrame::Render: 48.99%
 			+ test fma in Integrate
 				+ check assembly
+			- Damping: experiment with global velocities (i.e. no spring damping but harder global damping)
 			- To enable SSE2, should use 4 floats:
 					- Test first: Integrate: 
 						- 1a: Do two points at a time, with twin instructions
@@ -224,7 +222,6 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 				- Make test ship for it, need two floating bases with masts
 			- Set springs' K in material
 				- Fix Titanic masts
-			- Damping: experiment with global velocities (i.e. no spring damping but harder global damping)
 			- Experiment with:
 				- Runge-Kutta
 				- Semi-implicit Euler (https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf)

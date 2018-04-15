@@ -1,6 +1,6 @@
 /***************************************************************************************
 * Original Author:		Gabriele Giuseppini
-* Created:				2018-04-14
+* Created:				2018-04-15
 * Copyright:			Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
 ***************************************************************************************/
 #pragma once
@@ -14,17 +14,15 @@
 namespace Physics
 {
 
-class WaterSurface
+class OceanFloor
 {
 public:
 
-    WaterSurface();
+    OceanFloor();
 
-    void Update(
-        float currentTime,
-        GameParameters const & gameParameters);
+    void Update(GameParameters const & gameParameters);
 
-    float GetWaterHeightAt(float x) const
+    float GetFloorHeightAt(float x) const
     {
         float const absoluteSampleIndex = floorf(x / Dx);
 
@@ -41,11 +39,12 @@ public:
 private:
 
     // Frequencies of the wave components
-    static constexpr float Frequency1 = 0.1f;
-    static constexpr float Frequency2 = 0.3f;
+    static constexpr float Frequency1 = 0.005f;
+    static constexpr float Frequency2 = 0.015f;
+    static constexpr float Frequency3 = 0.001f;
 
     // Period of the sum of the frequency components
-    static constexpr float Period = 20.0f * Pi<float>;
+    static constexpr float Period = 2000.0f * Pi<float>;
 
     // The number of samples;
     // a higher value means more resolution at the expense of the cost of Update().

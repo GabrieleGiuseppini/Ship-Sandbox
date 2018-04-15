@@ -47,6 +47,8 @@ World::World(
     std::shared_ptr<IGameEventHandler> gameEventHandler,
     GameParameters const & gameParameters)
     : mAllShips()
+    , mAllClouds()
+    , mWaterSurface()
     , mCurrentTime(0.0f)
     , mCurrentStepSequenceNumber(1u)
     , mCollisionTree(BVHNode::AllocateTree())
@@ -80,35 +82,14 @@ int World::AddShip(
     return shipId;
 }
 
-// Function of time and x (though time is constant during the update step, so no need to parameterise it)
-float World::GetWaterHeight(
-    float x,
-    GameParameters const & gameParameters) const
-{
-    float const c1 = sinf(x * 0.1f + mCurrentTime) * 0.5f;
-    float const c2 = sinf(x * 0.3f - mCurrentTime * 1.1f) * 0.3f;
-    return (c1 + c2) * gameParameters.WaveHeight;
-}
-
-bool World::IsUnderwater(
-    Point const & point,
-    GameParameters const & gameParameters) const
-{
-    return point.GetPosition().y < GetWaterHeight(point.GetPosition().x, gameParameters);
-}
-
 float World::GetOceanFloorHeight(
     float x,
     GameParameters const & gameParameters) const
 {
-    /*x += 1024.f;
-    x = x - 2048.f * floorf(x / 2048.f);
-    float t = x - floorf(x);
-    return oceandepthbuffer[(int)floorf(x)] * (1 - t) + oceandepthbuffer[((int)ceilf(x)) % 2048] * t;*/
-
+    // Note: period is 20,000 * PI (lowering freq3 to 0.001 makes it 2,000 * PI)
     float const c1 = sinf(x * 0.005f) * 10.f;
     float const c2 = sinf(x * 0.015f) * 6.f;
-    float const c3 = sin(x * 0.0011f) * 45.f;
+    float const c3 = sinf(x * 0.0011f) * 45.f;
     return (c1 +  c2 - c3) - gameParameters.SeaDepth;
 }
 
@@ -171,6 +152,9 @@ void World::Update(GameParameters const & gameParameters)
     ++mCurrentStepSequenceNumber;
     if (0u == mCurrentStepSequenceNumber)
         mCurrentStepSequenceNumber = 1u;
+
+    // Update water surface
+    mWaterSurface.Update(mCurrentTime, gameParameters);
 
     // Update all ships
     for (auto & ship : mAllShips)
@@ -285,9 +269,9 @@ void World::UploadLandAndWater(
 {
     static constexpr size_t SlicesCount = 500;
 
-    float const worldWidth = renderContext.GetVisibleWorldWidth();
-    float const sliceWidth = worldWidth / static_cast<float>(SlicesCount);
-    float sliceX = renderContext.GetCameraWorldPosition().x - (worldWidth / 2.0f);
+    float const visibleWorldWidth = renderContext.GetVisibleWorldWidth();
+    float const sliceWidth = visibleWorldWidth / static_cast<float>(SlicesCount);
+    float sliceX = renderContext.GetCameraWorldPosition().x - (visibleWorldWidth / 2.0f);
 
     renderContext.UploadLandAndWaterStart(SlicesCount);    
 
@@ -296,7 +280,7 @@ void World::UploadLandAndWater(
         renderContext.UploadLandAndWater(
             sliceX,
             GetOceanFloorHeight(sliceX, gameParameters),
-            GetWaterHeight(sliceX, gameParameters),
+            mWaterSurface.GetWaterHeightAt(sliceX),
             gameParameters.SeaDepth);
     }
 

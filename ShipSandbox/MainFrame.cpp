@@ -1056,10 +1056,21 @@ void MainFrame::SetFrameTitle()
     float totalFps = static_cast<float>(mTotalFrameCount) * 1000.0f / static_cast<float>(totalElapsed.count());
     float lastFps = static_cast<float>(mLastFrameCount) * 1000 / static_cast<float>(lastElapsed.count());
 
+    auto minutes = std::chrono::duration_cast<std::chrono::minutes>(totalElapsed);
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(totalElapsed - minutes);
+    auto seconds = static_cast<int>(roundf(static_cast<float>(milliseconds.count()) / 1000.0f));
+
+    //
+    // Build title
+    //
+
     std::ostringstream ss;
 
+    ss.fill('0');
+
     ss << GetWindowTitle()
-        << "  FPS: " << std::fixed << std::setprecision(2) << totalFps << " (" << lastFps << ")";
+        << "  FPS: " << std::fixed << std::setprecision(2) << totalFps << " (" << lastFps << ")"
+        << " " << std::setw(2) << minutes.count() << ":" << std::setw(2) << seconds;
 
     if (!mCurrentShipNames.empty())
     {

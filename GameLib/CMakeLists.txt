@@ -63,6 +63,8 @@ set  (PHYSICS_SOURCES
 	Spring.h
 	Triangle.cpp
 	Triangle.h
+	WaterSurface.cpp
+	WaterSurface.h
 	World.cpp
 	World.h)
 

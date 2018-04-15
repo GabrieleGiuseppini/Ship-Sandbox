@@ -119,27 +119,19 @@ public:
     // Dynamics
     /////////////////////////////////////////////////////////////////////////
 
-    void UpdateDynamics(
-        float dt,
-        GameParameters const & gameParameters);
+    void UpdateDynamics(GameParameters const & gameParameters);
 
     void UpdateDrawForces(
         vec2f const & position,
         float strength);
 
-    void UpdatePointForces(
-        float dt,
-        GameParameters const & gameParameters);
+    void UpdatePointForces(GameParameters const & gameParameters);
 
-    void UpdateSpringForces(
-        float dt,
-        GameParameters const & gameParameters);    
+    void UpdateSpringForces(GameParameters const & gameParameters);    
 
-    void Integrate(float dt);
+    void Integrate();
 
-    void HandleCollisionsWithSeaFloor(
-        float dt,
-        GameParameters const & gameParameters);
+    void HandleCollisionsWithSeaFloor(GameParameters const & gameParameters);
 
     void DetectConnectedComponents(uint64_t currentStepSequenceNumber);
 

@@ -16,6 +16,7 @@ namespace Physics
 	class Ship;
 	class Spring;
 	class Triangle;
+    class WaterSurface;
 	class World;
 }
 
@@ -23,6 +24,7 @@ namespace Physics
 
 #include "ElectricalElement.h"
 
+#include "WaterSurface.h"
 #include "World.h"
 #include "Cable.h"
 #include "Cloud.h"

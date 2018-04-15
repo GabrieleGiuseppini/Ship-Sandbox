@@ -34,8 +34,9 @@ Point::Point(
 	, mPosition(position)
 	, mVelocity(0.0f, 0.0f)
     , mForce(0.0f, 0.0f)
-	, mMaterial(material)	
+    , mMassFactor(CalculateMassFactor(material->Mass))
 	, mBuoyancy(buoyancy)
+    , mMaterial(material)
 	, mWater(0.0f)
     , mLight(0.0f)
     , mIsLeaking(false)
@@ -106,6 +107,15 @@ void Point::DestroyConnectedTriangles()
     }
 
     mConnectedTriangles.clear();
+}
+
+float Point::CalculateMassFactor(float mass)
+{
+    assert(mass > 0.0f);
+
+    static constexpr float dt = GameParameters::DynamicsSimulationStepTimeDuration<float>;
+
+    return dt * dt / mass;
 }
 
 }

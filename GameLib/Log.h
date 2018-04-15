@@ -27,6 +27,19 @@ namespace /* anonymous */ {
 		ss << std::forward<T>(t);
 		return _LogToStream(ss, std::forward<TArgs>(args)...);
 	}
+
+    template<typename T>
+    void _LogToNothing(T&& t)
+    {
+    }
+
+    template<typename T, typename... TArgs>
+    void _LogToNothing(T&& t, TArgs&&... args)
+    {
+        (void)t;
+        _LogToNothing(std::forward<TArgs>(args)...);
+    }
+
 }
 
 class Logger
@@ -88,6 +101,12 @@ public:
         std::cout << message << std::endl;
 	}
 
+    template<typename...TArgs>
+    void LogToNothing(TArgs&&... args)
+    {
+        _LogToNothing(std::forward<TArgs>(args)...);
+    }
+
 public:
 
 	static Logger Instance;
@@ -117,6 +136,8 @@ void LogDebug(TArgs&&... args)
 {
 #ifdef _DEBUG
 	Logger::Instance.Log(std::forward<TArgs>(args)...);
+#else
+    Logger::Instance.LogToNothing(std::forward<TArgs>(args)...);
 #endif
 }
 

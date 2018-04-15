@@ -57,13 +57,12 @@ public:
     inline void ZeroForce() { mForce = vec2(0, 0); }
     inline void AddToForce(vec2 const & dForce) { mForce += dForce; }    
 
-
-	inline Material const * GetMaterial() const { return mMaterial; }
-
 	inline float GetMass() const { return mMaterial->Mass; }
-	
+    inline float GetMassFactor() const { return mMassFactor; }
+
     inline float GetBuoyancy() const { return mBuoyancy;  }
 
+    inline Material const * GetMaterial() const { return mMaterial; }
 
 
     //
@@ -184,6 +183,10 @@ public:
 
 private:
 
+    static float CalculateMassFactor(float mass);
+
+private:
+
 	static vec2 const AABBRadius;	
 
     //
@@ -194,9 +197,13 @@ private:
 	vec2 mVelocity;
     vec2 mForce;
 
-	Material const * mMaterial;
+    // Mass divided by dt sqaured; used in our integration method to calculate deltaPos
+    // due to force 
+    float const mMassFactor;
 	
 	float mBuoyancy;
+
+    Material const * mMaterial;
 
 	// Total quantity of water, 0.0->+INF (== internal water pressure)
 	float mWater;

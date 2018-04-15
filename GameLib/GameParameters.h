@@ -57,7 +57,7 @@ struct GameParameters
 
 	float WaterPressureAdjustment;
 	static constexpr float MinWaterPressureAdjustment = 0.0f;
-	static constexpr float MaxWaterPressureAdjustment = 2.0f;
+	static constexpr float MaxWaterPressureAdjustment = 4.0f;
 
 	float WaveHeight;
 	static constexpr float MinWaveHeight = 0.0f;

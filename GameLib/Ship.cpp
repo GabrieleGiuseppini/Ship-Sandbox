@@ -53,7 +53,7 @@ std::unique_ptr<Ship> Ship::Create(
     World * parentWorld,
     ShipDefinition const & shipDefinition,
     MaterialDatabase const & materials,
-    GameParameters const & gameParameters,
+    GameParameters const & /*gameParameters*/,
     uint64_t currentStepSequenceNumber)
 {
     //
@@ -623,7 +623,7 @@ void Ship::DestroyAt(
                 // Notify
                 mParentWorld->GetGameEventHandler()->OnDestroy(
                     point.GetMaterial(), 
-                    mParentWorld->IsUnderwater(point, gameParameters),
+                    mParentWorld->IsUnderwater(point.GetPosition()),
                     1u);
 
                 // Destroy point
@@ -677,9 +677,7 @@ void Ship::Update(
     // Update dynamics
     //
 
-    UpdateDynamics(
-        GameParameters::SimulationStepTimeDuration<float>,
-        gameParameters);
+    UpdateDynamics(gameParameters);
 
 
     //
@@ -735,7 +733,7 @@ void Ship::Update(
 }
 
 void Ship::Render(
-    GameParameters const & gameParameters,
+    GameParameters const & /*gameParameters*/,
     RenderContext & renderContext) const
 {
     if (mIsPointCountDirty)
@@ -904,15 +902,9 @@ void Ship::Render(
 // Private Helpers
 ///////////////////////////////////////////////////////////////////////////////////
 
-void Ship::UpdateDynamics(
-    float dt,
-    GameParameters const & gameParameters)
+void Ship::UpdateDynamics(GameParameters const & gameParameters)
 {
-    
-    static constexpr int NumIterations = 8;
-
-    float iterDt = dt / GameParameters::NumDynamicIterations<float>;
-    for (int iter = 0; iter < NumIterations; ++iter)
+    for (int iter = 0; iter < GameParameters::NumDynamicIterations<int>; ++iter)
     {
         // Update draw forces
         if (!!mCurrentDrawForce)
@@ -923,16 +915,16 @@ void Ship::UpdateDynamics(
         }
 
         // Update point forces
-        UpdatePointForces(iterDt, gameParameters);
+        UpdatePointForces(gameParameters);
 
         // Update springs forces
-        UpdateSpringForces(iterDt, gameParameters);
+        UpdateSpringForces(gameParameters);
 
         // Integrate
-        Integrate(iterDt);
+        Integrate();
 
         // Handle collisions with sea floor
-        HandleCollisionsWithSeaFloor(iterDt, gameParameters);
+        HandleCollisionsWithSeaFloor(gameParameters);
     }
 
     //
@@ -954,9 +946,7 @@ void Ship::UpdateDrawForces(
     }
 }
 
-void Ship::UpdatePointForces(
-    float dt,
-    GameParameters const & gameParameters)
+void Ship::UpdatePointForces(GameParameters const & gameParameters)
 {
     // Underwater points feel this amount of water drag
     constexpr float WaterDragCoefficient = 0.010f; //1.0f - powf(0.6f, 0.02f)
@@ -964,7 +954,7 @@ void Ship::UpdatePointForces(
     for (Point & point : mAllPoints)
     {
         // Get height of water at this point
-        float const waterHeightAtThisPoint = mParentWorld->GetWaterHeight(point.GetPosition().x, gameParameters);
+        float const waterHeightAtThisPoint = mParentWorld->GetWaterHeightAt(point.GetPosition().x);
 
         //
         // 1. Add gravity and buoyancy
@@ -999,9 +989,7 @@ void Ship::UpdatePointForces(
     }
 }
 
-void Ship::UpdateSpringForces(
-    float dt,
-    GameParameters const & gameParameters)
+void Ship::UpdateSpringForces(GameParameters const & /*gameParameters*/)
 {
     for (Spring & spring : mAllSprings)
     {
@@ -1016,18 +1004,8 @@ void Ship::UpdateSpringForces(
             // 1. Hooke's law
             //
 
-            // The empirical coefficient for the spring stiffness
-            //
-            // The simulation is quite sensitive to this value:
-            // - 0.80 is almost fine (though bodies are sometimes soft)
-            // - 0.95 makes everything explode (this was the equivalent of Luke's original code)
-            static constexpr float kSpringCoefficient = 0.8f;
-
-            // Calculate actual spring K
-            float kSpring = kSpringCoefficient * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / (dt * dt);
-
             // Calculate spring force on point A
-            vec2f const fSpringA = springDir * (displacementLength - spring.GetRestLength()) * kSpring;
+            vec2f const fSpringA = springDir * (displacementLength - spring.GetRestLength()) * spring.GetStiffnessCoefficient();
 
             // Apply force 
             spring.GetPointA()->AddToForce(fSpringA);
@@ -1041,19 +1019,9 @@ void Ship::UpdateSpringForces(
             // along the same direction as the spring
             //
 
-            // The empirical coefficient for the spring damping
-            //
-            // The simulation is quite sensitive to this value:
-            // - 0.03 is almost fine (though bodies are sometimes soft)
-            // - 0.8 makes everything explode (this was the equivalent of Luke's original code)
-            static constexpr float kDampCoefficient = 0.03f;
-
-            // Calculate actual damp K
-            float const kDamp = 0.03f * (spring.GetPointA()->GetMass() * spring.GetPointB()->GetMass()) / (spring.GetPointA()->GetMass() + spring.GetPointB()->GetMass()) / dt;
-
             // Calculate damp force on point A
             vec2f const relVelocity = (spring.GetPointB()->GetVelocity() - spring.GetPointA()->GetVelocity());
-            vec2f const fDampA = springDir * relVelocity.dot(springDir) * kDamp;
+            vec2f const fDampA = springDir * relVelocity.dot(springDir) * spring.GetDampingCoefficient();
 
             // Apply force
             spring.GetPointA()->AddToForce(fDampA);
@@ -1062,18 +1030,9 @@ void Ship::UpdateSpringForces(
     }
 }
 
-void Ship::Integrate(float dt)
+void Ship::Integrate()
 {
-    // TODO To test perf:
-    // Point has preparedMass = dt / point.GetMass() (dt from game params, passed at cctor)
-    //
-    // point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / point.GetMass());
-    // 1 component = m, m, a, d/2, m, m, a = 4*m + 2*a + 0.5d
-    //
-    // becomes:
-    //
-    // point.SetPosition(point.GetPosition() + (point.GetVelocity() + point.GetForce() * point.GetPreparedMass()) * dt
-    // 1 component = m, a, m, a = 2*m + 2*a, saves 2*m + 0.5d
+    static constexpr float dt = GameParameters::DynamicsSimulationStepTimeDuration<float>;
 
     // Global drag - lowers velocity uniformly, damping oscillations originating between gravity and buoyancy
     // Note: it's extremely sensitive, big difference between 0.9995 and 0.9998
@@ -1083,16 +1042,14 @@ void Ship::Integrate(float dt)
     for (Point & point : mAllPoints)
     {
         // Verlet (fourth order, with velocity being first order)
-        auto const oldPosition = point.GetPosition();
-        point.SetPosition(point.GetPosition() + point.GetVelocity() * dt + point.GetForce() * dt * dt / point.GetMass());
-        point.SetVelocity((point.GetPosition() - oldPosition) * GlobalDragCoefficient / dt);
+        auto const deltaPos = point.GetVelocity() * dt + point.GetForce() * point.GetMassFactor();
+        point.SetPosition(point.GetPosition() + deltaPos);
+        point.SetVelocity(deltaPos * GlobalDragCoefficient / dt);
         point.ZeroForce();
     }
 }
 
-void Ship::HandleCollisionsWithSeaFloor(
-    float dt,
-    GameParameters const & gameParameters)
+void Ship::HandleCollisionsWithSeaFloor(GameParameters const & gameParameters)
 {
     for (Point & point : mAllPoints)
     {
@@ -1110,7 +1067,7 @@ void Ship::HandleCollisionsWithSeaFloor(
 
             // Move point back along normal
             point.AddToPosition(bounceDisplacement);
-            point.SetVelocity(bounceDisplacement / dt);
+            point.SetVelocity(bounceDisplacement / GameParameters::DynamicsSimulationStepTimeDuration<float>);
         }
     }
 }
@@ -1193,9 +1150,7 @@ void Ship::LeakWater(GameParameters const & gameParameters)
 
         if (point.IsLeaking())
         {
-            float waterLevel = mParentWorld->GetWaterHeight(
-                point.GetPosition().x,
-                gameParameters);
+            float waterLevel = mParentWorld->GetWaterHeightAt(point.GetPosition().x);
 
             float const externalWaterPressure = point.GetExternalWaterPressure(
                 waterLevel,
@@ -1239,7 +1194,7 @@ void Ship::GravitateWater(GameParameters const & gameParameters)
         // Don't visit destroyed springs, or we run the risk of being affected by destroyed connected points
         if (!spring.IsDeleted())
         {
-            // Do not propagate water from hull point to hull point
+            // Do not propagate water from hull point to non-hull point, and viceversa
             if (!spring.IsHull())
             {
                 Point * const pointA = spring.GetPointA();
@@ -1257,7 +1212,7 @@ void Ship::GravitateWater(GameParameters const & gameParameters)
     }
 }
 
-void Ship::BalancePressure(GameParameters const & gameParameters)
+void Ship::BalancePressure(GameParameters const & /*gameParameters*/)
 {
     //
     // If there's too much water in this node, try and push it into the others
@@ -1273,7 +1228,7 @@ void Ship::BalancePressure(GameParameters const & gameParameters)
         // Don't visit destroyed springs, or we run the risk of being affected by destroyed connected points
         if (!spring.IsDeleted())
         {
-            // Do not propagate water from hull point to hull point
+            // Do not propagate water from hull point to non-hull point, and viceversa
             if (!spring.IsHull())
             {
                 Point * const pointA = spring.GetPointA();

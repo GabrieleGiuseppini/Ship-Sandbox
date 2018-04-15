@@ -72,7 +72,7 @@ public:
             // Notify
             gameEventHandler->OnBreak(
                 mMaterial, 
-                GetParentShip()->GetParentWorld()->IsUnderwater(*mPointA, gameParameters),
+                GetParentShip()->GetParentWorld()->IsUnderwater(mPointA->GetPosition()),
                 1);
         }
         else if (strain > 0.25f * effectiveStrength)
@@ -85,7 +85,7 @@ public:
                 // Notify
                 gameEventHandler->OnStress(
                     mMaterial, 
-                    GetParentShip()->GetParentWorld()->IsUnderwater(*mPointA, gameParameters),
+                    GetParentShip()->GetParentWorld()->IsUnderwater(mPointA->GetPosition()),
                     1);
             }
         }
@@ -108,6 +108,8 @@ public:
 	inline Point const * GetPointB() const { return mPointB; }
 
     inline float GetRestLength() const { return mRestLength; }
+    inline float GetStiffnessCoefficient() const { return mStiffnessCoefficient; }
+    inline float GetDampingCoefficient() const { return mDampingCoefficient; }
 
     inline bool IsHull() const { return 0 != (static_cast<int>(mCharacteristics) & static_cast<int>(Characteristics::Hull)); }
     inline bool IsRope() const { return 0 != (static_cast<int>(mCharacteristics) & static_cast<int>(Characteristics::Rope)); }
@@ -116,6 +118,14 @@ public:
 
 
 private:
+
+    static float CalculateStiffnessCoefficient(
+        Point const & pointA,
+        Point const & pointB);
+
+    static float CalculateDampingCoefficient(
+        Point const & pointA,
+        Point const & pointB);
 
     // Strain: 
     // 0  = no tension nor compression
@@ -132,6 +142,9 @@ private:
 	Point * const mPointB;
 	
     float const mRestLength;
+    float const mStiffnessCoefficient;
+    float const mDampingCoefficient;
+
     Characteristics const mCharacteristics;
 	Material const * const mMaterial;
 

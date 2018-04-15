@@ -57,6 +57,7 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 	= Do final round with all ships
 	+ Tell art guy
 	- Post on Forum
+	- Send email to Luke
 
 - Gfx:
 	- Optimizations:
@@ -132,36 +133,88 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 				+ Double-check new V
 			+ Make SimulationStep a templated constant (double and float)
 			+ Clean up code
-		- Perf:
-			- Get baseline (fps and trace)
-			- Do Point.MassFactor
-				- const calc'd at cctor via GameParameters::dt and GameParameters::numIterations
-				- See if can get rid of dt parameter in funcs
-			- Get baseline (fps)
-			- Do Spring.XYZFactor/s
-				- See if can get rid of dt parameter in funcs
-			- Get baseline (fps and trace)
+		= Perf:
+			+ Get baseline:
+				+ FPS: 15.8
+				+ GameController::DoStep: 44.98%
+					- UpdateDynamics: 32.96%
+						- UpdateSpringForces: 15.33%
+						- UpdatePointForces: 8.51%
+							- GetWaterHeight: 5.24%
+							- fminf: 1.23%
+						- SeaFloorCollisions: 5.40%
+							- GetOceanFloorHeight: 3.69%
+						- Integrate: 3.71%
+					- BalancePressure: 5.70%
+					- GravitateWater: 4.30%
+				+ MainFrame::Render: 46.67%
+			+ Do constants
+				+ FPS: 16.15
+			+ Do Spring.XYZFactor/s
+				+ See if can get rid of dt parameter in funcs
+				+ FPS: 16.25
+			+ Do Point.MassFactor
+				+ const calc'd at cctor via GameParameters::dt and GameParameters::numIterations
+				+ See if can get rid of dt parameter in funcs
+				+ FPS: 16.50
+			+ Do cached WaterHeight and ocean floor height
+				+ Also useful for LeakWater()
+				+ If period chosen wisely (< expected ship world width), saves on calculations
+				+ Physics::WaterSurface class, only visible by World, which exposes own getters
+					+ cctor(): allocate buffer
+					+ Update(currentTime, gameParameters): populate buffer
+					+ GetWaterHeight(x): 
+						+ Convert x to absolute sample index, via dx and taking floor
+						+ Interpolate height between asi%buffer_size and (asi+1)%buffer_size
+				+ At end:
+					+ Remove gameParameters from World::GetWaterHeight and cleanup World.h
+				+ Optimize
+			+ Get baseline:
+				+ FPS: 16.8
+				+ GameController::DoStep: 44.17%
+					- UpdateDynamics: 29.32%
+						- UpdateSpringForces: 14.10%
+						- UpdatePointForces: 6.79%
+							- fminf: 1.33%
+						- SeaFloorCollisions: 4.58%
+							- GetOceanFloorHeight: 3.65%
+								- sinf: 2.41%
+						- Integrate: 3.84%
+					- BalancePressure: 7.13%
+					- GravitateWater: 5.22%
+					- LeakWater: 0.43%
+				+ MainFrame::Render: 49.57%
+			+ test fma in Integrate
+				+ check assembly
 			- To enable SSE2, should use 4 floats:
 					- Test first: Integrate: 
 						- 1a: Do two points at a time, with twin instructions
 							- For int loop step 2 points, no remainder - see below
 						- 1b: pack Pos, Vel, Force from 2 points into vec4f
 							- Same for loop
+						- 1c: create buffers with all Pos, Vel, Force (see below) and call function with restricted pointers
 					- If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
 						- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
-						  Positions, Velocities, Forces, and Masses (or MassFactors), all
+						  Positions, Velocities, Forces, and MassFactors, all
 						  allocated and populated at Ship::Create() 
-							- Mass of a point is copied to x and y
+							- MassFactors of a point is copied to x and y
 							- Rounded to 2 (static constexpr = 16 / 2*sizeof(float) (16 = 128bit SSE, 2 = coordinates in 2D) with 0's
 						- Point has vec2f* Position, vec2f* Velocity, vec2f* Force 
 							- But own float Mass, it's const anyway
+								- See if even needed
 						- Integrate:
 							- Builds own vector of TimeSteps(and/or Factors)
 							- Test with simple 1-Point loop, compiler should make times two
-						- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force
-					
+						- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force)
+			- UpdatePointForces:
+				- Precalculate things that do not depend on position nor velocity
+					- Stored either in buffer (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
+					- Technically, would have to store separately effectiveMassMultiplier (*Mass) and effectiveBuoyancy (*Mass)
+						- But could cheat and use water height based on initial positions only, in which case
+						  we store directly StaticForce == Gravity + Water Drag
+						  - StaticForce used directly in Integrate() added to Force
 						
-		- If it works (!!!):
+		- If it works (!!!), test:
 			- See more iterations to decrease jellying 
 				- More iterations => becomes extremely strong, hence requires adjusting stiffness and possibly damping
 				- Test:
@@ -171,7 +224,7 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 				- Make test ship for it, need two floating bases with masts
 			- Set springs' K in material
 				- Fix Titanic masts
-			- Damping: experiment with global velocities
+			- Damping: experiment with global velocities (i.e. no spring damping but harder global damping)
 			- Experiment with:
 				- Runge-Kutta
 				- Semi-implicit Euler (https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf)

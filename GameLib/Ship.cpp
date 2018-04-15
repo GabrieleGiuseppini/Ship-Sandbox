@@ -963,7 +963,7 @@ void Ship::UpdatePointForces(GameParameters const & gameParameters)
         float const effectiveBuoyancy = gameParameters.BuoyancyAdjustment * point.GetBuoyancy();
 
         // Mass = own + contained water (clamped to 1)
-        float effectiveMassMultiplier = 1.0f + fminf(point.GetWater(), 1.0f) * effectiveBuoyancy;
+        float effectiveMassMultiplier = 1.0f + std::min(point.GetWater(), 1.0f) * effectiveBuoyancy;
         if (point.GetPosition().y < waterHeightAtThisPoint)
         {
             // Apply buoyancy of own mass (i.e. 1 * effectiveBuoyancy), which is

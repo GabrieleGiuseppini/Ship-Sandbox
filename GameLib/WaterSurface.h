@@ -47,12 +47,14 @@ private:
     // Period of the sum of the frequency components
     static constexpr float Period = 20.0f * Pi<float>;
 
-    // The x step of the samples;
-    // a higher value means more resolution at the expense of the cost of Update()
-    static constexpr float Dx = 0.2f;
+    // The number of samples;
+    // a higher value means more resolution at the expense of the cost of Update().
+    // Power of two's allow the compiler to optimize!
+    static constexpr int64_t SamplesCount = 512;
 
-    // The number of samples
-    static constexpr int64_t SamplesCount = static_cast<int64_t>(Period / Dx);
+    // The x step of the samples
+    static constexpr float Dx = Period / static_cast<float>(SamplesCount);
+
 
     std::unique_ptr<float[]> mSamples;    
 };

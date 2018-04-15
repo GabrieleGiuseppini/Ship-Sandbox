@@ -170,7 +170,7 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 					+ Remove gameParameters from World::GetWaterHeight and cleanup World.h
 				+ Optimize
 			+ Get baseline:
-				+ FPS: 16.8
+				+ FPS: 16.9
 				+ GameController::DoStep: 44.17%
 					- UpdateDynamics: 29.32%
 						- UpdateSpringForces: 14.10%

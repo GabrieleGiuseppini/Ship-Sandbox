@@ -22,6 +22,7 @@ public:
 
     enum class Characteristics
     {
+        None    = 0,
         Hull    = 1,    // Does not take water
         Rope    = 2     // Ropes are drawn differently
     };
@@ -111,11 +112,12 @@ public:
     inline float GetStiffnessCoefficient() const { return mStiffnessCoefficient; }
     inline float GetDampingCoefficient() const { return mDampingCoefficient; }
 
-    inline bool IsHull() const { return 0 != (static_cast<int>(mCharacteristics) & static_cast<int>(Characteristics::Hull)); }
-    inline bool IsRope() const { return 0 != (static_cast<int>(mCharacteristics) & static_cast<int>(Characteristics::Rope)); }
+    inline bool IsHull() const;
+    inline bool IsRope() const;
 
 	inline Material const * GetMaterial() const { return mMaterial; };
 
+    inline float GetWaterPermeability() const { return mWaterPermeability; }
 
 private:
 
@@ -145,11 +147,30 @@ private:
     float mStiffnessCoefficient;
     float mDampingCoefficient;
 
-    Characteristics const mCharacteristics;
+    Characteristics const mCharacteristics;    
 	Material const * const mMaterial;
+
+    // Water propagates through this spring according to this value;
+    // 0.0 make water not propagate
+    float mWaterPermeability;
 
     // State variable that tracks when we enter and exit the stressed state
     bool mIsStressed;
 };
 
+}
+
+constexpr Physics::Spring::Characteristics operator&(Physics::Spring::Characteristics a, Physics::Spring::Characteristics b)
+{
+    return static_cast<Physics::Spring::Characteristics>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+inline bool Physics::Spring::IsHull() const 
+{ 
+    return Physics::Spring::Characteristics::None != (mCharacteristics & Physics::Spring::Characteristics::Hull); 
+}
+
+inline bool Physics::Spring::IsRope() const 
+{ 
+    return Physics::Spring::Characteristics::None != (mCharacteristics & Physics::Spring::Characteristics::Rope); 
 }

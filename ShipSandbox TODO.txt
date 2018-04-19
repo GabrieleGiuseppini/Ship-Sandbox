@@ -192,12 +192,15 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 			+ UpdateSpringForces:
 				+ Don't check for IsDeleted, but just set coeff's to zero for deleted springs
 				+ FPS: 17.4/17.5
-			- Spring::WaterPermeability
-				- Set to 0.0 if hull spring or deleted, else 1.0f
-					- Set at cctor
-					- Set to 0.0 at Destroy() ("...avoid draining water to destroyed points...")
-				- Remove two if's at BalancePressure and GravitateWater
-				- Take baseline:
+			= Spring::WaterPermeability
+				+ Set to 0.0 if hull spring or deleted, else 1.0f
+					+ Set at cctor
+					+ Set to 0.0 at Destroy() ("...avoid draining water to destroyed points...")
+				+ Remove two if's at BalancePressure and GravitateWater
+				- Take new baseline: 17.3/17.5
+				- Split Spring::WaterPermeability in two, with pre-calculated values:
+					- WaterGravitationFactor
+					- WaterPropagationFactor
 			- To enable SSE2, should use 4 floats:
 					- Test first: Integrate: 
 						- 1a: pack Pos, Vel, Force from 2 points into vec4f
@@ -216,6 +219,8 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 							- Builds own 4-dimensional vector of dt's and GlobalDampCoefficient's
 							- Test with simple 1-Point loop, compiler should make times two
 						- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force)
+			- If SSE2 works, optimize also:
+				- BalancePressure, GravitateWater
 			- UpdatePointForces:
 				- Precalculate things that do not depend on position nor velocity
 					- Stored either in buffer (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)

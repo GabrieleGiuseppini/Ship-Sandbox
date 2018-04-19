@@ -1194,28 +1194,27 @@ void Ship::GravitateWater(GameParameters const & gameParameters)
     // Visit all connected non-hull points - i.e. non-hull springs
     for (Spring & spring : mAllSprings)
     {
-        // Don't visit destroyed springs, or we run the risk of being affected by destroyed connected points
-        if (!spring.IsDeleted())
-        {
-            // Do not propagate water from hull point to non-hull point, and viceversa
-            if (!spring.IsHull())
-            {
-                Point * const pointA = spring.GetPointA();
-                Point * const pointB = spring.GetPointB();
+        Point * const pointA = spring.GetPointA();
+        Point * const pointB = spring.GetPointB();
 
-                // cos_theta > 0 => pointA above pointB
-                float cos_theta = (pointB->GetPosition() - pointA->GetPosition()).normalise().dot(gameParameters.GravityNormal);
+        // cos_theta > 0 => pointA above pointB
+        float cos_theta = (pointB->GetPosition() - pointA->GetPosition()).normalise().dot(gameParameters.GravityNormal);
+
+        // This amount of water falls in a second; 
+        // a value too high causes all the water to be stuffed into the lowest node
+        static constexpr float velocity = 0.60f;
                 
-                // The 0.60 can be tuned, it's just to stop all the water being stuffed into the lowest node...
-                float correction = 0.60f * cos_theta * GameParameters::SimulationStepTimeDuration<float> * (cos_theta > 0.0f ? pointA->GetWater() : pointB->GetWater());
-                // TODO: use code below and store at Spring::WaterGravityFactorA/B
-                ////float cos_theta_select = (1.0f + cos_theta) / 2.0f;
-                ////float correction = 0.60f * cos_theta_select * pointA->GetWater() - 0.60f * (1.0f - cos_theta_select) * pointB->GetWater();
-                ////correction *= GameParameters::SimulationStepTimeDuration<float>;
-                pointA->AddWater(-correction);
-                pointB->AddWater(correction);
-            }
-        }
+        // Calculate amount of water that falls from highest point to lowest point
+        float correction = spring.GetWaterPermeability() * (velocity * GameParameters::SimulationStepTimeDuration<float>)
+            * cos_theta  * (cos_theta > 0.0f ? pointA->GetWater() : pointB->GetWater());
+
+        // TODO: use code below and store at Spring::WaterGravityFactorA/B
+        ////float cos_theta_select = (1.0f + cos_theta) / 2.0f;
+        ////float correction = 0.60f * cos_theta_select * pointA->GetWater() - 0.60f * (1.0f - cos_theta_select) * pointB->GetWater();
+        ////correction *= GameParameters::SimulationStepTimeDuration<float>;
+
+        pointA->AddWater(-correction);
+        pointB->AddWater(correction);
     }
 }
 
@@ -1232,27 +1231,22 @@ void Ship::BalancePressure(GameParameters const & /*gameParameters*/)
     // Visit all connected non-hull points - i.e. non-hull springs
     for (Spring & spring : mAllSprings)
     {
-        // Don't visit destroyed springs, or we run the risk of being affected by destroyed connected points
-        if (!spring.IsDeleted())
-        {
-            // Do not propagate water from hull point to non-hull point, and viceversa
-            if (!spring.IsHull())
-            {
-                Point * const pointA = spring.GetPointA();
-                float const aWater = pointA->GetWater();
+        Point * const pointA = spring.GetPointA();
+        float const aWater = pointA->GetWater();
 
-                Point * const pointB = spring.GetPointB();
-                float const bWater = pointB->GetWater();
+        Point * const pointB = spring.GetPointB();
+        float const bWater = pointB->GetWater();
 
-                if (aWater < 1 && bWater < 1)   // if water content below threshold, no need to force water out
-                    continue;
+        if (aWater < 1 && bWater < 1)   // if water content below threshold, no need to force water out
+            continue;
 
-                // Move water from more wet to less wet
-                float correction = (bWater - aWater) * 2.5f * GameParameters::SimulationStepTimeDuration<float>; // can tune this number; value of 1 means will equalise in 1 second.
-                pointA->AddWater(correction);
-                pointB->AddWater(-correction);
-            }
-        }
+        // This amount of water difference propagates in 1 second
+        static constexpr float velocity = 2.5f;
+
+        // Move water from more wet to less wet
+        float const correction = spring.GetWaterPermeability() * (bWater - aWater) * (velocity * GameParameters::SimulationStepTimeDuration<float>);
+        pointA->AddWater(correction);
+        pointB->AddWater(-correction);
     }
 }
 

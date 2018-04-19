@@ -36,6 +36,7 @@ Spring::Spring(
     , mDampingCoefficient(CalculateDampingCoefficient(*mPointA, *mPointB))
     , mCharacteristics(characteristics)
 	, mMaterial(material)
+    , mWaterPermeability(Characteristics::None != (mCharacteristics & Characteristics::Hull) ? 0.0f : 1.0f)
     , mIsStressed(false)
 {
     // Add ourselves to our endpoints
@@ -64,11 +65,15 @@ void Spring::Destroy(Point const * pointSource)
     if (mPointB != pointSource)
         mPointB->RemoveConnectedSpring(this);
 
-    // Zero out our factors, so that we can still calculate Hooke's 
+    // Zero out our dynamics factors, so that we can still calculate Hooke's 
     // and damping forces for this spring without running the risk of 
     // affecting non-deleted points
     mStiffnessCoefficient = 0.0f;
     mDampingCoefficient = 0.0f;
+
+    // Zero out our water permeability, to
+    // avoid draining water to destroyed points
+    mWaterPermeability = 0.0f;
 
     // Remove ourselves
     ShipElement::Destroy();

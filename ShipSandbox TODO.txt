@@ -57,10 +57,14 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 	= Do final round with all ships
 	+ Tell art guy
 	- Post on Forum
-	- Send email to Luke
+	+ Send email to Luke
 
 - Gfx:
 	- Optimizations:
+		- We don't need redundant triangles
+			- Row visit: for each point *after* the very first of a streak, only do triangles up to 90 degrees
+				- But keep doing all springs
+				- use boolean isInShip, init=false, set to true at end if point exists and set to false otherwise
 		- See if drawing springs & triangles with Z buffer and depth test helps (for springs' fragment shader)
 	- AmbientLightIntensity:
 		+ Use also in RenderContext::RenderStart() for clear (sky) color
@@ -79,6 +83,8 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 		- Point: Pinned Characteristic
 		- Point::Update: do nothing if pinned
 			- Springs: TBD - it's expensive to check for each point
+			- Set MassFactor to zero or recalc - via helper - at TogglePin()
+				- Also set velocity to zero @ pin time
 		- ShipRenderContext: draw pinned points (via new Render::Upload, done by Ship in same loop as UploadShipPoint) 
 		  using color ? and texture (centered) with bull's eye
 			- Draw at very end of Render(), after stressed springs
@@ -181,11 +187,17 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 					- GravitateWater: 4.88%
 					- LeakWater: 0.22%
 				+ MainFrame::Render: 48.99%
-			+ test fma in Integrate
-				+ check assembly: nope, it's function call!
+			+ Test fma in Integrate()
+				+ check assembly: REJECTED, it's function call!
 			+ UpdateSpringForces:
 				+ Don't check for IsDeleted, but just set coeff's to zero for deleted springs
 				+ FPS: 17.4/17.5
+			- Spring::WaterPermeability
+				- Set to 0.0 if hull spring or deleted, else 1.0f
+					- Set at cctor
+					- Set to 0.0 at Destroy() ("...avoid draining water to destroyed points...")
+				- Remove two if's at BalancePressure and GravitateWater
+				- Take baseline:
 			- To enable SSE2, should use 4 floats:
 					- Test first: Integrate: 
 						- 1a: pack Pos, Vel, Force from 2 points into vec4f
@@ -201,7 +213,7 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 							- But own float Mass, it's const anyway
 								- See if even needed
 						- Integrate:
-							- Builds own vector of TimeSteps(and/or Factors)
+							- Builds own 4-dimensional vector of dt's and GlobalDampCoefficient's
 							- Test with simple 1-Point loop, compiler should make times two
 						- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force)
 			- UpdatePointForces:
@@ -211,16 +223,29 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 						- But could cheat and use water height based on initial positions only, in which case
 						  we store directly StaticForce == Gravity + Water Drag
 						  - StaticForce used directly in Integrate() added to Force
+			- GravitateWater:
+				- Calculate once and for all cos theta's at first iteration
+					- !!! Actually, calculate WaterGravityFactorA = dt*0.6*(1+cos_theta)/2, WaterGravityFactorB = -dt*0.6*(1-cos_theta)/2
+						float cos_theta_select = (1.0f + cos_theta) / 2.0f;
+				                float correction = 0.60f * cos_theta_select * pointA->GetWater() - 0.60f * (1.0f - cos_theta_select) * pointB->GetWater();
+				                correction *= GameParameters::SimulationStepTimeDuration<float>;
+					- Test (check disassembly) with templated lambda (Spring const &)->void
+						- First one calculates factors and stores them in Spring
+						- All others empty
+						- All iters take factors from Spring after calling lambda
 						
 		- If it works (!!!), test:
 			- See more iterations to decrease jellying 
+				- Recalc both Spring::K's in terms of global, so that we can calculate the local ones based off NumIterations
 				- More iterations => becomes extremely strong, hence requires adjusting stiffness and possibly damping
 				- Test:
 					- Self-adjustment of kDamp based off paper's formula (H and L bounds)
 					- Debug to see if bounds ever exceeded
 			- Fix ropes (they don't move as fluid and continuous as before)
 				- Make test ship for it, need two floating bases with masts
+				- Test with own K for ropes (start with half K)
 			- Set springs' K in material
+				- Substitutes C (0.8) in Spring::CalculateStiffnessCoefficient()
 				- Fix Titanic masts
 			- Experiment with:
 				- Runge-Kutta
@@ -230,6 +255,8 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 		+ Did original game propagate water also through hull springs? YES. How did hull thin dividers work? THEY DIDN'T WORK
 		+ Add Point::Hull Characteristic, and don't leak/propagate(incl. gravitate) water if at least one of the two points is hull			
 			+ Alternatively: just make a spring hull if one point is hull; test it
+		- BalancePressure: see if shouldn't average water among two points - do we lose waves if we do so?
+		- GravitateWater: can avoid checking sign of cos theta - using minus to still move water from higher to lower?
 		- BalancePressure: use gradient, it seems we stuff too much water into points with already too much water
 		- GravitateWater: try inverse visit (from H to L)
 			- Requires PointerVector::rbegin,rend

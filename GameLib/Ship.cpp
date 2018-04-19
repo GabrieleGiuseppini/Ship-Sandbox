@@ -948,7 +948,9 @@ void Ship::UpdateDrawForces(
 void Ship::UpdatePointForces(GameParameters const & gameParameters)
 {
     // Underwater points feel this amount of water drag
-    constexpr float WaterDragCoefficient = 0.010f; //1.0f - powf(0.6f, 0.02f)
+    //
+    // The higher the value, the more viscous the water looks when a body moves through it
+    constexpr float WaterDragCoefficient = 0.020f; // ~= 1.0f - powf(0.6f, 0.02f)
     
     for (Point & point : mAllPoints)
     {
@@ -1034,10 +1036,10 @@ void Ship::Integrate()
 {
     static constexpr float dt = GameParameters::DynamicsSimulationStepTimeDuration<float>;
 
-    // Global drag - lowers velocity uniformly, damping oscillations originating between gravity and buoyancy
+    // Global damp - lowers velocity uniformly, damping oscillations originating between gravity and buoyancy
     // Note: it's extremely sensitive, big difference between 0.9995 and 0.9998
     // Note: it's not technically a drag force, it's just a dimensionless deceleration
-    float constexpr GlobalDragCoefficient = 0.9995;
+    float constexpr GlobalDampCoefficient = 0.9995;
 
     for (Point & point : mAllPoints)
     {
@@ -1045,7 +1047,7 @@ void Ship::Integrate()
         // - For each point: 6 * mul + 4 * add
         auto const deltaPos = point.GetVelocity() * dt + point.GetForce() * point.GetMassFactor();
         point.SetPosition(point.GetPosition() + deltaPos);
-        point.SetVelocity(deltaPos * GlobalDragCoefficient / dt);
+        point.SetVelocity(deltaPos * GlobalDampCoefficient / dt);
         point.ZeroForce();
     }
 }
@@ -1203,9 +1205,13 @@ void Ship::GravitateWater(GameParameters const & gameParameters)
 
                 // cos_theta > 0 => pointA above pointB
                 float cos_theta = (pointB->GetPosition() - pointA->GetPosition()).normalise().dot(gameParameters.GravityNormal);
-
+                
                 // The 0.60 can be tuned, it's just to stop all the water being stuffed into the lowest node...
                 float correction = 0.60f * cos_theta * GameParameters::SimulationStepTimeDuration<float> * (cos_theta > 0.0f ? pointA->GetWater() : pointB->GetWater());
+                // TODO: use code below and store at Spring::WaterGravityFactorA/B
+                ////float cos_theta_select = (1.0f + cos_theta) / 2.0f;
+                ////float correction = 0.60f * cos_theta_select * pointA->GetWater() - 0.60f * (1.0f - cos_theta_select) * pointB->GetWater();
+                ////correction *= GameParameters::SimulationStepTimeDuration<float>;
                 pointA->AddWater(-correction);
                 pointB->AddWater(correction);
             }

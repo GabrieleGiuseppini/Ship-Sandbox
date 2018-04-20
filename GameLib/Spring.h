@@ -20,7 +20,7 @@ class Spring : public ShipElement<Spring>
 {
 public:
 
-    enum class Characteristics
+    enum class Characteristics : uint8_t
     {
         None    = 0,
         Hull    = 1,    // Does not take water

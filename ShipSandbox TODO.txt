@@ -41,30 +41,83 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 		- Done in FB branch
 	- No default args @ vec cctors
 		- Done in FB branch
-	
+
+- Optimizations:
+	- Take full baseline first
+	- We don't need redundant triangles
+		- Row visit: for each point *after* the very first of a streak, only do triangles up to 90 degrees
+			- But keep doing all springs
+			- use boolean isInShip, init=false, set to true at end if point exists and set to false otherwise
+	- SSE2:
+		- Test first: Integrate: 
+			- 1a: pack Pos, Vel, Force from 2 points into vec4f
+				- For loop with two points at a time
+			- 1b: create buffers with all Pos, Vel, Force (see below) and call function with restricted pointers
+	- Point & Spring Destructuring:
+		- Test first with GravitateWater and BalancePressure if N buffers make a difference vs 1 larger buffer:
+			- 1a: explode Spring as Spring (==now) and Spring_Water (Point*,Point*,Coeff1,Coeff2)
+			- 1b: explode Spring as Spring (==now), Spring_Point(Point*,Point*), and Spring_Water (Coeff1,Coeff2)
+		- Replace Point, Spring with Points, Springs
+			- They contain N buffers of non-overlapping structs
+				- Points: Position, Velocity, Force, MassFactors, ...
+				- Springs: Points, DynamicsCoefficients, WaterCoefficients (see below), ...
+				- Details depend on SSE2 test results; if we go for SSE2:
+					- Each struct would actually be union: (float[4], {vec2f cPoint1, vec2f cPoint2})
+					- MassFactors of a point is copied to x and y
+					- Rounded to 2 (static constexpr = 16 / 2*sizeof(float) (16 = 128bit SSE, 2 = coordinates in 2D) with 0's
+					
+			- They expose operations on single elements, via 32-bit index argument
+			- Pointers to springs, point are replaced by 32-bit indices
+				- Funcs that need to follow pointers (e.g. Destroy()) also must take whole containers 
+		- Integrate:
+			- Builds own 4-dimensional vector of dt's and GlobalDampCoefficient's
+			- Test with simple 1-Point loop, compiler should make times two
+
+		- TODOOLD: If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
+			- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
+			  Positions, Velocities, Forces, and MassFactors, all
+			  allocated and populated at Ship::Create() 
+				- MassFactors of a point is copied to x and y
+				- Rounded to 2 (static constexpr = 16 / 2*sizeof(float) (16 = 128bit SSE, 2 = coordinates in 2D) with 0's
+			- Point has vec2f* Position, vec2f* Velocity, vec2f* Force 
+				- But own float Mass, it's const anyway
+					- See if even needed
+			- Integrate:
+				- Builds own 4-dimensional vector of dt's and GlobalDampCoefficient's
+				- Test with simple 1-Point loop, compiler should make times two
+			- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force)
+	- Triangle vertex cache optimization
+	- Spring vertex cache optimization
+	- UpdatePointForces:
+		- Precalculate things that do not depend on position nor velocity
+			- Stored either in buffer (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
+			- Technically, would have to store separately effectiveMassMultiplier (*Mass) and effectiveBuoyancy (*Mass)
+				- But could cheat and use water height based on initial positions only, in which case
+				  we store directly StaticForce == Gravity + Water Drag
+				  - StaticForce used directly in Integrate() added to Force
+	- Split Spring::WaterPermeability in two, with pre-calculated values:
+		- WaterGravitationFactor
+		- WaterPropagationFactor
+	- GravitateWater:
+		- Calculate once and for all cos theta's at first iteration
+			- !!! Actually, calculate WaterGravityFactorA = dt*0.6*(1+cos_theta)/2, WaterGravityFactorB = -dt*0.6*(1-cos_theta)/2
+				float cos_theta_select = (1.0f + cos_theta) / 2.0f;
+		                float correction = 0.60f * cos_theta_select * pointA->GetWater() - 0.60f * (1.0f - cos_theta_select) * pointB->GetWater();
+		                correction *= GameParameters::SimulationStepTimeDuration<float>;
+			- Test (check disassembly) with templated lambda (Spring const &)->void
+				- First one calculates factors and stores them in Spring
+				- All others empty
+				- All iters take factors from Spring after calling lambda
+	- If SSE2 works, see if can parallelize also:
+		- BalancePressure, GravitateWater
+						
+
 - Release:
-	+ Do structure first (above)
-	+ Check if less rope mass makes empress of britain not break
-	+ Add all other ships 
-		+ Remember: uppercase and spaces filenames
-	+ Do new .shp's:
-		+ Carnival
-		+ Titanic
-	+ Rerun perf profiling
-	+ Lower volume of stress sounds, so that break sounds are louder
-	+ @Release only: make Krafting.shp the default ship
-	+ Screenshots @ github readme
-	= Do final round with all ships
-	+ Tell art guy
+	- Do final round with all ships
 	- Post on Forum
-	+ Send email to Luke
 
 - Gfx:
 	- Optimizations:
-		- We don't need redundant triangles
-			- Row visit: for each point *after* the very first of a streak, only do triangles up to 90 degrees
-				- But keep doing all springs
-				- use boolean isInShip, init=false, set to true at end if point exists and set to false otherwise
 		- See if drawing springs & triangles with Z buffer and depth test helps (for springs' fragment shader)
 	- AmbientLightIntensity:
 		+ Use also in RenderContext::RenderStart() for clear (sky) color
@@ -81,10 +134,9 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 - Dynamics:
 	- Pin points
 		- Point: Pinned Characteristic
-		- Point::Update: do nothing if pinned
-			- Springs: TBD - it's expensive to check for each point
-			- Set MassFactor to zero or recalc - via helper - at TogglePin()
-				- Also set velocity to zero @ pin time
+		- Point::TogglePin():
+			- If pinning: set MassFactor to zero, and set velocity to zero
+			- If unpinning: recalc MassFactor (using same helper used at cctor)
 		- ShipRenderContext: draw pinned points (via new Render::Upload, done by Ship in same loop as UploadShipPoint) 
 		  using color ? and texture (centered) with bull's eye
 			- Draw at very end of Render(), after stressed springs
@@ -94,6 +146,7 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 			- Cursor is a pin
 	- Frontier:
 		- Only for non-rope points - rope points never take part in frontier
+		- TODO: all following might have to be revisited
 		- Realize that a node can belong to up to 4 frontiers (center of 4 holes)
 			- And a point deletion might cause a merge of the four
 		- Frontier is set of points, marked as frontier, and connected to each other via 
@@ -111,150 +164,21 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 						- If one of the connected points is already a frontier, then the new frontier points
 						  take that frontierId
 						- TODO
-	= Test completely force-driven dynamics:
-		+ Create branch
-		+ Each iteration (test initially with 1 iteration per step; then see with more, but scale dt)
-			+ Apply forces: 
-				+ For each spring:
-					+ Spring force (Stooke's law - need k, try fixed at first)
-					+ Damping (try along spring first - like now)
-					+ see https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf for equations
-			+ For each point:
-				+ Gravity (with buoyance)
-				+ Drag
-			+ Apply verlet integration
-			+ Zero force
-			+ ...do tension strain check...
-			+ ...electrical and water...
-		+ Improve:
-			+ Masses				
-			+ Gamma - from original (NOT from original, doesn't work)
-			+ Better grab force:
-				+ Have optional<float force, vec2f position>; at each iteration, if not none:
-					- Do force spreading with force/NumIterations
-				+ Also, all non-static GameParameters initialized at cctor in cpp				
-				+ Check ropes afterwards
-			+ Collision with sea floor and (original) "bounce"
-				+ v += adjusted Pos - pre-adjusted Pos
-				+ Double-check new V
-			+ Make SimulationStep a templated constant (double and float)
-			+ Clean up code
-		= Perf:
-			+ Get baseline:
-				+ FPS: 15.8
-				+ GameController::DoStep: 44.98%
-					- UpdateDynamics: 32.96%
-						- UpdateSpringForces: 15.33%
-						- UpdatePointForces: 8.51%
-							- GetWaterHeight: 5.24%
-							- fminf: 1.23%
-						- SeaFloorCollisions: 5.40%
-							- GetOceanFloorHeight: 3.69%
-						- Integrate: 3.71%
-					- BalancePressure: 5.70%
-					- GravitateWater: 4.30%
-				+ MainFrame::Render: 46.67%
-			+ Do constants
-				+ FPS: 16.15
-			+ Do Spring.XYZFactor/s
-				+ See if can get rid of dt parameter in funcs
-				+ FPS: 16.25
-			+ Do Point.MassFactor
-				+ const calc'd at cctor via GameParameters::dt and GameParameters::numIterations
-				+ See if can get rid of dt parameter in funcs
-				+ FPS: 16.50
-			+ Do cached WaterHeight and ocean floor height
-				+ Also useful for LeakWater()
-				+ If period chosen wisely (< expected ship world width), saves on calculations
-				+ Physics::WaterSurface class, only visible by World, which exposes own getters
-					+ cctor(): allocate buffer
-					+ Update(currentTime, gameParameters): populate buffer
-					+ GetWaterHeight(x): 
-						+ Convert x to absolute sample index, via dx and taking floor
-						+ Interpolate height between asi%buffer_size and (asi+1)%buffer_size
-				+ At end:
-					+ Remove gameParameters from World::GetWaterHeight and cleanup World.h
-				+ Optimize
-			+ Get baseline:
-				+ FPS: 17.0/17.2
-				+ GameController::DoStep: 41.85%
-					- UpdateDynamics: 28.10%
-						- UpdateSpringForces: 13.90%
-						- UpdatePointForces: 5.87%
-						- HandleCollisionsWithSeaFloor: 4.27%
-						- Integrate: 4.24%
-					- BalancePressure: 6.47%
-					- GravitateWater: 4.88%
-					- LeakWater: 0.22%
-				+ MainFrame::Render: 48.99%
-			+ Test fma in Integrate()
-				+ check assembly: REJECTED, it's function call!
-			+ UpdateSpringForces:
-				+ Don't check for IsDeleted, but just set coeff's to zero for deleted springs
-				+ FPS: 17.4/17.5
-			= Spring::WaterPermeability
-				+ Set to 0.0 if hull spring or deleted, else 1.0f
-					+ Set at cctor
-					+ Set to 0.0 at Destroy() ("...avoid draining water to destroyed points...")
-				+ Remove two if's at BalancePressure and GravitateWater
-				- Take new baseline: 17.3/17.5
-				- Split Spring::WaterPermeability in two, with pre-calculated values:
-					- WaterGravitationFactor
-					- WaterPropagationFactor
-			- To enable SSE2, should use 4 floats:
-					- Test first: Integrate: 
-						- 1a: pack Pos, Vel, Force from 2 points into vec4f
-							- For loop with two points at a time
-						- 1b: create buffers with all Pos, Vel, Force (see below) and call function with restricted pointers
-					- If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
-						- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
-						  Positions, Velocities, Forces, and MassFactors, all
-						  allocated and populated at Ship::Create() 
-							- MassFactors of a point is copied to x and y
-							- Rounded to 2 (static constexpr = 16 / 2*sizeof(float) (16 = 128bit SSE, 2 = coordinates in 2D) with 0's
-						- Point has vec2f* Position, vec2f* Velocity, vec2f* Force 
-							- But own float Mass, it's const anyway
-								- See if even needed
-						- Integrate:
-							- Builds own 4-dimensional vector of dt's and GlobalDampCoefficient's
-							- Test with simple 1-Point loop, compiler should make times two
-						- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force)
-			- If SSE2 works, optimize also:
-				- BalancePressure, GravitateWater
-			- UpdatePointForces:
-				- Precalculate things that do not depend on position nor velocity
-					- Stored either in buffer (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
-					- Technically, would have to store separately effectiveMassMultiplier (*Mass) and effectiveBuoyancy (*Mass)
-						- But could cheat and use water height based on initial positions only, in which case
-						  we store directly StaticForce == Gravity + Water Drag
-						  - StaticForce used directly in Integrate() added to Force
-			- GravitateWater:
-				- Calculate once and for all cos theta's at first iteration
-					- !!! Actually, calculate WaterGravityFactorA = dt*0.6*(1+cos_theta)/2, WaterGravityFactorB = -dt*0.6*(1-cos_theta)/2
-						float cos_theta_select = (1.0f + cos_theta) / 2.0f;
-				                float correction = 0.60f * cos_theta_select * pointA->GetWater() - 0.60f * (1.0f - cos_theta_select) * pointB->GetWater();
-				                correction *= GameParameters::SimulationStepTimeDuration<float>;
-					- Test (check disassembly) with templated lambda (Spring const &)->void
-						- First one calculates factors and stores them in Spring
-						- All others empty
-						- All iters take factors from Spring after calling lambda
-						
-		- If it works (!!!), test:
-			- See more iterations to decrease jellying 
-				- Recalc both Spring::K's in terms of global, so that we can calculate the local ones based off NumIterations
-				- More iterations => becomes extremely strong, hence requires adjusting stiffness and possibly damping
-				- Test:
-					- Self-adjustment of kDamp based off paper's formula (H and L bounds)
-					- Debug to see if bounds ever exceeded
-			- Fix ropes (they don't move as fluid and continuous as before)
-				- Make test ship for it, need two floating bases with masts
-				- Test with own K for ropes (start with half K)
-			- Set springs' K in material
-				- Substitutes C (0.8) in Spring::CalculateStiffnessCoefficient()
-				- Fix Titanic masts
-			- Experiment with:
-				- Runge-Kutta
-				- Semi-implicit Euler (https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf)
+	- See more iterations to decrease jellying 
+		- Recalc both Spring::K's in terms of global, so that we can calculate the local ones based off NumIterations
+		- More iterations => becomes extremely strong, hence requires adjusting stiffness and possibly damping
+		- Test:
+			- Self-adjustment of kDamp based off paper's formula (H and L bounds)
+			- Debug to see if bounds ever exceeded
+	- Set springs' K in material
+		- Substitutes C (0.8) in Spring::CalculateStiffnessCoefficient()
+		- Fix Titanic masts
+	- Fix ropes (they don't move as fluid and continuous as before)
+		- Make test ship for it, need two floating bases with masts
+		- Test with own K for ropes (start with half K)
+	- Experiment with:
+		- Runge-Kutta
+		- Semi-implicit Euler (https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf)
 	- Do we really need Spring::Damp 3 times? Would once with a higher coeff suffice?
 	- Water:
 		+ Did original game propagate water also through hull springs? YES. How did hull thin dividers work? THEY DIDN'T WORK
@@ -266,6 +190,8 @@ NOTE: fps drop is wholly due to additional vertex shader outputs; it has
 		- GravitateWater: try inverse visit (from H to L)
 			- Requires PointerVector::rbegin,rend
 		- Try directional BalancePressure?
+		- Make waves with Shallow Water Equations plus breaking waves
+			- And if frontier works, change height when frontier touches water for the first time
 	- DestroyAt:
 		- Test: Spring::Destroy() only destroys triangles that contain A-B
 			- Should definitely make both A and B leak, as they both now have an adjacent hole
@@ -1011,6 +937,93 @@ IF WX:
 			+ Check if also in old program Titanic.png had non-wet hull rudder: YES
 			+ Less hull material in Titanic, but maintain strength
 			+ Test Titanic afterwards
+	+ Test completely force-driven dynamics:
+		+ Create branch
+		+ Each iteration (test initially with 1 iteration per step; then see with more, but scale dt)
+			+ Apply forces: 
+				+ For each spring:
+					+ Spring force (Stooke's law - need k, try fixed at first)
+					+ Damping (try along spring first - like now)
+					+ see https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf for equations
+			+ For each point:
+				+ Gravity (with buoyance)
+				+ Drag
+			+ Apply verlet integration
+			+ Zero force
+			+ ...do tension strain check...
+			+ ...electrical and water...
+		+ Improve:
+			+ Masses				
+			+ Gamma - from original (NOT from original, doesn't work)
+			+ Better grab force:
+				+ Have optional<float force, vec2f position>; at each iteration, if not none:
+					- Do force spreading with force/NumIterations
+				+ Also, all non-static GameParameters initialized at cctor in cpp				
+				+ Check ropes afterwards
+			+ Collision with sea floor and (original) "bounce"
+				+ v += adjusted Pos - pre-adjusted Pos
+				+ Double-check new V
+			+ Make SimulationStep a templated constant (double and float)
+			+ Clean up code
+		+ Perf:
+			+ Get baseline:
+				+ FPS: 15.8
+				+ GameController::DoStep: 44.98%
+					- UpdateDynamics: 32.96%
+						- UpdateSpringForces: 15.33%
+						- UpdatePointForces: 8.51%
+							- GetWaterHeight: 5.24%
+							- fminf: 1.23%
+						- SeaFloorCollisions: 5.40%
+							- GetOceanFloorHeight: 3.69%
+						- Integrate: 3.71%
+					- BalancePressure: 5.70%
+					- GravitateWater: 4.30%
+				+ MainFrame::Render: 46.67%
+			+ Do constants
+				+ FPS: 16.15
+			+ Do Spring.XYZFactor/s
+				+ See if can get rid of dt parameter in funcs
+				+ FPS: 16.25
+			+ Do Point.MassFactor
+				+ const calc'd at cctor via GameParameters::dt and GameParameters::numIterations
+				+ See if can get rid of dt parameter in funcs
+				+ FPS: 16.50
+			+ Do cached WaterHeight and ocean floor height
+				+ Also useful for LeakWater()
+				+ If period chosen wisely (< expected ship world width), saves on calculations
+				+ Physics::WaterSurface class, only visible by World, which exposes own getters
+					+ cctor(): allocate buffer
+					+ Update(currentTime, gameParameters): populate buffer
+					+ GetWaterHeight(x): 
+						+ Convert x to absolute sample index, via dx and taking floor
+						+ Interpolate height between asi%buffer_size and (asi+1)%buffer_size
+				+ At end:
+					+ Remove gameParameters from World::GetWaterHeight and cleanup World.h
+				+ Optimize
+			+ Get baseline:
+				+ FPS: 17.0/17.2
+				+ GameController::DoStep: 41.85%
+					- UpdateDynamics: 28.10%
+						- UpdateSpringForces: 13.90%
+						- UpdatePointForces: 5.87%
+						- HandleCollisionsWithSeaFloor: 4.27%
+						- Integrate: 4.24%
+					- BalancePressure: 6.47%
+					- GravitateWater: 4.88%
+					- LeakWater: 0.22%
+				+ MainFrame::Render: 48.99%
+			+ Test fma in Integrate()
+				+ check assembly: REJECTED, it's function call!
+			+ UpdateSpringForces:
+				+ Don't check for IsDeleted, but just set coeff's to zero for deleted springs
+				+ FPS: 17.4/17.5
+			+ Spring::WaterPermeability
+				+ Set to 0.0 if hull spring or deleted, else 1.0f
+					+ Set at cctor
+					+ Set to 0.0 at Destroy() ("...avoid draining water to destroyed points...")
+				+ Remove two if's at BalancePressure and GravitateWater
+				+ FPS: 17.3/17.5
 
 + Debug light/drag issue
 	+ Could be due to distance too close and shooting light to sky
@@ -1193,6 +1206,20 @@ IF WX:
 + Compare old (released) look with this one, and see if there are changes (in phys, render,...) to take in
 	+ Also jellyfish fixed in 1.2.6? NO
 
++ Release:
+	+ Do structure first (above)
+	+ Check if less rope mass makes empress of britain not break
+	+ Add all other ships 
+		+ Remember: uppercase and spaces filenames
+	+ Do new .shp's:
+		+ Carnival
+		+ Titanic
+	+ Rerun perf profiling
+	+ Lower volume of stress sounds, so that break sounds are louder
+	+ @Release only: make Krafting.shp the default ship
+	+ Screenshots @ github readme
+	+ Tell art guy
+	+ Send email to Luke
 
 ==============================================
         // Inputs from previous shader

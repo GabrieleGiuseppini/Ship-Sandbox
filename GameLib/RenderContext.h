@@ -443,12 +443,25 @@ public:
             connectedComponentId);
     }
 
+    void UploadShipElementsEnd(int shipId)
+    {
+        assert(shipId < mShips.size());
+
+        mShips[shipId]->UploadElementsEnd();
+    }
+
+    inline void UploadShipElementStressedSpringsStart(int shipId)
+    {
+        assert(shipId < mShips.size());
+
+        mShips[shipId]->UploadElementStressedSpringsStart();
+    }
+
     inline void UploadShipElementStressedSpring(
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
         size_t connectedComponentId)
-
     {
         assert(shipId < mShips.size());
 
@@ -458,11 +471,11 @@ public:
             connectedComponentId);
     }
 
-    void UploadShipElementsEnd(int shipId)
+    void UploadShipElementStressedSpringsEnd(int shipId)
     {
         assert(shipId < mShips.size());
 
-        mShips[shipId]->UploadElementsEnd();
+        mShips[shipId]->UploadElementStressedSpringsEnd();
     }
 
 

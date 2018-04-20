@@ -33,37 +33,44 @@ public:
 
     void Destroy();
 
-	inline vec2 const & GetPosition() const {  return mPosition;  }	
-    inline void AddToPosition(vec2 const & dPosition) { mPosition += dPosition; }    
-	
-	inline vec2 const & GetLastPosition() const { return mLastPosition; }    
-    inline void AddToLastPosition(vec2 const & dPosition) { mLastPosition += dPosition; }
+    void Breach();
 
-	inline Material const * GetMaterial() const { return mMaterial; }
-
-
-	inline float GetMass() const { return mMaterial->Mass; }
-
-
-	inline vec2 const & GetForce() const { return mForce; }	
-
-    inline void AddForce(vec2 const & force)
+    inline AABB GetAABB() const noexcept
     {
-        mForce += force;
+        return AABB(mPosition - AABBRadius, mPosition + AABBRadius);
     }
 
-    inline void ZeroForce() { mForce = vec2(0, 0); }
 
+    //
+    // Physics
+    //
+
+	inline vec2 const & GetPosition() const {  return mPosition;  }	
+    inline void SetPosition(vec2 const & newPosition) { mPosition = newPosition; }
+    inline void AddToPosition(vec2 const & dPosition) { mPosition += dPosition; }    
 	
+	inline vec2 const & GetVelocity() const { return mVelocity; }    
+    inline void SetVelocity(vec2 const & newVelocity) { mVelocity = newVelocity; }
+    inline void AddToVelocity(vec2 const & dVelocity) { mVelocity += dVelocity; }
+
+    inline vec2 const & GetForce() const { return mForce; }
+    inline void ZeroForce() { mForce = vec2(0, 0); }
+    inline void AddToForce(vec2 const & dForce) { mForce += dForce; }    
+
+	inline float GetMass() const { return mMaterial->Mass; }
+    inline float GetMassFactor() const { return mMassFactor; }
+
     inline float GetBuoyancy() const { return mBuoyancy;  }
 
-
-    inline bool IsLeaking() const { return mIsLeaking; }
-
-    inline void SetLeaking() { mIsLeaking = true; }
+    inline Material const * GetMaterial() const { return mMaterial; }
 
 
+    //
+    // Water
+    //
     // Dimensionally akin to Water Pressure
+    //
+
 	inline float GetWater() const { return mWater; }
 
 	inline void AddWater(float dWater) 
@@ -71,6 +78,25 @@ public:
         mWater += dWater; 
     }
 
+    float GetExternalWaterPressure(
+        float waterLevel,
+        GameParameters const & gameParameters) const
+    {
+        // Negative Y == under water line
+        if (mPosition.y < waterLevel)
+        {
+            return gameParameters.GravityMagnitude * (waterLevel - mPosition.y) * 0.1f;  // 0.1 = scaling constant, represents 1/ship width
+        }
+        else
+        {
+            return 0.0f;
+        }
+    }
+
+
+    //
+    // Light
+    //
 
     inline float GetLight() const { return mLight; }
 
@@ -86,6 +112,15 @@ public:
             mLight = light;
         }
     }
+
+
+    //
+    // Structural
+    //
+
+    inline bool IsLeaking() const { return mIsLeaking; }
+
+    inline void SetLeaking() { mIsLeaking = true; }
 
     inline int GetElementIndex() const { return mElementIndex; }
 
@@ -146,52 +181,42 @@ public:
     inline uint64_t GetCurrentConnectedComponentDetectionStepSequenceNumber() const { return mCurrentConnectedComponentDetectionStepSequenceNumber; }
     inline void SetConnectedComponentDetectionStepSequenceNumber(uint64_t connectedComponentDetectionStepSequenceNumber) { mCurrentConnectedComponentDetectionStepSequenceNumber = connectedComponentDetectionStepSequenceNumber; }
 
-    float GetExternalWaterPressure(
-        float waterLevel,
-        GameParameters const & gameParameters) const
-    {
-        // Negative Y == under water line
-        if (mPosition.y < waterLevel)
-        {
-            return gameParameters.GravityMagnitude * (waterLevel - mPosition.y) * 0.1f;  // 0.1 = scaling constant, represents 1/ship width
-        }
-        else
-        {
-            return 0.0f;
-        }
-    }
+private:
 
-	inline AABB GetAABB() const noexcept
-	{
-		return AABB(mPosition - AABBRadius, mPosition + AABBRadius);
-	}
-
-	void Breach();
-
-	void Update(
-		float dt,
-        float dragCoefficient,
-		GameParameters const & gameParameters);
+    static float CalculateMassFactor(float mass);
 
 private:
 
 	static vec2 const AABBRadius;	
 
+    //
+    // Physics
+    //
+
 	vec2 mPosition;
-	vec2 mLastPosition;
+	vec2 mVelocity;
     vec2 mForce;
 
-	Material const * mMaterial;
+    // Mass divided by dt squared; used in our integration method to calculate deltaPos
+    // due to force 
+    float const mMassFactor;
 	
 	float mBuoyancy;
 
-    bool mIsLeaking;
+    Material const * mMaterial;
 
 	// Total quantity of water, 0.0->+INF (== internal water pressure)
 	float mWater;
 
     // Total illumination, 0.0->1.0
     float mLight;
+
+
+    //
+    // Structure
+    //
+
+    bool mIsLeaking;
 
     // The ID of this point, used by graphics elements to refer to vertices
     int const mElementIndex;

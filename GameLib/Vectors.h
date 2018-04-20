@@ -123,9 +123,15 @@ public:
 
     std::string toString() const;
 
-	inline vec2f(
-		float _x = 0,
-		float _y = 0)
+    inline constexpr vec2f()
+        : x(0.0f)
+        , y(0.0f)
+    {
+    }
+
+	inline constexpr vec2f(
+		float _x,
+		float _y)
 		: x(_x)
 		, y(_y)
 	{
@@ -249,10 +255,17 @@ public:
 
     std::string toString() const;
 
+    inline constexpr vec3f()
+        : x(0.0f)
+        , y(0.0f)
+        , z(0.0f)
+    {
+    }
+
 	inline constexpr vec3f(
-		float _x = 0,
-		float _y = 0,
-		float _z = 0)
+		float _x,
+		float _y,
+		float _z)
 		: x(_x)
 		, y(_y)
 		, z(_z)

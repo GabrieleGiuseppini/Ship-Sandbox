@@ -32,8 +32,11 @@ Spring::Spring(
 	, mPointA(a)
 	, mPointB(b)
 	, mRestLength(restLength)
+    , mStiffnessCoefficient(CalculateStiffnessCoefficient(*mPointA, *mPointB))
+    , mDampingCoefficient(CalculateDampingCoefficient(*mPointA, *mPointB))
     , mCharacteristics(characteristics)
 	, mMaterial(material)
+    , mWaterPermeability(Characteristics::None != (mCharacteristics & Characteristics::Hull) ? 0.0f : 1.0f)
     , mIsStressed(false)
 {
     // Add ourselves to our endpoints
@@ -62,8 +65,52 @@ void Spring::Destroy(Point const * pointSource)
     if (mPointB != pointSource)
         mPointB->RemoveConnectedSpring(this);
 
+    // Zero out our dynamics factors, so that we can still calculate Hooke's 
+    // and damping forces for this spring without running the risk of 
+    // affecting non-deleted points
+    mStiffnessCoefficient = 0.0f;
+    mDampingCoefficient = 0.0f;
+
+    // Zero out our water permeability, to
+    // avoid draining water to destroyed points
+    mWaterPermeability = 0.0f;
+
     // Remove ourselves
     ShipElement::Destroy();
+}
+
+float Spring::CalculateStiffnessCoefficient(
+    Point const & pointA,
+    Point const & pointB)
+{
+    // The empirically-determined constant for the spring stiffness
+    //
+    // The simulation is quite sensitive to this value:
+    // - 0.80 is almost fine (though bodies are sometimes soft)
+    // - 0.95 makes everything explode (this was the equivalent of Luke's original code)
+    static constexpr float C = 0.8f;
+
+    float const massFactor = (pointA.GetMass() * pointB.GetMass()) / (pointA.GetMass() + pointB.GetMass());
+    static constexpr float dtSquared = GameParameters::DynamicsSimulationStepTimeDuration<float> * GameParameters::DynamicsSimulationStepTimeDuration<float>;
+
+    return C * massFactor / dtSquared;
+}
+
+float Spring::CalculateDampingCoefficient(
+    Point const & pointA,
+    Point const & pointB)
+{
+    // The empirically-determined constant for the spring damping
+    //
+    // The simulation is quite sensitive to this value:
+    // - 0.03 is almost fine (though bodies are sometimes soft)
+    // - 0.8 makes everything explode (this was the equivalent of Luke's original code)
+    static constexpr float C = 0.03f;
+
+    float const massFactor = (pointA.GetMass() * pointB.GetMass()) / (pointA.GetMass() + pointB.GetMass());
+    static constexpr float dt = GameParameters::DynamicsSimulationStepTimeDuration<float>;
+
+    return C * massFactor / dt;
 }
 
 }

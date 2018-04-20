@@ -35,19 +35,23 @@ public:
 
     int AddShip(
         ShipDefinition const & shipDefinition,
-        MaterialDatabase const & materials);
+        MaterialDatabase const & materials,
+        GameParameters const & gameParameters);
 
-	float GetWaterHeight(		
-		float x,
-		GameParameters const & gameParameters) const;
+    inline float GetWaterHeightAt(float x) const
+    {
+        return mWaterSurface.GetWaterHeightAt(x);
+    }
 
-    bool IsUnderwater(
-        Point const & point,
-        GameParameters const & gameParameters) const;
+    inline bool IsUnderwater(vec2f const & position) const
+    {
+        return position.y < GetWaterHeightAt(position.x);
+    }
 	
-    float GetOceanFloorHeight(
-		float x,
-		GameParameters const & gameParameters) const;
+    inline float GetOceanFloorHeightAt(float x) const
+    {
+        return mOceanFloor.GetFloorHeightAt(x);
+    }
 
     IGameEventHandler * GetGameEventHandler()
     {
@@ -56,8 +60,7 @@ public:
 
 	void DestroyAt(
 		vec2 const & targetPos, 
-		float radius,
-        GameParameters const & gameParameters);
+		float radius);
 
 	void DrawTo(
         vec2 const & targetPos,
@@ -67,9 +70,7 @@ public:
         vec2 const & targetPos,
         float radius) const;
 
-	void Update(
-		float dt,
-		GameParameters const & gameParameters);
+	void Update(GameParameters const & gameParameters);
 
 	void Render(		
         GameParameters const & gameParameters,
@@ -90,6 +91,8 @@ private:
 	// Repository
 	std::vector<std::unique_ptr<Ship>> mAllShips;
     std::vector<std::unique_ptr<Cloud>> mAllClouds;
+    WaterSurface mWaterSurface;
+    OceanFloor mOceanFloor;
 
 	// The current time 
 	float mCurrentTime;
@@ -109,8 +112,6 @@ private:
 	//
 	// TODO: experimental
 	//
-
-    // float const *oceandepthbuffer;
 
 	struct BVHNode
 	{

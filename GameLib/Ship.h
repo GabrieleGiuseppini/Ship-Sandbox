@@ -30,6 +30,7 @@ public:
         World * parentWorld,
         ShipDefinition const & shipDefinition,
         MaterialDatabase const & materials,
+        GameParameters const & gameParameters,
         uint64_t currentStepSequenceNumber);
 
     ~Ship();
@@ -53,8 +54,7 @@ public:
 
     void DestroyAt(
         vec2 const & targetPos,
-        float radius,
-        GameParameters const & gameParameters);
+        float radius);
 
     void DrawTo(
         vec2 const & targetPos,
@@ -65,7 +65,6 @@ public:
         float radius) const;
 
     void Update(
-        float dt,
         uint64_t currentStepSequenceNumber,
         GameParameters const & gameParameters);
 
@@ -113,25 +112,35 @@ private:
         DetectConnectedComponents(currentStepSequenceNumber);
     }
 
-    void DoSpringsRelaxation(
-        float dt,
-        GameParameters const & gameParameters);
+public:
+
+    /////////////////////////////////////////////////////////////////////////
+    // Dynamics
+    /////////////////////////////////////////////////////////////////////////
+
+    void UpdateDynamics(GameParameters const & gameParameters);
+
+    void UpdateDrawForces(
+        vec2f const & position,
+        float strength);
+
+    void UpdatePointForces(GameParameters const & gameParameters);
+
+    void UpdateSpringForces(GameParameters const & gameParameters);    
+
+    void Integrate();
+
+    void HandleCollisionsWithSeaFloor();
 
     void DetectConnectedComponents(uint64_t currentStepSequenceNumber);
 
-    void LeakWater(
-        float dt,
-        GameParameters const & gameParameters);
+    void LeakWater(GameParameters const & gameParameters);
 
-    void GravitateWater(
-        float dt,
-        GameParameters const & gameParameters);
+    void GravitateWater(GameParameters const & gameParameters);
 
-    void BalancePressure(float dt);
+    void BalancePressure(GameParameters const & gameParameters);
 
-    void DiffuseLight(
-        float dt,
-        GameParameters const & gameParameters);
+    void DiffuseLight(GameParameters const & gameParameters);
 
 private:
 
@@ -164,6 +173,25 @@ private:
     // Sinking detection
     bool mIsSinking;
     float mTotalWater;
+
+    //
+    // Draw force to apply to next iteration
+    //
+
+    struct DrawForce
+    {
+        vec2f Position;
+        float Strength;
+
+        DrawForce(
+            vec2f position,
+            float strength)
+            : Position(position)
+            , Strength(strength)
+        {}
+    };
+
+    std::optional<DrawForce> mCurrentDrawForce;
 };
 
 template<>

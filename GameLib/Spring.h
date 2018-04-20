@@ -20,8 +20,9 @@ class Spring : public ShipElement<Spring>
 {
 public:
 
-    enum class Characteristics
+    enum class Characteristics : uint8_t
     {
+        None    = 0,
         Hull    = 1,    // Does not take water
         Rope    = 2     // Ropes are drawn differently
     };
@@ -72,7 +73,7 @@ public:
             // Notify
             gameEventHandler->OnBreak(
                 mMaterial, 
-                GetParentShip()->GetParentWorld()->IsUnderwater(*mPointA, gameParameters),
+                GetParentShip()->GetParentWorld()->IsUnderwater(mPointA->GetPosition()),
                 1);
         }
         else if (strain > 0.25f * effectiveStrength)
@@ -85,7 +86,7 @@ public:
                 // Notify
                 gameEventHandler->OnStress(
                     mMaterial, 
-                    GetParentShip()->GetParentWorld()->IsUnderwater(*mPointA, gameParameters),
+                    GetParentShip()->GetParentWorld()->IsUnderwater(mPointA->GetPosition()),
                     1);
             }
         }
@@ -107,59 +108,26 @@ public:
     inline Point * GetPointB() { return mPointB; }
 	inline Point const * GetPointB() const { return mPointB; }
 
-    inline bool IsHull() const { return 0 != (static_cast<int>(mCharacteristics) & static_cast<int>(Characteristics::Hull)); }
-    inline bool IsRope() const { return 0 != (static_cast<int>(mCharacteristics) & static_cast<int>(Characteristics::Rope)); }
+    inline float GetRestLength() const { return mRestLength; }
+    inline float GetStiffnessCoefficient() const { return mStiffnessCoefficient; }
+    inline float GetDampingCoefficient() const { return mDampingCoefficient; }
+
+    inline bool IsHull() const;
+    inline bool IsRope() const;
 
 	inline Material const * GetMaterial() const { return mMaterial; };
 
-    inline void Relax()
-    {
-        //
-        // Try to space the two points by the equilibrium length 
-        // (need to iterate to actually achieve this for all points, but it's FAAAAST for each step)
-        //
-
-        // 0.8 => Spring returns in dt to 80% of the equilibrium length, not all the way; the world is soft
-        // 1.0 => Spring returns in dt to the equilibrium length; the world is stiff
-        // 1.5 => Spring overshoots in dt by 50%; the world is unstable and tends to explode
-        static const float stiffness = 0.95f;
-
-        vec2f const displacement = (mPointB->GetPosition() - mPointA->GetPosition());
-        float const displacementLength = displacement.length();
-        vec2f correction = displacement.normalise(displacementLength);
-        correction *= stiffness * (mRestLength - displacementLength) / (mPointA->GetMass() + mPointB->GetMass());
-
-        // correction > 0 -> compressed, & correction is oriented towards B
-        mPointA->AddToPosition(-correction * mPointB->GetMass()); // If mPointB is heavier, mPointA moves more...
-        mPointB->AddToPosition(correction * mPointA->GetMass()); // ...and vice versa
-    }
-
-
-    /*
-     * Damps the velocities of the two points, as if the points were also connected by a damper
-     * along the same direction as the spring.
-     *
-     * Rather than modeling an actual damping force (whose deceleration would be inversely proportional
-     * to a point's mass), this function simply models a decrease of the velocity.
-     */
-    inline void Damp(float amount)
-    {
-        // Get damp direction
-        vec2f dampCorrection = (mPointA->GetPosition() - mPointB->GetPosition()).normalise();
-
-        // Relative velocity dot spring direction = projected velocity;
-        // amount = amount of projected velocity that damping reduces by;
-        // result is oriented along the spring
-        //
-        // dampCorrection > 0 -> point A is faster
-        dampCorrection *= ((mPointA->GetPosition() - mPointA->GetLastPosition()) - (mPointB->GetPosition() - mPointB->GetLastPosition())).dot(dampCorrection) * amount;   
-
-        // Update velocities - slow down A by dampCorrection and speed up B by dampCorrection
-        mPointA->AddToLastPosition(dampCorrection);
-        mPointB->AddToLastPosition(-dampCorrection);
-    }
+    inline float GetWaterPermeability() const { return mWaterPermeability; }
 
 private:
+
+    static float CalculateStiffnessCoefficient(
+        Point const & pointA,
+        Point const & pointB);
+
+    static float CalculateDampingCoefficient(
+        Point const & pointA,
+        Point const & pointB);
 
     // Strain: 
     // 0  = no tension nor compression
@@ -176,11 +144,33 @@ private:
 	Point * const mPointB;
 	
     float const mRestLength;
-    Characteristics const mCharacteristics;
+    float mStiffnessCoefficient;
+    float mDampingCoefficient;
+
+    Characteristics const mCharacteristics;    
 	Material const * const mMaterial;
+
+    // Water propagates through this spring according to this value;
+    // 0.0 make water not propagate
+    float mWaterPermeability;
 
     // State variable that tracks when we enter and exit the stressed state
     bool mIsStressed;
 };
 
+}
+
+constexpr Physics::Spring::Characteristics operator&(Physics::Spring::Characteristics a, Physics::Spring::Characteristics b)
+{
+    return static_cast<Physics::Spring::Characteristics>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+inline bool Physics::Spring::IsHull() const 
+{ 
+    return Physics::Spring::Characteristics::None != (mCharacteristics & Physics::Spring::Characteristics::Hull); 
+}
+
+inline bool Physics::Spring::IsRope() const 
+{ 
+    return Physics::Spring::Characteristics::None != (mCharacteristics & Physics::Spring::Characteristics::Rope); 
 }

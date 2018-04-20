@@ -12,6 +12,37 @@
 */
 struct GameParameters
 {
+    //
+    // The dt of each step
+    //
+
+    template <typename T>
+    static constexpr T SimulationStepTimeDuration = 0.02f;
+
+
+    //
+    // The number of iterations we run in the dynamics step
+    //
+    // The number of iterations dictates how stiff bodies are:
+    // - Less iterations => softer (jelly) body
+    // - More iterations => hard body (never breaks though) 
+    //
+
+    template <typename T>
+    static constexpr T NumDynamicIterations = 8;
+
+    //
+    // The dt of each iteration in the dynamics step
+    //
+
+    template <typename T>
+    static constexpr T DynamicsSimulationStepTimeDuration = SimulationStepTimeDuration<T> / NumDynamicIterations<T>;
+
+
+    //
+    // Tunable parameters
+    //
+
 	vec2 const Gravity;
 	vec2 const GravityNormal;
 	float const GravityMagnitude;
@@ -26,7 +57,7 @@ struct GameParameters
 
 	float WaterPressureAdjustment;
 	static constexpr float MinWaterPressureAdjustment = 0.0f;
-	static constexpr float MaxWaterPressureAdjustment = 2.0f;
+	static constexpr float MaxWaterPressureAdjustment = 4.0f;
 
 	float WaveHeight;
 	static constexpr float MinWaveHeight = 0.0f;
@@ -40,28 +71,11 @@ struct GameParameters
 	static constexpr float MinDestroyRadius = 0.1f;
 	static constexpr float MaxDestroyRadius = 10.0f;
 
-    float SpringDampingFactor;
-
     float LightDiffusionAdjustment;
 
     size_t NumberOfClouds;
 
     float WindSpeed;
 
-	GameParameters()
-		: Gravity(0.0f, -9.8f)
-		, GravityNormal(Gravity.normalise())
-		, GravityMagnitude(Gravity.length())
-		, StrengthAdjustment(0.0048f)
-		, BuoyancyAdjustment(4.0f)
-		, WaterPressureAdjustment(0.75f)
-		, WaveHeight(2.5f)
-		, SeaDepth(150.0f)
-		, DestroyRadius(0.55f)
-        , SpringDampingFactor(0.8f)
-        , LightDiffusionAdjustment(0.5f)
-        , NumberOfClouds(50)
-        , WindSpeed(3.0f)
-	{
-	}
+    GameParameters();
 };

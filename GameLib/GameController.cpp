@@ -8,9 +8,6 @@
 #include "GameMath.h"
 #include "Log.h"
 
-// The dt of each step
-static constexpr float StepTimeDuration = 0.02f;
-
 std::unique_ptr<GameController> GameController::Create(
     std::shared_ptr<ResourceLoader> resourceLoader,
     ProgressCallback const & progressCallback)
@@ -87,9 +84,7 @@ void GameController::DoStep()
 {
 	// Update world
 	assert(!!mWorld);
-    mWorld->Update(
-        StepTimeDuration,
-		mGameParameters);
+    mWorld->Update(mGameParameters);
 
     // Flush events
     mGameEventDispatcher->Flush();
@@ -158,8 +153,7 @@ void GameController::DestroyAt(
 	assert(!!mWorld);
     mWorld->DestroyAt(
 		worldCoordinates,
-		mGameParameters.DestroyRadius * radiusMultiplier,
-        mGameParameters);
+		mGameParameters.DestroyRadius * radiusMultiplier);
 
     // Flush events
     mGameEventDispatcher->Flush();
@@ -236,7 +230,10 @@ void GameController::Reset()
 void GameController::AddShip(ShipDefinition shipDefinition)
 {
     // Add ship to world
-    int shipId = mWorld->AddShip(shipDefinition, mMaterials);
+    int shipId = mWorld->AddShip(
+        shipDefinition, 
+        mMaterials,
+        mGameParameters);
 
     // Add ship to rendering engine
     mRenderContext->AddShip(shipId, std::move(shipDefinition.TextureImage));

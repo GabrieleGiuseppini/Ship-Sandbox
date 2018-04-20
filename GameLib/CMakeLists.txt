@@ -15,6 +15,7 @@ set  (GAME_SOURCES
 	GameMath.h
 	GameOpenGL.cpp
 	GameOpenGL.h
+	GameParameters.cpp
 	GameParameters.h
 	IGameEventHandler.h
 	ImageData.h
@@ -52,6 +53,8 @@ set  (PHYSICS_SOURCES
 	Generator.h
 	Lamp.cpp
 	Lamp.h
+	OceanFloor.cpp
+	OceanFloor.h
 	Physics.h
 	Point.cpp
 	Point.h
@@ -62,6 +65,8 @@ set  (PHYSICS_SOURCES
 	Spring.h
 	Triangle.cpp
 	Triangle.h
+	WaterSurface.cpp
+	WaterSurface.h
 	World.cpp
 	World.h)
 

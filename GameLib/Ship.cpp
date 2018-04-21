@@ -379,13 +379,13 @@ std::unique_ptr<Ship> Ship::Create(
 
     static const int Directions[8][2] = {
         {  1,  0 },  // E
-        {  1, -1 },  // NE
-        {  0, -1 },  // N
-        { -1, -1 }, // NW
-        { -1,  0 }, // W
-        { -1,  1 }, // SW
-        {  0,  1 },  // S
-        {  1,  1 }   // SE
+        {  1, -1 },  // SE
+        {  0, -1 },  // S
+        { -1, -1 },  // SW
+        { -1,  0 },  // W
+        { -1,  1 },  // NW
+        {  0,  1 },  // N
+        {  1,  1 }   // NE
     };
 
     // From bottom to top
@@ -427,8 +427,8 @@ std::unique_ptr<Ship> Ship::Create(
                 // Check if a spring exists
                 //
 
-                // First four directions out of 8: from 0 deg (+x) through to 135 deg (-x +y),
-                // i.e. E, NE, N, NW - this covers each pair of points in each direction
+                // First four directions out of 8: from 0 deg (+x) through to 225 deg (-x -y),
+                // i.e. E, SE, S, SW - this covers each pair of points in each direction
                 for (int i = 0; i < 4; ++i)
                 {
                     int adjx1 = x + Directions[i][0];
@@ -436,7 +436,7 @@ std::unique_ptr<Ship> Ship::Create(
 
                     if (!!pointIndexMatrix[adjx1][adjy1])
                     {
-                        // This point is adjacent to the first point at one of E, NE, N, NW
+                        // This point is adjacent to the first point at one of E, SE, S, SW
 
                         //
                         // Create SpringInfo
@@ -449,18 +449,18 @@ std::unique_ptr<Ship> Ship::Create(
 
                         //
                         // Check if a triangle exists
-                        // - If this is the first point that is in a ship, we check up to W;
-                        // - Else, we check up to N
+                        // - If this is the first point that is in a ship, we check all the way up to W;
+                        // - Else, we check up to S, so to avoid covering areas already covered by the triangulation
+                        //   at the previous point
                         //
 
                         // Check adjacent point in next CW direction
                         int adjx2 = x + Directions[i + 1][0];
                         int adjy2 = y + Directions[i + 1][1];   
-                        // TODOTEST: if (!isInShip || i < 2) 
-
-                        if (!!pointIndexMatrix[adjx2][adjy2])
+                        if ( (!isInShip || i < 2) 
+                             && !!pointIndexMatrix[adjx2][adjy2])
                         {
-                            // This point is adjacent to the first point at one of SW, E, NE, N
+                            // This point is adjacent to the first point at one of SE, S, SW, W
 
                             //
                             // Create TriangleInfo
@@ -470,6 +470,28 @@ std::unique_ptr<Ship> Ship::Create(
                                 pointIndex,
                                 *pointIndexMatrix[adjx1][adjy1],
                                 *pointIndexMatrix[adjx2][adjy2]);
+                        }
+
+                        // Now, we also want to check whether the single "irregular" triangle from this point exists, 
+                        // i.e. the triangle between this point, the point at its E, and the point at its
+                        // S, in case there is no point at SE.
+                        // We do this so that we can forget the entire W side for inner points and yet ensure
+                        // full coverage of the area
+                        if (i == 0
+                            && !pointIndexMatrix[x + Directions[1][0]][y + Directions[1][1]]
+                            && !!pointIndexMatrix[x + Directions[2][0]][y + Directions[2][1]])
+                        { 
+                            // If we're here, the point at E exists
+                            assert(!!pointIndexMatrix[x + Directions[0][0]][y + Directions[0][1]]);
+
+                            //
+                            // Create TriangleInfo
+                            // 
+
+                            triangleInfos.emplace_back(
+                                pointIndex,
+                                *pointIndexMatrix[x + Directions[0][0]][y + Directions[0][1]],
+                                *pointIndexMatrix[x + Directions[2][0]][y + Directions[2][1]]);
                         }
                     }
                 }

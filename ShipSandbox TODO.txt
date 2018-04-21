@@ -33,7 +33,7 @@ Prev perf (before Optimizations)
 			- But keep doing all springs
 			- use boolean isInShip, init=false, set to true at end of single-point processing if point exists and set to false otherwise
 		+ Before: 5231 points, 19932 springs, 19569 triangles
-		- After: 5231 points, 19932 springs, 9797 triangles
+		+ After: 5231 points, 19932 springs, 9819 triangles
 		- Adjust fixed # of Point::connected triangles (now should be 8?)
 	- SSE2:
 		- Test first: Integrate: 

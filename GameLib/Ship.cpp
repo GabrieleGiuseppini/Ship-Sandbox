@@ -1,9 +1,9 @@
 ﻿/***************************************************************************************
-* Original Author:		Luke Wren (wren6991@gmail.com)
-* Created:				2013-04-30
-* Modified By:			Gabriele Giuseppini
-* Copyright:			Luke Wren (http://github.com/Wren6991),
-*						Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
+* Original Author:      Luke Wren (wren6991@gmail.com)
+* Created:              2013-04-30
+* Modified By:          Gabriele Giuseppini
+* Copyright:            Luke Wren (http://github.com/Wren6991),
+*                       Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
 ***************************************************************************************/
 #include "Physics.h"
 
@@ -63,6 +63,8 @@ std::unique_ptr<Ship> Ship::Create(
     // - RopeInfo's
     //    
 
+    // PointInfo's
+
     struct PointInfo
     {
         vec2f Position;
@@ -83,12 +85,17 @@ std::unique_ptr<Ship> Ship::Create(
     std::vector<PointInfo> pointInfos;
 
 
+    // Matrix of points
+
     int const structureWidth = shipDefinition.StructuralImage.Size.Width;
     float const halfWidth = static_cast<float>(structureWidth) / 2.0f;
     int const structureHeight = shipDefinition.StructuralImage.Size.Height;
 
-    std::unique_ptr<std::unique_ptr<std::optional<size_t>[]>[]> pointIndexMatrix(new std::unique_ptr<std::optional<size_t>[]>[structureWidth]);    
+    // We allocate 2 extra rows and cols to avoid checking for boundaries
+    std::unique_ptr<std::unique_ptr<std::optional<size_t>[]>[]> pointIndexMatrix(new std::unique_ptr<std::optional<size_t>[]>[structureWidth + 2]);    
     
+
+    // RopeInfo's
 
     struct RopeInfo
     {
@@ -105,9 +112,14 @@ std::unique_ptr<Ship> Ship::Create(
     std::map<std::array<uint8_t, 3u>, RopeInfo> ropeInfos;
 
 
+    // First dummy column
+    pointIndexMatrix[0] = std::unique_ptr<std::optional<size_t>[]>(new std::optional<size_t>[structureHeight + 2]);
+
+    // Visit all real columns
     for (int x = 0; x < structureWidth; ++x)
     {
-        pointIndexMatrix[x] = std::unique_ptr<std::optional<size_t>[]>(new std::optional<size_t>[structureHeight]);
+        // We allocate 2 extra rows and cols to avoid checking for boundaries
+        pointIndexMatrix[x + 1] = std::unique_ptr<std::optional<size_t>[]>(new std::optional<size_t>[structureHeight + 2]);
 
         // From bottom to top
         for (int y = 0; y < structureHeight; ++y)
@@ -153,7 +165,7 @@ std::unique_ptr<Ship> Ship::Create(
                 // Make a point
                 //
 
-                pointIndexMatrix[x][y] = pointInfos.size();
+                pointIndexMatrix[x + 1][y + 1] = pointInfos.size();
 
                 pointInfos.emplace_back(
                     vec2f(
@@ -168,6 +180,8 @@ std::unique_ptr<Ship> Ship::Create(
         }
     }
 
+    // Last dummy column
+    pointIndexMatrix[structureWidth + 1] = std::unique_ptr<std::optional<size_t>[]>(new std::optional<size_t>[structureHeight + 2]);
 
     //
     // 2. Process RopeInfo's and create:
@@ -332,8 +346,8 @@ std::unique_ptr<Ship> Ship::Create(
 
 
     //
-    // 4. Visit point matrix and :
-    //  - Set Points as leaking
+    // 4. Visit point matrix and:
+    //  - Set non-fully-surrounded Points as leaking
     //  - Create SpringInfo (additional to ropes)
     //  - Create TriangleInfo
     //
@@ -364,22 +378,30 @@ std::unique_ptr<Ship> Ship::Create(
     // Visit point matrix
 
     static const int Directions[8][2] = {
-        { 1,  0 },	// E
-        { 1, -1 },	// NE
-        { 0, -1 },	// N
-        { -1, -1 },	// NW
-        { -1,  0 },	// W
-        { -1,  1 },	// SW
-        { 0,  1 },	// S
-        { 1,  1 }	// SE
+        {  1,  0 },  // E
+        {  1, -1 },  // NE
+        {  0, -1 },  // N
+        { -1, -1 }, // NW
+        { -1,  0 }, // W
+        { -1,  1 }, // SW
+        {  0,  1 },  // S
+        {  1,  1 }   // SE
     };
 
-    for (int x = 0; x < structureWidth; ++x)
+    // From bottom to top
+    for (int y = 1; y <= structureHeight; ++y)
     {
-        for (int y = 0; y < structureHeight; ++y)
+        // We're starting a new row, so we're not in a ship now
+        bool isInShip = false;
+
+       for (int x = 1; x <= structureWidth; ++x)
         {
             if (!!pointIndexMatrix[x][y])
             {
+                //
+                // A point exists at these coordinates
+                //
+
                 size_t pointIndex = *pointIndexMatrix[x][y];
                 Point & point = allPoints[pointIndex];
 
@@ -389,10 +411,10 @@ std::unique_ptr<Ship> Ship::Create(
                 // - there is at least a hole at E, S, W, N
                 if (!point.GetMaterial()->IsHull)
                 {
-                    if ((x < structureWidth - 1 && !pointIndexMatrix[x + 1][y])
-                        || (y < structureHeight - 1 && !pointIndexMatrix[x][y + 1])
-                        || (x > 0 && !pointIndexMatrix[x - 1][y])
-                        || (y > 0 && !pointIndexMatrix[x][y - 1]))
+                    if (!pointIndexMatrix[x + 1][y]
+                        || !pointIndexMatrix[x][y + 1]
+                        || !pointIndexMatrix[x - 1][y]
+                        || !pointIndexMatrix[x][y - 1])
                     {
                         point.SetLeaking();
 
@@ -411,50 +433,58 @@ std::unique_ptr<Ship> Ship::Create(
                 {
                     int adjx1 = x + Directions[i][0];
                     int adjy1 = y + Directions[i][1];                    
-                    if (adjx1 >= 0 && adjx1 < structureWidth && adjy1 >= 0) // Valid coordinates?
-                    {
-                        assert(adjy1 < structureHeight); // The four directions we're checking do not include S
 
-                        if (!!pointIndexMatrix[adjx1][adjy1])
+                    if (!!pointIndexMatrix[adjx1][adjy1])
+                    {
+                        // This point is adjacent to the first point at one of E, NE, N, NW
+
+                        //
+                        // Create SpringInfo
+                        // 
+
+                        springInfos.emplace_back(
+                            pointIndex, 
+                            *pointIndexMatrix[adjx1][adjy1]);
+
+
+                        //
+                        // Check if a triangle exists
+                        // - If this is the first point that is in a ship, we check up to W;
+                        // - Else, we check up to N
+                        //
+
+                        // Check adjacent point in next CW direction
+                        int adjx2 = x + Directions[i + 1][0];
+                        int adjy2 = y + Directions[i + 1][1];   
+                        // TODOTEST: if (!isInShip || i < 2) 
+
+                        if (!!pointIndexMatrix[adjx2][adjy2])
                         {
-                            // This point is adjacent to the first point at one of E, NE, N, NW
+                            // This point is adjacent to the first point at one of SW, E, NE, N
 
                             //
-                            // Create SpringInfo
+                            // Create TriangleInfo
                             // 
 
-                            springInfos.emplace_back(
-                                pointIndex, 
-                                *pointIndexMatrix[adjx1][adjy1]);
-
-
-                            //
-                            // Check if a triangle exists
-
-                            // Check adjacent point in next CW direction
-                            int adjx2 = x + Directions[i + 1][0];
-                            int adjy2 = y + Directions[i + 1][1];                            
-                            if (adjx2 >= 0 && adjx2 < structureWidth && adjy2 >= 0) // Valid coordinates?
-                            {
-                                assert(adjy2 < structureHeight); // The five directions we're checking do not include S
-
-                                if (!!pointIndexMatrix[adjx2][adjy2])
-                                {
-                                    // This point is adjacent to the first point at one of SW, E, NE, N
-
-                                    //
-                                    // Create TriangleInfo
-                                    // 
-
-                                    triangleInfos.emplace_back(
-                                        pointIndex,
-                                        *pointIndexMatrix[adjx1][adjy1],
-                                        *pointIndexMatrix[adjx2][adjy2]);
-                                }
-                            }
+                            triangleInfos.emplace_back(
+                                pointIndex,
+                                *pointIndexMatrix[adjx1][adjy1],
+                                *pointIndexMatrix[adjx2][adjy2]);
                         }
                     }
                 }
+
+                // Remember now that we're in a ship
+                isInShip = true;
+            }
+            else
+            {
+                //
+                // No point exists at these coordinates
+                //
+
+                // From now on we're not in a ship anymore
+                isInShip = false;
             }
         }
     }
@@ -1039,7 +1069,7 @@ void Ship::Integrate()
     // Global damp - lowers velocity uniformly, damping oscillations originating between gravity and buoyancy
     // Note: it's extremely sensitive, big difference between 0.9995 and 0.9998
     // Note: it's not technically a drag force, it's just a dimensionless deceleration
-    float constexpr GlobalDampCoefficient = 0.9995;
+    float constexpr GlobalDampCoefficient = 0.9995f;
 
     for (Point & point : mAllPoints)
     {

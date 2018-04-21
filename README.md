@@ -73,7 +73,7 @@ The game looks like this now:
 - Add directional water drag forces, to simulate underwater gliding 
 	- Requires maintaining convex hull and ship perimeter normals
 - Add ability to pin points - freezing them at their current position
-- Better waves, may be with shallow water equations
+- Better waves, may be with shallow water equations and breaking wave fronts
 - Leverage vectorized instructions for dynamics calculations 
 - Make lights turn off (after flickering) when generator is wet or when electrical cables break
 - Add time-of-day (i.e. day light change during the game)

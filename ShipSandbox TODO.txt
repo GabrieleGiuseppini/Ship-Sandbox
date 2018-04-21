@@ -6,7 +6,7 @@ Current perf
 =================================================
 Prev perf (before Optimizations)
 =================================================
-- fps: 17.3/17.7 (Samsung: ) (Mattia's:  (Titanic))
+- fps: 17.3/17.7 (Samsung: 18.7 (Krafting)) (Mattia's: 13.8 (Krafting))
 - GameController::DoStep: 41.92%
 	- Ship::Update: 41.06%
 		- UpdateDynamics: 26.94%
@@ -28,16 +28,20 @@ Prev perf (before Optimizations)
 
 - Optimizations:
 	+ Take full baseline first
-	- We don't need redundant triangles
-		- Row visit: for each point *after* the very first of a streak, only do triangles up to 90 degrees
-			- But keep doing all springs
-			- use boolean isInShip, init=false, set to true at end of single-point processing if point exists and set to false otherwise
+	+ FPS: 17.3/17.7
+	+ We don't need redundant triangles
+		+ Row visit: for each point *after* the very first of a streak, only do triangles up to 90 degrees
+			+ But keep doing all springs
+			+ use boolean isInShip, init=false, set to true at end of single-point processing if point exists and set to false otherwise
 		+ Before: 5231 points, 19932 springs, 19569 triangles
 		+ After: 5231 points, 19932 springs, 9819 triangles
-		- Adjust fixed # of Point::connected triangles (now should be 8?)
+	+ FPS: 19.2/19.3
+	+ Fix division by zero
+		+ Do fix
+	+ FPS: 19.1
 	- SSE2:
 		- Test first: Integrate: 
-			- 1a: pack Pos, Vel, Force from 2 points into vec4f
+			- 1a: pack Pos, Vel, Force from 2 points into local vec4f
 				- For loop with two points at a time
 			- 1b: create buffers with all Pos, Vel, Force (see below) and call function with restricted pointers
 	- Point & Spring Destructuring:
@@ -97,7 +101,9 @@ Prev perf (before Optimizations)
 				- All iters take factors from Spring after calling lambda
 	- If SSE2 works, see if can parallelize also:
 		- BalancePressure, GravitateWater
-						
+							
+
+- Fix ShipCreate unit tests
 
 - Release:
 	- Do final round with all ships

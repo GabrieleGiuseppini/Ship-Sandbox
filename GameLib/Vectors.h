@@ -113,12 +113,27 @@ public:
 
 	inline vec2f normalise() const
 	{
-        return (*this) / sqrtf(x * x + y * y);
+        float const squareLength = x * x + y * y;
+        if (squareLength > 0)
+        {
+            return (*this) / sqrtf(squareLength);
+        }
+        else
+        {
+            return vec2f(0.0f, 0.0f);
+        }
 	}
 
     inline vec2f normalise(float length) const
     {
-        return (*this) / length;
+        if (length > 0)
+        {
+            return (*this) / length;
+        }
+        else
+        {
+            return vec2f(0.0f, 0.0f);
+        }
     }
 
     std::string toString() const;
@@ -250,7 +265,15 @@ public:
 
 	vec3f normalise() const
 	{
-		return (*this) / sqrtf(x * x + y * y + z * z);
+        float const squareLength = x * x + y * y + z * z;
+        if (squareLength > 0)
+        {
+            return (*this) / sqrtf(squareLength);
+        }
+        else
+        {
+            return vec3f(0.0f, 0.0f, 0.0f);
+        }
 	}
 
     std::string toString() const;

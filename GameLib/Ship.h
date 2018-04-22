@@ -25,13 +25,31 @@ class Ship
 {
 public:
 
-    static std::unique_ptr<Ship> Create(
-        int shipId,        
-        World * parentWorld,
-        ShipDefinition const & shipDefinition,
-        MaterialDatabase const & materials,
-        GameParameters const & gameParameters,
-        uint64_t currentStepSequenceNumber);
+    Ship(
+        int id,
+        World * parentWorld);
+
+    void Initialize(
+        ElementRepository<Point> && allPoints,
+        ElementRepository<vec3f> && allPointColors,
+        ElementRepository<vec2f> && allPointTextureCoordinates,
+        ElementRepository<Spring> && allSprings,
+        ElementRepository<Triangle> && allTriangles,
+        std::vector<ElectricalElement *> && allElectricalElements,
+        uint64_t currentStepSequenceNumber)
+    {
+        mAllPoints = std::move(allPoints);
+        mAllPointColors = std::move(allPointColors);
+        mAllPointTextureCoordinates = std::move(allPointTextureCoordinates);
+        mAllSprings = std::move(allSprings);
+        mAllTriangles = std::move(allTriangles);
+        mAllElectricalElements.initialize(std::move(allElectricalElements));
+
+        mIsPointCountDirty = true;
+        mAreElementsDirty = true;
+
+        DetectConnectedComponents(currentStepSequenceNumber);
+    }
 
     ~Ship();
 
@@ -83,34 +101,6 @@ public:
      */
     template<typename TElement>
     void RegisterDestruction(TElement * element);
-
-private:
-
-    Ship(
-        int id,
-        World * parentWorld);
-
-    void Initialize(
-        ElementRepository<Point> && allPoints,
-        ElementRepository<vec3f> && allPointColors,
-        ElementRepository<vec2f> && allPointTextureCoordinates,
-        ElementRepository<Spring> && allSprings,
-        ElementRepository<Triangle> && allTriangles,
-        std::vector<ElectricalElement *> && allElectricalElements,
-        uint64_t currentStepSequenceNumber)
-    {
-        mAllPoints = std::move(allPoints);
-        mAllPointColors = std::move(allPointColors);
-        mAllPointTextureCoordinates = std::move(allPointTextureCoordinates);
-        mAllSprings = std::move(allSprings);
-        mAllTriangles = std::move(allTriangles);
-        mAllElectricalElements.initialize(std::move(allElectricalElements));
-
-        mIsPointCountDirty = true;
-        mAreElementsDirty = true;
-
-        DetectConnectedComponents(currentStepSequenceNumber);
-    }
 
 public:
 
@@ -175,7 +165,7 @@ private:
     float mTotalWater;
 
     //
-    // Draw force to apply to next iteration
+    // Draw force to apply at next iteration
     //
 
     struct DrawForce

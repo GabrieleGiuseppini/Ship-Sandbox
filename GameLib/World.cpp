@@ -7,6 +7,8 @@
 ***************************************************************************************/
 #include "Physics.h"
 
+#include "ShipBuilder.h"
+
 #include <algorithm>
 #include <cassert>
 
@@ -74,7 +76,7 @@ int World::AddShip(
 {
     int shipId = static_cast<int>(mAllShips.size());
 
-    auto newShip = Ship::Create(
+    auto newShip = ShipBuilder::Create(
         shipId,
         this,
         shipDefinition,

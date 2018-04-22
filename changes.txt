@@ -1,6 +1,6 @@
 Alpha 2.1.0 (Gabriele Giuseppini) - Changes:
  - Rewritten dynamics layer as force-based rather than position-based
- - Fixed tessellation bug that caused rendering of redundant triangles
+- Revisited tessellation algorithm, cutting in half the number of triangles that have to be rendered
 
 Alpha 2.0.1 (Gabriele Giuseppini) - Changes:
  - Ship and land textures are now mipmapped

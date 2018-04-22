@@ -32,6 +32,8 @@ set  (GAME_SOURCES
 	RenderTypes.h
 	ResourceLoader.cpp
 	ResourceLoader.h
+	ShipBuilder.cpp
+	ShipBuilder.h
 	ShipDefinition.h
 	ShipDefinitionFile.cpp
 	ShipDefinitionFile.h

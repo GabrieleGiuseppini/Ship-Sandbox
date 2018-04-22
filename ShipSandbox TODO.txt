@@ -39,31 +39,70 @@ Prev perf (before Optimizations)
 	+ Fix division by zero
 		+ Do fix
 	+ FPS: 19.1
-	- SSE2:
-		- Test first: Integrate: 
-			- 1a: pack Pos, Vel, Force from 2 points into local vec4f
-				- For loop with two points at a time
-			- 1b: create buffers with all Pos, Vel, Force (see below) and call function with restricted pointers
+	+ SSE2:
+		+ Test first: Integrate: 
+			+ 1a: pack Pos, Vel, Force from 2 points into local vec4f
+				+ For loop with two points at a time
+			+ 1b: create buffers with all Pos, Vel, Forces, and call function with restricted pointers: IT USES PACKED SSE's!
+		+ Undo
+	= Vertex cache optimizations with Forsyth's algo:
+		+ Break out ShipBuilder, friend
+		- Use own LRU cache and calculate current score (cache misses) for triangles and springs
+		- Do triangle vertex cache optimization
+			- New score:
+			- New FPS:
+		- Do spring vertex cache optimization
+			- New score:
+			- New FPS:
+	- FPS: 
 	- Point & Spring Destructuring:
+		- Main goal: improve cache locality
+		- Secondary goal: make vectorization-friendly
 		- Test first with GravitateWater and BalancePressure if N buffers make a difference vs 1 larger buffer:
-			- 1a: explode Spring as Spring (==now) and Spring_Water (Point*,Point*,Coeff1,Coeff2)
-			- 1b: explode Spring as Spring (==now), Spring_Point(Point*,Point*), and Spring_Water (Coeff1,Coeff2)
-		- Replace Point, Spring with Points, Springs
-			- They contain N buffers of non-overlapping structs
-				- Points: Position, Velocity, Force, MassFactors, ...
-				- Springs: Points, DynamicsCoefficients, WaterCoefficients (see below), ...
-				- Details depend on SSE2 test results; if we go for SSE2:
-					- Each struct would actually be union: (float[4], {vec2f cPoint1, vec2f cPoint2})
-					- MassFactors of a point is copied to x and y
-					- Rounded to 2 (static constexpr = 16 / 2*sizeof(float) (16 = 128bit SSE, 2 = coordinates in 2D) with 0's
-					
-			- They expose operations on single elements, via 32-bit index argument
-			- Pointers to springs, point are replaced by 32-bit indices
-				- Funcs that need to follow pointers (e.g. Destroy()) also must take whole containers 
-		- Integrate:
-			- Builds own 4-dimensional vector of dt's and GlobalDampCoefficient's
-			- Test with simple 1-Point loop, compiler should make times two
-
+			- 1a: explode Spring as Spring (==now) and Spring_WaterDynamics (Point*,Point*,Coeff1,Coeff2)
+			- 1b: explode Spring as Spring (==now), Spring_Point(Point*,Point*), and Spring_WaterDynamics (Coeff1,Coeff2)
+		- Replace Point, Spring, Triangle with Points, Springs, Triangles
+			- Base is ShipElementContainer
+				- Defines aliases (ElementCount, ElementIndex) - uint32
+				- ElementCount GetCount() const
+					- Number of elements
+					- passed at cctor
+				- Parent ship
+			- They contain N buffers:
+				- Points: Position, Velocity, Force, MassFactor, IsDeleted ...
+					- All scalars of a point that are only used for both x and y (e.g. MassFactor) are stored 
+					 (and updated, if any) twice
+					- All scalars of a point that are used as scalars (e.g. Buoyancy) are stored once
+				- Springs: Points, dynamics coefficients, water coefficients, ...
+				- Structure of buffers:
+					- For SSE2, need to be simple floats
+					- For handling, need to be structured
+					- Should probably go for union, and SSE loops only see float *
+						- e.g., union for 2d vectors: (float[2], vec2f component})
+				- Buffers are ElementContainer
+					- Need to be mem-aligned
+			- They expose buffer getters for each buffer (as float*)
+				- Those needed as vectors (e.g. Position, needed by UpdatePointForces()) are *also* exposed
+				  as Type* (e.g. vec2f* GetPositionBufferAsVectors())
+			- When needed, they expose getters and generally operations on single elements, via 32-bit index argument (aliased as ElementIndex)
+				- e.g. void Destroy(ElementIndex)
+				- e.g. float GetMass(ElementIndex)
+			- Destroy(ElementIndex) takes care of telling ship that element count is dirty
+				- Or even better, see if can set directly in Ship whenever we know we destroy something
+			- Pointers to springs & points are replaced by 32-bit indices
+				- Funcs that need to follow pointers (e.g. Destroy() and SpringDynamics()) also must take whole containers 
+			- They expose own Upload(RenderContext &)
+			- Move ElectricalElement to ElementContainer (move it here from PointerContainer)
+			- Nuke ShipElement
+			- Nuke PointerContainer
+		- Integrate():
+			- Just simple 1-Point loop, compiler makes times four
+			- Caller gives buffers directly from Points (GetPositionBuffer()->float *), which Integrate() take as __restrict,
+			  and adjusted count (i.e. times 2)
+				- Integrate() uses indices in the buffers
+		- UpdatePointForces():
+			- Uses Points.GetPosition/Velocity/ForceBufferAsVectors() and point-based indices
+		==========================
 		- TODOOLD: If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
 			- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
 			  Positions, Velocities, Forces, and MassFactors, all
@@ -77,11 +116,9 @@ Prev perf (before Optimizations)
 				- Builds own 4-dimensional vector of dt's and GlobalDampCoefficient's
 				- Test with simple 1-Point loop, compiler should make times two
 			- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force)
-	- Triangle vertex cache optimization
-	- Spring vertex cache optimization
 	- UpdatePointForces:
 		- Precalculate things that do not depend on position nor velocity
-			- Stored either in buffer (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
+			- Stored either in buffers (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
 			- Technically, would have to store separately effectiveMassMultiplier (*Mass) and effectiveBuoyancy (*Mass)
 				- But could cheat and use water height based on initial positions only, in which case
 				  we store directly StaticForce == Gravity + Water Drag
@@ -100,7 +137,8 @@ Prev perf (before Optimizations)
 				- All others empty
 				- All iters take factors from Spring after calling lambda
 	- If SSE2 works, see if can parallelize also:
-		- BalancePressure, GravitateWater
+		- BalancePressure, GravitateWater, SpringDynamics
+			- See shuffled loading and storing of 4 arbitrary floats in ETH deck
 							
 
 - Fix ShipCreate unit tests

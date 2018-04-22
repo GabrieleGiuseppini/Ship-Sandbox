@@ -41,9 +41,7 @@ Back to Gabe's version now.
 My goal with this playing pen is to learn the physics modeling from Luke and start messing with it. Of course I have great ambitions, so the very first step
 is to make the current simulator as fast as possible, so to minimize the impact of my new features on the performance of the game.
 
-After cleaning up the code a bit and making it CMake- and VS2017-friendly, the initial baseline (on my single-core laptop!) was:
-- Debug: 1fps/2fps
-- Release: 7fps/8fps
+After cleaning up the code a bit and making it CMake- and VS2017-friendly, the initial baseline (on my single-core laptop!) was 7fps.
 
 Here's a list of the major changes I've been doing:
 - Reverted Luke's code to use wxWidgets, as GLFW was too bare-bones for my liking (can't really make dialogs and common UI controls)
@@ -51,16 +49,19 @@ Here's a list of the major changes I've been doing:
 - Restructured interactions between the UI and the game, splitting settings between physics-related settings and render-related settings
 - Rearchitected lifetime management of elements - originally elements were removed from vectors while these are being iterated, and the entire "points-to" graph was a tad too complex 
 - Completely re-written the OpenGL interactions, targeting 2.0 "core profile" (i.e. no compatibility API) with custom shaders and adding texture mapping
+- Revisited tessellation algorithm, cutting in half the number of triangles that have to be rendered
 - Inlined critical functions
 - Added unit tests
 - Added sounds and cued music
 - Added initial proof of concept of lights
-- Optimized existing code to the point that the fps rate on my laptop reached 16fps (from 8fps)
 - Added connected component detection, used to correctly draw ship break-away parts on top of each other, among other things
 - Added texture mapping for ships, and a new "shp" input file that binds together ship structure and ship image
 	- Textures are mipmapped with box filtering
 - Added more realistic ropes, synthesised between two endpoints
 - Removed original parallelism of spring relaxation, as it was inherently wrong (there were race conditions in updating points caught in the boundary between parallel batches)
+- Made the data a bit more cache-friendly
+
+After these changes, the fps rate on my laptop increased from 7fps to 16fps.
 
 The game looks like this now:
 <img src="https://i.imgur.com/c8fTsgY.png">
@@ -68,13 +69,13 @@ The game looks like this now:
 
 
 ..and here's a rought list of the major remaining changes I want to do:
-- Test with rewriting the physics as force-based rather than position-based
-	- Eventually using Runge-Kutta for integration
+- Rewrite the physics as force-based rather than position-based
+- Rewrite data structures to maximize cache-friendliness
+- Rewrite algorithms to favor vectorized code
 - Add directional water drag forces, to simulate underwater gliding 
 	- Requires maintaining convex hull and ship perimeter normals
 - Add ability to pin points - freezing them at their current position
 - Better waves, may be with shallow water equations and breaking wave fronts
-- Leverage vectorized instructions for dynamics calculations 
 - Make lights turn off (after flickering) when generator is wet or when electrical cables break
 - Add time-of-day (i.e. day light change during the game)
 - Add multiple ships and collision detection

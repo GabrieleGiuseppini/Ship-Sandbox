@@ -11,11 +11,10 @@
 
 #include <algorithm>
 #include <cassert>
-#include <limits>
-#include <queue>
-#include <set>
 
 using namespace Physics;
+
+//////////////////////////////////////////////////////////////////////////////
 
 namespace /* anonymous */ {
 
@@ -37,6 +36,8 @@ namespace /* anonymous */ {
 
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 std::unique_ptr<Ship> ShipBuilder::Create(
     int shipId,
     World * parentWorld,
@@ -45,6 +46,23 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     GameParameters const & /*gameParameters*/,
     uint64_t currentStepSequenceNumber)
 {
+    int const structureWidth = shipDefinition.StructuralImage.Size.Width;
+    float const halfWidth = static_cast<float>(structureWidth) / 2.0f;
+    int const structureHeight = shipDefinition.StructuralImage.Size.Height;
+
+    // PointInfo's
+    std::vector<PointInfo> pointInfos;
+
+    // SpringInfo's
+    std::vector<SpringInfo> springInfos;
+
+    // RopeSegment's, indexed by the rope color
+    std::map<std::array<uint8_t, 3u>, RopeSegment> ropeSegments;
+
+    // TriangleInfo's
+    std::vector<TriangleInfo> triangleInfos;
+
+
     //
     // 1. Process image points and:
     // - Identify all points, and create PointInfo's for them
@@ -52,64 +70,16 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // - Identify rope endpoints, and create RopeSegment's for them
     //    
 
-    // PointInfo's
-
-    struct PointInfo
-    {
-        vec2f Position;
-        vec2f TextureCoordinates;
-        Material const * Mtl;
-
-        PointInfo(
-            vec2f position,
-            vec2f textureCoordinates,
-            Material const * mtl)
-            : Position(position)
-            , TextureCoordinates(textureCoordinates)
-            , Mtl(mtl)
-        {
-        }
-    };
-
-    std::vector<PointInfo> pointInfos;
-
-
-    // Matrix of points
-
-    int const structureWidth = shipDefinition.StructuralImage.Size.Width;
-    float const halfWidth = static_cast<float>(structureWidth) / 2.0f;
-    int const structureHeight = shipDefinition.StructuralImage.Size.Height;
-
-    // We allocate 2 extra rows and cols to avoid checking for boundaries
+    // Matrix of points - we allocate 2 extra dummy rows and cols to avoid checking for boundaries
     std::unique_ptr<std::unique_ptr<std::optional<size_t>[]>[]> pointIndexMatrix(new std::unique_ptr<std::optional<size_t>[]>[structureWidth + 2]);    
-    
-
-    // RopeEndpoints's
-
-    struct RopeSegment
+    for (int c = 0; c < structureWidth + 2; ++c)
     {
-        std::optional<size_t> PointAIndex;
-        std::optional<size_t> PointBIndex;
-
-        RopeSegment()
-            : PointAIndex(std::nullopt)
-            , PointBIndex(std::nullopt)
-        {
-        }
-    };
-
-    std::map<std::array<uint8_t, 3u>, RopeSegment> ropeSegments;
-
-
-    // First dummy column
-    pointIndexMatrix[0] = std::unique_ptr<std::optional<size_t>[]>(new std::optional<size_t>[structureHeight + 2]);
+        pointIndexMatrix[c] = std::unique_ptr<std::optional<size_t>[]>(new std::optional<size_t>[structureHeight + 2]);
+    }
 
     // Visit all real columns
     for (int x = 0; x < structureWidth; ++x)
     {
-        // We allocate 2 extra rows and cols to avoid checking for boundaries
-        pointIndexMatrix[x + 1] = std::unique_ptr<std::optional<size_t>[]>(new std::optional<size_t>[structureHeight + 2]);
-
         // From bottom to top
         for (int y = 0; y < structureHeight; ++y)
         {
@@ -169,8 +139,6 @@ std::unique_ptr<Ship> ShipBuilder::Create(
         }
     }
 
-    // Last dummy column
-    pointIndexMatrix[structureWidth + 1] = std::unique_ptr<std::optional<size_t>[]>(new std::optional<size_t>[structureHeight + 2]);
 
 
     //
@@ -179,21 +147,116 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // - Fill-in springs between each pair of points in the rope, creating SpringInfo's for them
     //    
 
-    struct SpringInfo
-    {
-        size_t PointAIndex;
-        size_t PointBIndex;
+    CreateRopes(
+        ropeSegments,
+        shipDefinition.StructuralImage.Size,
+        materials.GetRopeMaterial(),
+        pointInfos,
+        springInfos);
 
-        SpringInfo(
-            size_t pointAIndex,
-            size_t pointBIndex)
-            : PointAIndex(pointAIndex)
-            , PointBIndex(pointBIndex)
-        {
-        }
-    };
 
-    std::vector<SpringInfo> springInfos;
+
+    //
+    // 3. Visit all PointInfo's and create:
+    //  - Points
+    //  - PointColors
+    //  - PointTextureCoordinates
+    //
+
+    Ship *ship = new Ship(shipId, parentWorld);
+
+    ElementRepository<Point> allPoints(pointInfos.size());
+    ElementRepository<vec3f> allPointColors(pointInfos.size());
+    ElementRepository<vec2f> allPointTextureCoordinates(pointInfos.size());
+
+    CreatePoints(
+        pointInfos,
+        ship,
+        allPoints,
+        allPointColors,
+        allPointTextureCoordinates);
+
+
+    //
+    // 4. Visit point matrix and:
+    //  - Set non-fully-surrounded Points as "leaking"
+    //  - Detect springs and create SpringInfo's for them (additional to ropes)
+    //  - Do tessellation and create TriangleInfo's
+    //
+
+    size_t leakingPointsCount;
+
+    CreateShipElementInfos(
+        pointIndexMatrix,
+        shipDefinition.StructuralImage.Size,
+        allPoints,
+        springInfos,
+        triangleInfos,
+        leakingPointsCount);
+
+
+    //
+    // 5. Create Springs for all SpringInfo's
+    //
+
+    ElementRepository<Spring> allSprings = CreateSprings(
+        springInfos,
+        ship,
+        allPoints);
+
+
+    //
+    // 6. Create Triangles for all TriangleInfo's except those whose vertices
+    //    are all rope points, of which at least one is connected exclusively 
+    //    to rope points (these would be knots "sticking out" of the structure)
+    //
+
+    ElementRepository<Triangle> allTriangles = CreateTriangles(
+        triangleInfos,
+        ship,
+        allPoints);
+
+
+    //
+    // 7. Create Electrical Elements
+    //
+
+    std::vector<ElectricalElement*> allElectricalElements = CreateElectricalElements(
+        allPoints,
+        ship);
+
+
+    //
+    // We're done!
+    //
+
+    LogMessage("Created ship: W=", shipDefinition.StructuralImage.Size.Width, ", H=", shipDefinition.StructuralImage.Size.Height, ", ",
+        allPoints.size(), " points, ", allSprings.size(), " springs, ", allTriangles.size(), " triangles, ", 
+        allElectricalElements.size(), " electrical elements.");
+
+    ship->Initialize(
+        std::move(allPoints),   
+        std::move(allPointColors),
+        std::move(allPointTextureCoordinates),
+        std::move(allSprings),
+        std::move(allTriangles),
+        std::move(allElectricalElements),
+        currentStepSequenceNumber);
+
+    return std::unique_ptr<Ship>(ship);
+}
+
+void ShipBuilder::CreateRopes(
+    std::map<std::array<uint8_t, 3u>, RopeSegment> const & ropeSegments,
+    ImageSize const & structureImageSize,
+    Material const & ropeMaterial,
+    std::vector<PointInfo> & pointInfos,
+    std::vector<SpringInfo> & springInfos)
+{
+    //
+    // - Fill-in points between each pair of endpoints, creating additional PointInfo's for them
+    // - Fill-in springs between each pair of points in the rope, creating SpringInfo's for them
+    //    
 
     // Visit all RopeSegment's
     for (auto const & ropeSegmentEntry : ropeSegments)
@@ -219,7 +282,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
         //
         // Go along widest of Dx and Dy, in steps of 1.0, until we're very close to end position
         //
-        
+
         // W = wide, N = narrow
 
         float dx = endPos.x - startPos.x;
@@ -260,7 +323,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
             // Create position
             vec2f newPosition;
             if (widestIsX)
-            { 
+            {
                 newPosition = vec2f(curW, curN);
             }
             else
@@ -277,28 +340,26 @@ std::unique_ptr<Ship> ShipBuilder::Create(
             pointInfos.emplace_back(
                 newPosition,
                 vec2f(
-                    newPosition.x / static_cast<float>(structureWidth),
-                    newPosition.y / static_cast<float>(structureHeight)),
-                &(materials.GetRopeMaterial()));
+                    newPosition.x / static_cast<float>(structureImageSize.Width),
+                    newPosition.y / static_cast<float>(structureImageSize.Height)),
+                &ropeMaterial);
         }
 
         // Add last SpringInfo (no PointInfo as the endpoint has already a PointInfo)
         springInfos.emplace_back(curStartPointIndex, *ropeSegment.PointBIndex);
     }
+}
 
-
-    //
-    // 3. Visit all PointInfo's and create:
-    //  - Points
-    //  - PointColors
-    //  - PointTextureCoordinates
-    //
-
-    Ship *ship = new Ship(shipId, parentWorld);
-
-    ElementRepository<Point> allPoints(pointInfos.size());
-    ElementRepository<vec3f> allPointColors(pointInfos.size());
-    ElementRepository<vec2f> allPointTextureCoordinates(pointInfos.size());
+void ShipBuilder::CreatePoints(
+    std::vector<PointInfo> const & pointInfos,
+    Physics::Ship * ship,
+    ElementRepository<Physics::Point> & points,
+    ElementRepository<vec3f> & pointColors,
+    ElementRepository<vec2f> & pointTextureCoordinates)
+{
+    assert(points.size() == pointInfos.size());
+    assert(pointColors.size() == pointInfos.size());
+    assert(pointTextureCoordinates.size() == pointInfos.size());
 
     for (size_t p = 0; p < pointInfos.size(); ++p)
     {
@@ -310,7 +371,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
         // Create point
         //
 
-        allPoints.emplace_back(
+        points.emplace_back(
             ship,
             pointInfo.Position,
             mtl,
@@ -321,51 +382,34 @@ std::unique_ptr<Ship> ShipBuilder::Create(
         // Create point color
         //
 
-        allPointColors.emplace_back(mtl->RenderColour);
+        pointColors.emplace_back(mtl->RenderColour);
 
 
         //
         // Create point texture coordinates
         //
 
-        if (!!shipDefinition.TextureImage)
-        {
-            allPointTextureCoordinates.emplace_back(pointInfo.TextureCoordinates);
-        }
+        pointTextureCoordinates.emplace_back(pointInfo.TextureCoordinates);
     }
+}
 
-
+void ShipBuilder::CreateShipElementInfos(
+    std::unique_ptr<std::unique_ptr<std::optional<size_t>[]>[]> const & pointIndexMatrix,
+    ImageSize const & structureImageSize,
+    ElementRepository<Point> & points,
+    std::vector<SpringInfo> & springInfos,
+    std::vector<TriangleInfo> & triangleInfos,
+    size_t & leakingPointsCount)
+{
     //
-    // 4. Visit point matrix and:
+    // Visit point matrix and:
     //  - Set non-fully-surrounded Points as "leaking"
     //  - Detect springs and create SpringInfo's for them (additional to ropes)
     //  - Do tessellation and create TriangleInfo's
     //
 
-    size_t leakingPointsCount = 0;
-
-
-    struct TriangleInfo
-    {
-        size_t PointAIndex;
-        size_t PointBIndex;
-        size_t PointCIndex;
-
-        TriangleInfo(
-            size_t pointAIndex,
-            size_t pointBIndex,
-            size_t pointCIndex)
-            : PointAIndex(pointAIndex)
-            , PointBIndex(pointBIndex)
-            , PointCIndex(pointCIndex)
-        {
-        }
-    };
-
-    std::vector<TriangleInfo> triangleInfos;
-
-
-    // Visit point matrix
+    // Initialize count of leaking points
+    leakingPointsCount = 0;
 
     static const int Directions[8][2] = {
         {  1,  0 },  // E
@@ -379,12 +423,12 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     };
 
     // From bottom to top
-    for (int y = 1; y <= structureHeight; ++y)
+    for (int y = 1; y <= structureImageSize.Height; ++y)
     {
         // We're starting a new row, so we're not in a ship now
         bool isInShip = false;
 
-       for (int x = 1; x <= structureWidth; ++x)
+        for (int x = 1; x <= structureImageSize.Width; ++x)
         {
             if (!!pointIndexMatrix[x][y])
             {
@@ -393,7 +437,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
                 //
 
                 size_t pointIndex = *pointIndexMatrix[x][y];
-                Point & point = allPoints[pointIndex];
+                Point & point = points[pointIndex];
 
                 // If a non-hull node has empty space on one of its four sides, it is automatically leaking.
                 // Check if a is leaking; a is leaking if:
@@ -422,7 +466,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
                 for (int i = 0; i < 4; ++i)
                 {
                     int adjx1 = x + Directions[i][0];
-                    int adjy1 = y + Directions[i][1];                    
+                    int adjy1 = y + Directions[i][1];
 
                     if (!!pointIndexMatrix[adjx1][adjy1])
                     {
@@ -433,7 +477,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
                         // 
 
                         springInfos.emplace_back(
-                            pointIndex, 
+                            pointIndex,
                             *pointIndexMatrix[adjx1][adjy1]);
 
 
@@ -446,9 +490,9 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
                         // Check adjacent point in next CW direction
                         int adjx2 = x + Directions[i + 1][0];
-                        int adjy2 = y + Directions[i + 1][1];   
-                        if ( (!isInShip || i < 2) 
-                             && !!pointIndexMatrix[adjx2][adjy2])
+                        int adjy2 = y + Directions[i + 1][1];
+                        if ((!isInShip || i < 2)
+                            && !!pointIndexMatrix[adjx2][adjy2])
                         {
                             // This point is adjacent to the first point at one of SE, S, SW, W
 
@@ -470,7 +514,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
                         if (i == 0
                             && !pointIndexMatrix[x + Directions[1][0]][y + Directions[1][1]]
                             && !!pointIndexMatrix[x + Directions[2][0]][y + Directions[2][1]])
-                        { 
+                        {
                             // If we're here, the point at E exists
                             assert(!!pointIndexMatrix[x + Directions[0][0]][y + Directions[0][1]]);
 
@@ -500,18 +544,19 @@ std::unique_ptr<Ship> ShipBuilder::Create(
             }
         }
     }
+}
 
-
-    //
-    // 5. Create Springs for all SpringInfo's
-    //
-
+ElementRepository<Spring> ShipBuilder::CreateSprings(
+    std::vector<SpringInfo> const & springInfos,
+    Physics::Ship * ship,
+    ElementRepository<Point> & points)
+{
     ElementRepository<Spring> allSprings(springInfos.size());
 
     for (SpringInfo const & springInfo : springInfos)
     {
-        Point * a = &(allPoints[springInfo.PointAIndex]);
-        Point * b = &(allPoints[springInfo.PointBIndex]);
+        Point * a = &(points[springInfo.PointAIndex]);
+        Point * b = &(points[springInfo.PointBIndex]);
 
         // We choose the spring to be as strong as its strongest point
         Material const * const strongestMaterial = a->GetMaterial()->Strength > b->GetMaterial()->Strength ? a->GetMaterial() : b->GetMaterial();
@@ -537,20 +582,21 @@ std::unique_ptr<Ship> ShipBuilder::Create(
             strongestMaterial);
     }
 
+    return allSprings;
+}
 
-    //
-    // 6. Create Triangles for all TriangleInfo's except those whose vertices
-    //    are all rope points, of which at least one is connected exclusively 
-    //    to rope points (these would be knots "sticking out" of the structure)
-    //
-
+ElementRepository<Physics::Triangle> ShipBuilder::CreateTriangles(
+    std::vector<TriangleInfo> const & triangleInfos,
+    Physics::Ship * ship,
+    ElementRepository<Physics::Point> & points)
+{
     ElementRepository<Triangle> allTriangles(triangleInfos.size());
 
     for (TriangleInfo const & triangleInfo : triangleInfos)
     {
-        Point * a = &(allPoints[triangleInfo.PointAIndex]);
-        Point * b = &(allPoints[triangleInfo.PointBIndex]);
-        Point * c = &(allPoints[triangleInfo.PointCIndex]);
+        Point * a = &(points[triangleInfo.PointAIndex]);
+        Point * b = &(points[triangleInfo.PointBIndex]);
+        Point * c = &(points[triangleInfo.PointCIndex]);
 
         if (a->GetMaterial()->IsRope
             && b->GetMaterial()->IsRope
@@ -572,14 +618,16 @@ std::unique_ptr<Ship> ShipBuilder::Create(
             c);
     }
 
+    return allTriangles;
+}
 
-    //
-    // 7. Create Electrical Elements
-    //
-
+std::vector<ElectricalElement*> ShipBuilder::CreateElectricalElements(
+    ElementRepository<Physics::Point> & points,
+    Physics::Ship * ship)
+{
     std::vector<ElectricalElement*> allElectricalElements;
 
-    for (Point & point : allPoints)
+    for (Point & point : points)
     {
         if (!!point.GetMaterial()->Electrical)
         {
@@ -606,18 +654,5 @@ std::unique_ptr<Ship> ShipBuilder::Create(
         }
     }
 
-    LogMessage("Created ship: W=", shipDefinition.StructuralImage.Size.Width, ", H=", shipDefinition.StructuralImage.Size.Height, ", ",
-        allPoints.size(), " points, ", allSprings.size(),
-        " springs, ", allTriangles.size(), " triangles, ", allElectricalElements.size(), " electrical elements.");
-
-    ship->Initialize(
-        std::move(allPoints),   
-        std::move(allPointColors),
-        std::move(allPointTextureCoordinates),
-        std::move(allSprings),
-        std::move(allTriangles),
-        std::move(allElectricalElements),
-        currentStepSequenceNumber);
-
-    return std::unique_ptr<Ship>(ship);
+    return allElectricalElements;
 }

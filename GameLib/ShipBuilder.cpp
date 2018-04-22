@@ -155,7 +155,6 @@ std::unique_ptr<Ship> ShipBuilder::Create(
         springInfos);
 
 
-
     //
     // 3. Visit all PointInfo's and create:
     //  - Points
@@ -196,7 +195,31 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 5. Create Springs for all SpringInfo's
+    // 5. Optimize order of SpringInfo's to minimize cache misses
+    //
+
+    float springACMR = CalculateACMR(springInfos);
+
+    // TODOHERE
+
+    LogMessage("Spring ACMR: ", springACMR);
+
+
+    //
+    // 6. Optimize order of TriangleInfo's to minimize cache misses
+    //
+    // Applies to both GPU and CPU!
+    //
+
+    float triangleACMR = CalculateACMR(triangleInfos);
+
+    // TODOHERE
+
+    LogMessage("Triangle ACMR: ", triangleACMR);
+
+
+    //
+    // 7. Create Springs for all SpringInfo's
     //
 
     ElementRepository<Spring> allSprings = CreateSprings(
@@ -206,7 +229,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 6. Create Triangles for all TriangleInfo's except those whose vertices
+    // 8. Create Triangles for all TriangleInfo's except those whose vertices
     //    are all rope points, of which at least one is connected exclusively 
     //    to rope points (these would be knots "sticking out" of the structure)
     //
@@ -218,7 +241,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 7. Create Electrical Elements
+    // 9. Create Electrical Elements
     //
 
     std::vector<ElectricalElement*> allElectricalElements = CreateElectricalElements(
@@ -245,6 +268,10 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
     return std::unique_ptr<Ship>(ship);
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Building helpers
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ShipBuilder::CreateRopes(
     std::map<std::array<uint8_t, 3u>, RopeSegment> const & ropeSegments,
@@ -655,4 +682,127 @@ std::vector<ElectricalElement*> ShipBuilder::CreateElectricalElements(
     }
 
     return allElectricalElements;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Vertex cache optimization
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+float ShipBuilder::CalculateACMR(std::vector<SpringInfo> const & springInfos)
+{
+    //
+    // Calculate the average cache miss ratio
+    //
+
+    if (springInfos.empty())
+    {
+        return 0.0f;
+    }
+
+    // Using 32 is good enough; apparently 64 does not yield significant differences
+    LRUVertexCache<32> cache;
+
+    float cacheMisses = 0.0f;
+
+    for (auto const & springInfo : springInfos)
+    {
+        if (!cache.UseVertex(springInfo.PointAIndex))
+        {
+            cacheMisses += 1.0f;
+        }
+
+        if (!cache.UseVertex(springInfo.PointBIndex))
+        {
+            cacheMisses += 1.0f;
+        }
+    }
+
+    return cacheMisses / static_cast<float>(springInfos.size());
+}
+
+float ShipBuilder::CalculateACMR(std::vector<TriangleInfo> const & triangleInfos)
+{
+    //
+    // Calculate the average cache miss ratio
+    //
+
+    if (triangleInfos.empty())
+    {
+        return 0.0f;
+    }
+
+    // Using 32 is good enough; apparently 64 does not yield significant differences
+    LRUVertexCache<32> cache;
+
+    float cacheMisses = 0.0f;
+
+    for (auto const & triangleInfo : triangleInfos)
+    {
+        if (!cache.UseVertex(triangleInfo.PointAIndex))
+        {
+            cacheMisses += 1.0f;
+        }
+
+        if (!cache.UseVertex(triangleInfo.PointBIndex))
+        {
+            cacheMisses += 1.0f;
+        }
+
+        if (!cache.UseVertex(triangleInfo.PointCIndex))
+        {
+            cacheMisses += 1.0f;
+        }
+    }
+
+    return cacheMisses / static_cast<float>(triangleInfos.size());
+}
+
+template<size_t Size>
+bool ShipBuilder::LRUVertexCache<Size>::UseVertex(size_t vertexIndex)
+{
+    for (auto it = mEntries.begin(); it != mEntries.end(); ++it)
+    {
+        if (vertexIndex == *it)
+        {
+            // It's already in the cache...
+            // ...move it to front
+            mEntries.erase(it);
+            mEntries.push_front(vertexIndex);
+
+            // It was a cache hit
+            return true;
+        }
+    }
+
+    // Not in the cache...
+    // ...insert in front of cache
+    mEntries.push_front(vertexIndex);
+
+    // Trim
+    while (mEntries.size() > Size)
+    {
+        mEntries.pop_back();
+    }
+
+    // It was a cache miss
+    return false;
+}
+
+template<size_t Size>
+std::optional<size_t> ShipBuilder::LRUVertexCache<Size>::GetCachePosition(size_t vertexIndex)
+{
+    size_t position = 0;
+    for (auto const & vi : mEntries)
+    {
+        if (vi == vertexIndex)
+        {
+            // Found!
+            return position;
+        }
+
+        ++position;
+    }
+
+    // Not found
+    return std::nullopt;
 }

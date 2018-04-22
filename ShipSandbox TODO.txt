@@ -47,7 +47,9 @@ Prev perf (before Optimizations)
 		+ Undo
 	= Vertex cache optimizations with Forsyth's algo:
 		+ Break out ShipBuilder, friend
-		- Use own LRU cache and calculate current score (cache misses) for triangles and springs
+		+ Use own LRU cache and calculate current ACMR for triangles and springs
+			+ Spring ACMR: 0.516807
+			+ Triangle ACMR: 1.01986
 		- Do triangle vertex cache optimization
 			- New score:
 			- New FPS:

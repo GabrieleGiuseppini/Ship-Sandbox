@@ -11,6 +11,8 @@
 #include "Physics.h"
 #include "ShipDefinition.h"
 
+#include <cstdint>
+#include <list>
 #include <map>
 #include <memory>
 #include <set>
@@ -95,6 +97,10 @@ private:
 
 private:
 
+    /////////////////////////////////////////////////////////////////
+    // Building helpers
+    /////////////////////////////////////////////////////////////////
+
     static void CreateRopes(
         std::map<std::array<uint8_t, 3u>, RopeSegment> const & ropeSegments,
         ImageSize const & structureImageSize,
@@ -131,4 +137,30 @@ private:
         ElementRepository<Physics::Point> & points,
         Physics::Ship * ship);
 
+private:
+
+    /////////////////////////////////////////////////////////////////
+    // Vertex cache optimization
+    /////////////////////////////////////////////////////////////////
+
+    static float CalculateACMR(std::vector<SpringInfo> const & springInfos);
+    static float CalculateACMR(std::vector<TriangleInfo> const & triangleInfos);
+
+    template <size_t Size>
+    class LRUVertexCache
+    {
+    public:
+
+        LRUVertexCache() 
+            : mEntries() 
+        {}
+
+        bool UseVertex(size_t vertexIndex);
+
+        std::optional<size_t> GetCachePosition(size_t vertexIndex);
+
+    private:
+
+        std::list<size_t> mEntries;
+    };
 };

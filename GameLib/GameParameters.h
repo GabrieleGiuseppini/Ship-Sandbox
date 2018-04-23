@@ -21,7 +21,8 @@ struct GameParameters
 
 
     //
-    // The number of iterations we run in the dynamics step
+    // The number of iterations we run in the dynamics step for
+    // each simulation step
     //
     // The number of iterations dictates how stiff bodies are:
     // - Less iterations => softer (jelly) body
@@ -30,6 +31,7 @@ struct GameParameters
 
     template <typename T>
     static constexpr T NumDynamicIterations = 8;
+
 
     //
     // The dt of each iteration in the dynamics step

@@ -81,15 +81,24 @@ Prev perf (before Optimizations)
 	+ FPS: 19.3/19.5
 	+ ShipRendering: upload triangles, ropes, springs only when they change
 		+ Have VBOs per connected component
-	= FPS: 19.7
-		- Commit & check again w/previous commit
-	= Redo full baseline
+	+ FPS: 19.0/19.4/19.7/19.9
+	- Redo full baseline
 	- Point & Spring Destructuring:
 		- Main goal: improve cache locality
 		- Secondary goal: make vectorization-friendly
 		- Test first with GravitateWater and BalancePressure if N buffers make a difference vs 1 larger buffer:
 			- 1a: explode Spring as Spring (==now) and Spring_WaterDynamics (Point*,Point*,Coeff1,Coeff2)
+				- Made at Ship::cctor
+				- Use at SpringDynamics
+				- Get baseline 1:
+					- FPS:
+					- Step:
+					- SpringDynamics
 			- 1b: explode Spring as Spring (==now), Spring_Point(Point*,Point*), and Spring_WaterDynamics (Coeff1,Coeff2)
+				- Get baseline 2:
+					- FPS:
+					- Step:
+					- SpringDynamics
 		- Replace Point, Spring, Triangle with Points, Springs, Triangles
 			- Base is ShipElementContainer
 				- Defines aliases (ElementCount, ElementIndex) - uint32

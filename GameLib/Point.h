@@ -222,7 +222,7 @@ private:
     int const mElementIndex;
 
     FixedSizeVector<Spring *, 8U + 1U> mConnectedSprings; // 8 neighbours and 1 rope spring, when this is a rope endpoint
-    FixedSizeVector<Triangle *, 12U> mConnectedTriangles;    
+    FixedSizeVector<Triangle *, 8U> mConnectedTriangles;    
     ElectricalElement * mConnectedElectricalElement;
 
     size_t mConnectedComponentId; // Starts from 1

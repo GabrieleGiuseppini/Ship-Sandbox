@@ -32,18 +32,7 @@ ShipRenderContext::ShipRenderContext(
     , mElementTextureShaderAmbientLightIntensityParameter(0)
     , mElementStressedSpringShaderProgram(0)
     , mElementStressedSpringShaderOrthoMatrixParameter(0)
-    , mPointElementBuffers()
-    , mSpringElementBuffers()
-    , mRopeElementBuffers()
-    , mTriangleElementBuffers()
-    , mStressedSpringElementBuffers()
-    , mElementBufferSizes()
-    , mElementBufferMaxSizes()
-    , mPointElementVBO()
-    , mSpringElementVBO()
-    , mRopeElementVBO()
-    , mTriangleElementVBO()
-    , mStressedSpringElementVBO()
+    , mConnectedComponents()
     , mElementTexture()
     , mElementStressedSpringTexture()
     // Lamps
@@ -358,19 +347,6 @@ ShipRenderContext::ShipRenderContext(
 
 
     //
-    // Create element VBOs
-    //
-
-    GLuint elementVBOs[5];
-    glGenBuffers(5, elementVBOs);
-    mPointElementVBO = elementVBOs[0];
-    mSpringElementVBO = elementVBOs[1];
-    mRopeElementVBO = elementVBOs[2];
-    mTriangleElementVBO = elementVBOs[3];
-    mStressedSpringElementVBO = elementVBOs[4];
-
-
-    //
     // Create and upload ship texture, if present
     //
 
@@ -552,98 +528,150 @@ void ShipRenderContext::UploadPointsEnd()
 
 void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & connectedComponentsMaxSizes)
 {
-    if (connectedComponentsMaxSizes.size() != mElementBufferMaxSizes.size())
+    GLuint elementVBO;
+
+    if (connectedComponentsMaxSizes.size() != mConnectedComponents.size())
     {
-        // A change in the number of connected components
-
-        mPointElementBuffers.clear();
-        mPointElementBuffers.resize(connectedComponentsMaxSizes.size());
-
-        mSpringElementBuffers.clear();
-        mSpringElementBuffers.resize(connectedComponentsMaxSizes.size());
-
-        mRopeElementBuffers.clear();
-        mRopeElementBuffers.resize(connectedComponentsMaxSizes.size());
-
-        mTriangleElementBuffers.clear();
-        mTriangleElementBuffers.resize(connectedComponentsMaxSizes.size());
-
-        mStressedSpringElementBuffers.clear();
-        mStressedSpringElementBuffers.resize(connectedComponentsMaxSizes.size());
-
-        mElementBufferMaxSizes.clear();
-        mElementBufferMaxSizes.resize(connectedComponentsMaxSizes.size());
+        // A change in the number of connected components, nuke everything
+        mConnectedComponents.clear();
+        mConnectedComponents.resize(connectedComponentsMaxSizes.size());
     }
-
-    for (size_t c = 0; c < connectedComponentsMaxSizes.size(); ++c)
+    
+    for (size_t c = 0; c < mConnectedComponents.size(); ++c)
     {
+        // Prepare point elements
         size_t maxConnectedComponentPoints = connectedComponentsMaxSizes[c];
-        if (mElementBufferMaxSizes[c].pointCount != maxConnectedComponentPoints)
+        if (mConnectedComponents[c].pointElementMaxCount != maxConnectedComponentPoints)
         {
             // A change in the max size of this connected component
-            mPointElementBuffers[c].reset();
-            mPointElementBuffers[c].reset(new PointElement[maxConnectedComponentPoints]);
-            mElementBufferMaxSizes[c].pointCount = maxConnectedComponentPoints;
+            mConnectedComponents[c].pointElementBuffer.reset();
+            mConnectedComponents[c].pointElementBuffer.reset(new PointElement[maxConnectedComponentPoints]);
+            mConnectedComponents[c].pointElementMaxCount = maxConnectedComponentPoints;
         }
 
+        mConnectedComponents[c].pointElementCount = 0;
+        if (!mConnectedComponents[c].pointElementVBO)
+        {
+            glGenBuffers(1, &elementVBO);
+            mConnectedComponents[c].pointElementVBO = elementVBO;
+        }
+        
+        // Prepare spring elements
         size_t maxConnectedComponentSprings = connectedComponentsMaxSizes[c] * 9;        
-        if (mElementBufferMaxSizes[c].springCount != maxConnectedComponentSprings)
+        if (mConnectedComponents[c].springElementMaxCount != maxConnectedComponentSprings)
         {
             // A change in the max size of this connected component
-            mSpringElementBuffers[c].reset();
-            mSpringElementBuffers[c].reset(new SpringElement[maxConnectedComponentSprings]);
-            mElementBufferMaxSizes[c].springCount = maxConnectedComponentSprings;
+            mConnectedComponents[c].springElementBuffer.reset();
+            mConnectedComponents[c].springElementBuffer.reset(new SpringElement[maxConnectedComponentSprings]);
+            mConnectedComponents[c].springElementMaxCount = maxConnectedComponentSprings;
         }
 
+        mConnectedComponents[c].springElementCount = 0;
+        if (!mConnectedComponents[c].springElementVBO)
+        {
+            glGenBuffers(1, &elementVBO);
+            mConnectedComponents[c].springElementVBO = elementVBO;
+        }
+
+        // Prepare rope elements
         size_t maxConnectedComponentRopes = connectedComponentsMaxSizes[c];
-        if (mElementBufferMaxSizes[c].ropeCount != maxConnectedComponentRopes)
+        if (mConnectedComponents[c].ropeElementMaxCount != maxConnectedComponentRopes)
         {
             // A change in the max size of this connected component
-            mRopeElementBuffers[c].reset();
-            mRopeElementBuffers[c].reset(new RopeElement[maxConnectedComponentRopes]);
-            mElementBufferMaxSizes[c].ropeCount = maxConnectedComponentRopes;
+            mConnectedComponents[c].ropeElementBuffer.reset();
+            mConnectedComponents[c].ropeElementBuffer.reset(new RopeElement[maxConnectedComponentRopes]);
+            mConnectedComponents[c].ropeElementMaxCount = maxConnectedComponentRopes;
         }
 
-        size_t maxConnectedComponentTriangles = connectedComponentsMaxSizes[c] * 12;
-        if (mElementBufferMaxSizes[c].triangleCount != maxConnectedComponentTriangles)
+        mConnectedComponents[c].ropeElementCount = 0;
+        if (!mConnectedComponents[c].ropeElementVBO)
+        {
+            glGenBuffers(1, &elementVBO);
+            mConnectedComponents[c].ropeElementVBO = elementVBO;
+        }
+
+        // Prepare triangle elements
+        size_t maxConnectedComponentTriangles = connectedComponentsMaxSizes[c] * 8;
+        if (mConnectedComponents[c].triangleElementMaxCount != maxConnectedComponentTriangles)
         {
             // A change in the max size of this connected component
-            mTriangleElementBuffers[c].reset();
-            mTriangleElementBuffers[c].reset(new TriangleElement[maxConnectedComponentTriangles]);
-            mElementBufferMaxSizes[c].triangleCount = maxConnectedComponentTriangles;
+            mConnectedComponents[c].triangleElementBuffer.reset();
+            mConnectedComponents[c].triangleElementBuffer.reset(new TriangleElement[maxConnectedComponentTriangles]);
+            mConnectedComponents[c].triangleElementMaxCount = maxConnectedComponentTriangles;
         }
 
+        mConnectedComponents[c].triangleElementCount = 0;
+        if (!mConnectedComponents[c].triangleElementVBO)
+        {
+            glGenBuffers(1, &elementVBO);
+            mConnectedComponents[c].triangleElementVBO = elementVBO;
+        }
+
+        // Prepare stressed spring elements
         size_t maxConnectedComponentStressedSprings = connectedComponentsMaxSizes[c] * 9;
-        if (mElementBufferMaxSizes[c].stressedSpringCount != maxConnectedComponentStressedSprings)
+        if (mConnectedComponents[c].stressedSpringElementMaxCount != maxConnectedComponentStressedSprings)
         {
             // A change in the max size of this connected component
-            mStressedSpringElementBuffers[c].reset();
-            mStressedSpringElementBuffers[c].reset(new StressedSpringElement[maxConnectedComponentStressedSprings]);
-            mElementBufferMaxSizes[c].stressedSpringCount = maxConnectedComponentStressedSprings;
+            mConnectedComponents[c].stressedSpringElementBuffer.reset();
+            mConnectedComponents[c].stressedSpringElementBuffer.reset(new StressedSpringElement[maxConnectedComponentStressedSprings]);
+            mConnectedComponents[c].stressedSpringElementMaxCount = maxConnectedComponentStressedSprings;
+        }
+
+        mConnectedComponents[c].stressedSpringElementCount = 0;
+        if (!mConnectedComponents[c].stressedSpringElementVBO)
+        {
+            glGenBuffers(1, &elementVBO);
+            mConnectedComponents[c].stressedSpringElementVBO = elementVBO;
         }
     }
-
-    mElementBufferSizes.clear();
-    mElementBufferSizes.resize(connectedComponentsMaxSizes.size());
 }
 
 void ShipRenderContext::UploadElementsEnd()
 {
-    // Nop
+    //
+    // Upload all elements, except for stressed springs
+    //
+
+    for (size_t c = 0; c < mConnectedComponents.size(); ++c)
+    {
+        // Points
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mConnectedComponents[c].pointElementVBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mConnectedComponents[c].pointElementCount * sizeof(PointElement), mConnectedComponents[c].pointElementBuffer.get(), GL_STATIC_DRAW);
+
+        // Springs
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mConnectedComponents[c].springElementVBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mConnectedComponents[c].springElementCount * sizeof(SpringElement), mConnectedComponents[c].springElementBuffer.get(), GL_STATIC_DRAW);
+
+        // Ropes
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mConnectedComponents[c].ropeElementVBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mConnectedComponents[c].ropeElementCount * sizeof(RopeElement), mConnectedComponents[c].ropeElementBuffer.get(), GL_STATIC_DRAW);
+
+        // Triangles
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mConnectedComponents[c].triangleElementVBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mConnectedComponents[c].triangleElementCount * sizeof(TriangleElement), mConnectedComponents[c].triangleElementBuffer.get(), GL_STATIC_DRAW);
+    }
 }
 
 void ShipRenderContext::UploadElementStressedSpringsStart()
 {
-    // Zero-out counts of stressed springs
-    for (auto & counts : mElementBufferSizes)
+    for (size_t c = 0; c < mConnectedComponents.size(); ++c)
     {
-        counts.stressedSpringCount = 0;
+        // Zero-out count of stressed springs
+        mConnectedComponents[c].stressedSpringElementCount = 0;
     }
 }
 
 void ShipRenderContext::UploadElementStressedSpringsEnd()
 {
-    // Nop
+    //
+    // Upload stressed spring elements
+    //
+
+    for (size_t c = 0; c < mConnectedComponents.size(); ++c)
+    {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mConnectedComponents[c].stressedSpringElementVBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mConnectedComponents[c].stressedSpringElementCount * sizeof(StressedSpringElement), mConnectedComponents[c].stressedSpringElementBuffer.get(), GL_DYNAMIC_DRAW);
+    }
 }
 
 void ShipRenderContext::UploadLampsStart(size_t connectedComponents)
@@ -668,7 +696,7 @@ void ShipRenderContext::Render(
     // Process all connected components, from first to last, and draw all elements
     //
 
-    for (size_t c = 0; c < mElementBufferSizes.size(); ++c)
+    for (size_t c = 0; c < mConnectedComponents.size(); ++c)
     {
         //
         // Draw points
@@ -676,8 +704,8 @@ void ShipRenderContext::Render(
 
         if (renderMode == ShipRenderMode::Points)
         {
-            RenderPoints(
-                c,
+            RenderPointElements(
+                mConnectedComponents[c],
                 ambientLightIntensity,
                 canvasToVisibleWorldHeightRatio,
                 orthoMatrix);
@@ -697,8 +725,8 @@ void ShipRenderContext::Render(
             || renderMode == ShipRenderMode::Structure
             || renderMode == ShipRenderMode::Texture)
         {
-            RenderSprings(
-                c,
+            RenderSpringElements(
+                mConnectedComponents[c],
                 renderMode == ShipRenderMode::Texture,
                 ambientLightIntensity,
                 canvasToVisibleWorldHeightRatio,
@@ -715,8 +743,8 @@ void ShipRenderContext::Render(
         if (renderMode == ShipRenderMode::Springs
             || renderMode == ShipRenderMode::Texture)
         {
-            RenderRopes(
-                c,
+            RenderRopeElements(
+                mConnectedComponents[c],
                 ambientLightIntensity,
                 canvasToVisibleWorldHeightRatio,
                 orthoMatrix);
@@ -730,8 +758,8 @@ void ShipRenderContext::Render(
         if (renderMode == ShipRenderMode::Structure
             || renderMode == ShipRenderMode::Texture)
         {
-            RenderTriangles(
-                c,
+            RenderTriangleElements(
+                mConnectedComponents[c],
                 renderMode == ShipRenderMode::Texture,
                 ambientLightIntensity,
                 orthoMatrix);
@@ -744,8 +772,8 @@ void ShipRenderContext::Render(
 
         if (renderMode == ShipRenderMode::Structure)
         {
-            RenderRopes(
-                c,
+            RenderRopeElements(
+                mConnectedComponents[c],
                 ambientLightIntensity,
                 canvasToVisibleWorldHeightRatio,
                 orthoMatrix);
@@ -758,8 +786,8 @@ void ShipRenderContext::Render(
 
         if (showStressedSprings)
         {
-            RenderStressedSprings(
-                c,
+            RenderStressedSpringElements(
+                mConnectedComponents[c],
                 canvasToVisibleWorldHeightRatio,
                 orthoMatrix);
         }
@@ -768,8 +796,8 @@ void ShipRenderContext::Render(
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-void ShipRenderContext::RenderPoints(
-    size_t connectedComponentId,
+void ShipRenderContext::RenderPointElements(
+    ConnectedComponentData const & connectedComponent,
     float ambientLightIntensity,
     float canvasToVisibleWorldHeightRatio,
     float(&orthoMatrix)[4][4])
@@ -784,19 +812,18 @@ void ShipRenderContext::RenderPoints(
     // Set point size
     glPointSize(0.2f * 2.0f * canvasToVisibleWorldHeightRatio);
 
-    // Upload points
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mPointElementVBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementBufferSizes[connectedComponentId].pointCount * sizeof(PointElement), mPointElementBuffers[connectedComponentId].get(), GL_DYNAMIC_DRAW);
+    // Bind VBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *connectedComponent.pointElementVBO);
 
     // Draw
-    glDrawElements(GL_POINTS, static_cast<GLsizei>(1 * mElementBufferSizes[connectedComponentId].pointCount), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_POINTS, static_cast<GLsizei>(1 * connectedComponent.pointElementCount), GL_UNSIGNED_INT, 0);
 
     // Stop using program
     glUseProgram(0);
 }
 
-void ShipRenderContext::RenderSprings(
-    size_t connectedComponentId,
+void ShipRenderContext::RenderSpringElements(
+    ConnectedComponentData const & connectedComponent,
     bool withTexture,
     float ambientLightIntensity,
     float canvasToVisibleWorldHeightRatio,
@@ -827,12 +854,11 @@ void ShipRenderContext::RenderSprings(
     // Set line size
     glLineWidth(0.1f * 2.0f * canvasToVisibleWorldHeightRatio);
 
-    // Upload springs
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mSpringElementVBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementBufferSizes[connectedComponentId].springCount * sizeof(SpringElement), mSpringElementBuffers[connectedComponentId].get(), GL_DYNAMIC_DRAW);
+    // Bind VBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *connectedComponent.springElementVBO);
 
     // Draw
-    glDrawElements(GL_LINES, static_cast<GLsizei>(2 * mElementBufferSizes[connectedComponentId].springCount), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_LINES, static_cast<GLsizei>(2 * connectedComponent.springElementCount), GL_UNSIGNED_INT, 0);
 
     // Unbind texture (if any)
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -841,8 +867,8 @@ void ShipRenderContext::RenderSprings(
     glUseProgram(0);
 }
 
-void ShipRenderContext::RenderRopes(
-    size_t connectedComponentId,
+void ShipRenderContext::RenderRopeElements(
+    ConnectedComponentData const & connectedComponent,
     float ambientLightIntensity,
     float canvasToVisibleWorldHeightRatio,
     float(&orthoMatrix)[4][4])
@@ -857,19 +883,18 @@ void ShipRenderContext::RenderRopes(
     // Set line size
     glLineWidth(0.1f * 2.0f * canvasToVisibleWorldHeightRatio);
 
-    // Upload ropes
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mRopeElementVBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementBufferSizes[connectedComponentId].ropeCount * sizeof(RopeElement), mRopeElementBuffers[connectedComponentId].get(), GL_DYNAMIC_DRAW);
+    // Bind VBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *connectedComponent.ropeElementVBO);
 
     // Draw
-    glDrawElements(GL_LINES, static_cast<GLsizei>(2 * mElementBufferSizes[connectedComponentId].ropeCount), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_LINES, static_cast<GLsizei>(2 * connectedComponent.ropeElementCount), GL_UNSIGNED_INT, 0);
 
     // Stop using program
     glUseProgram(0);
 }
 
-void ShipRenderContext::RenderTriangles(
-    size_t connectedComponentId,
+void ShipRenderContext::RenderTriangleElements(
+    ConnectedComponentData const & connectedComponent,
     bool withTexture,
     float ambientLightIntensity,
     float(&orthoMatrix)[4][4])
@@ -896,12 +921,11 @@ void ShipRenderContext::RenderTriangles(
         glUniform1f(mElementColorShaderAmbientLightIntensityParameter, ambientLightIntensity);
     }
 
-    // Upload elements
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mTriangleElementVBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementBufferSizes[connectedComponentId].triangleCount * sizeof(TriangleElement), mTriangleElementBuffers[connectedComponentId].get(), GL_DYNAMIC_DRAW);
+    // Bind VBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *connectedComponent.triangleElementVBO);
 
     // Draw
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3 * mElementBufferSizes[connectedComponentId].triangleCount), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3 * connectedComponent.triangleElementCount), GL_UNSIGNED_INT, 0);
 
     // Unbind texture (if any)
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -910,8 +934,8 @@ void ShipRenderContext::RenderTriangles(
     glUseProgram(0);
 }
 
-void ShipRenderContext::RenderStressedSprings(
-    size_t connectedComponentId,
+void ShipRenderContext::RenderStressedSpringElements(
+    ConnectedComponentData const & connectedComponent,
     float canvasToVisibleWorldHeightRatio,
     float(&orthoMatrix)[4][4])
 {
@@ -924,15 +948,14 @@ void ShipRenderContext::RenderStressedSprings(
     // Bind texture
     glBindTexture(GL_TEXTURE_2D, *mElementStressedSpringTexture);
 
-    // Upload elements
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *mStressedSpringElementVBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementBufferSizes[connectedComponentId].stressedSpringCount * sizeof(StressedSpringElement), mStressedSpringElementBuffers[connectedComponentId].get(), GL_DYNAMIC_DRAW);
+    // Bind VBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *connectedComponent.stressedSpringElementVBO);
 
     // Set line size
     glLineWidth(0.1f * 2.0f * canvasToVisibleWorldHeightRatio);
 
     // Draw
-    glDrawElements(GL_LINES, static_cast<GLsizei>(2 * mElementBufferSizes[connectedComponentId].stressedSpringCount), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_LINES, static_cast<GLsizei>(2 * connectedComponent.stressedSpringElementCount), GL_UNSIGNED_INT, 0);
 
     // Unbind texture
     glBindTexture(GL_TEXTURE_2D, 0);

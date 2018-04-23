@@ -2,6 +2,25 @@
 Current perf
 =================================================
 =================================================
+- fps: 19.3/19.5 (Samsung: TBD (Krafting)) (Mattia's: TBD (Krafting))
+- GameController::DoStep: 51.73%
+	- Ship::Update: 50.82%
+		- UpdateDynamics: 31.23%
+			- UpdateSpringForces: 19.39%
+			- UpdatePointForces: 5.27%
+			- Integrate: 3.40%
+			- HandleCollisionsWithSeafloor: 3.16%
+		- BalancePressure: 8.47%
+		- GravitateWater: 8.98%
+		- LeakWater: 0.25%
+	- DiffuseLight: 0.81%
+	- WaterSurface::Update: 0.07%
+- MainFrame::RenderGame: 41.60%
+	- Ship::Render: 36.88% (Incl) 0.50% (Excl)
+		- ShipRenderContext::RenderTriangles: 14.78%
+		- ShipRenderContext::RenderSprings: 21.17%
+		- ShipRenderContext::RenderRopes: 0.35%
+	- RenderContext::RenderCloudsEnd: 2.05%
 
 =================================================
 Prev perf (before Optimizations)
@@ -60,6 +79,11 @@ Prev perf (before Optimizations)
 			+ New ACMR: 0.325156
 			+ New FPS: 19.4/19.7
 	+ FPS: 19.3/19.5
+	+ ShipRendering: upload triangles, ropes, springs only when they change
+		+ Have VBOs per connected component
+	= FPS: 19.7
+		- Commit & check again w/previous commit
+	= Redo full baseline
 	- Point & Spring Destructuring:
 		- Main goal: improve cache locality
 		- Secondary goal: make vectorization-friendly
@@ -168,6 +192,7 @@ Prev perf (before Optimizations)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
+	- See if can draw a bit more often
 	- Pin points
 		- Point: Pinned Characteristic
 		- Point::TogglePin():

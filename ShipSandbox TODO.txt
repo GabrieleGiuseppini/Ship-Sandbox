@@ -45,19 +45,21 @@ Prev perf (before Optimizations)
 				+ For loop with two points at a time
 			+ 1b: create buffers with all Pos, Vel, Forces, and call function with restricted pointers: IT USES PACKED SSE's!
 		+ Undo
-	= Vertex cache optimizations with Forsyth's algo:
+	+ Vertex cache optimizations with Forsyth's algo:
 		+ Break out ShipBuilder, friend
 		+ Use own LRU cache and calculate current ACMR for triangles and springs
 			+ Spring ACMR: 0.516807
 			+ Triangle ACMR: 1.01986
-		= Do triangle vertex cache optimization
+		+ Do triangle vertex cache optimization
 			+ New ACMR: 0.68174
 			+ FPS improvement: 19.1 -> 19.0
-			- Check if self-covering within same connected component now looks weird
-		- Do spring vertex cache optimization
-			- New ACMR:
-			- New FPS:
-	- FPS: 
+			+ Check if self-covering within same connected component now looks weird
+			+ Test on samsung: 18.5/18.8 -> 18.5/18.6/18.8/19.0
+			+ REVERT, IT'S (MARGINALLY) WORSE!
+		+ Do spring vertex cache optimization
+			+ New ACMR: 0.325156
+			+ New FPS: 19.4/19.7
+	+ FPS: 19.3/19.5
 	- Point & Spring Destructuring:
 		- Main goal: improve cache locality
 		- Secondary goal: make vectorization-friendly
@@ -215,6 +217,9 @@ Prev perf (before Optimizations)
 		- Semi-implicit Euler (https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf)
 	- Do we really need Spring::Damp 3 times? Would once with a higher coeff suffice?
 	- Water:
+		- Sinking detection is broken - it currently only considers total water that entered the ship, which comes proportionally to external
+		  water pressure; all this water could be confined to a tiny volume, and yet we trigger sinking
+		  - Should be based on total number of points that have water instead
 		+ Did original game propagate water also through hull springs? YES. How did hull thin dividers work? THEY DIDN'T WORK
 		+ Add Point::Hull Characteristic, and don't leak/propagate(incl. gravitate) water if at least one of the two points is hull			
 			+ Alternatively: just make a spring hull if one point is hull; test it

@@ -65,7 +65,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 1. Process image points and:
+    // Process image points and:
     // - Identify all points, and create PointInfo's for them
     // - Build a 2D matrix containing indices to the points above
     // - Identify rope endpoints, and create RopeSegment's for them
@@ -143,7 +143,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 2. Process all identified rope endpoints and:
+    // Process all identified rope endpoints and:
     // - Fill-in points between the endpoints, creating additional PointInfo's for them
     // - Fill-in springs between each pair of points in the rope, creating SpringInfo's for them
     //    
@@ -157,7 +157,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 3. Visit all PointInfo's and create:
+    // Visit all PointInfo's and create:
     //  - Points
     //  - PointColors
     //  - PointTextureCoordinates
@@ -178,7 +178,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 4. Visit point matrix and:
+    // Visit point matrix and:
     //  - Set non-fully-surrounded Points as "leaking"
     //  - Detect springs and create SpringInfo's for them (additional to ropes)
     //  - Do tessellation and create TriangleInfo's
@@ -196,7 +196,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 5. Optimize order of SpringInfo's to minimize cache misses
+    // Optimize order of SpringInfo's to minimize cache misses
     //
 
     float originalSpringACMR = CalculateACMR(springInfos);
@@ -208,24 +208,13 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     LogMessage("Spring ACMR: original=", originalSpringACMR, ", optimized=", optimizedSpringACMR);
 
 
-    //
-    // 6. Optimize order of TriangleInfo's to minimize cache misses
-    //
-    // Applies to both GPU and CPU!
-    //
-
-    float originalTriangleACMR = CalculateACMR(triangleInfos);
-
-    // TODOTEST
-    //triangleInfos = ReorderOptimally(triangleInfos, pointInfos.size());
-
-    float optimizedTriangleACMR = CalculateACMR(triangleInfos);
-
-    LogMessage("Triangle ACMR: original=", originalTriangleACMR, ", optimized=", optimizedTriangleACMR);
+    // Note: we don't optimize triangles, as tests indicate that performance gets (marginally) worse,
+    // and at the same time, it makes sense to use the natural order of the triangles as it ensures
+    // that higher elements in the ship cover lower elements when they are semi-detached
 
 
     //
-    // 7. Create Springs for all SpringInfo's
+    // Create Springs for all SpringInfo's
     //
 
     ElementRepository<Spring> allSprings = CreateSprings(
@@ -235,9 +224,9 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 8. Create Triangles for all TriangleInfo's except those whose vertices
-    //    are all rope points, of which at least one is connected exclusively 
-    //    to rope points (these would be knots "sticking out" of the structure)
+    // Create Triangles for all TriangleInfo's except those whose vertices
+    // are all rope points, of which at least one is connected exclusively 
+    // to rope points (these would be knots "sticking out" of the structure)
     //
 
     ElementRepository<Triangle> allTriangles = CreateTriangles(
@@ -247,7 +236,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // 9. Create Electrical Elements
+    // Create Electrical Elements
     //
 
     std::vector<ElectricalElement*> allElectricalElements = CreateElectricalElements(
@@ -698,22 +687,43 @@ std::vector<ShipBuilder::SpringInfo> ShipBuilder::ReorderOptimally(
     std::vector<SpringInfo> & springInfos,
     size_t vertexCount)
 {
-    // TODOHERE
-    return springInfos;
+    std::vector<VertexData> vertexData(vertexCount);
+    std::vector<ElementData> elementData(springInfos.size());
+
+    // Fill-in cross-references between vertices and springs
+    for (size_t s = 0; s < springInfos.size(); ++s)
+    {
+        vertexData[springInfos[s].PointAIndex].RemainingElementIndices.push_back(s);
+        vertexData[springInfos[s].PointBIndex].RemainingElementIndices.push_back(s);
+
+        elementData[s].VertexIndices.push_back(springInfos[s].PointAIndex);
+        elementData[s].VertexIndices.push_back(springInfos[s].PointBIndex);
+    }
+
+    // Get optimal indices
+    auto optimalIndices = ReorderOptimally<2>(
+        vertexData,
+        elementData);
+
+    // Build optimally-ordered set of springs
+    std::vector<SpringInfo> newSpringInfos;
+    newSpringInfos.reserve(springInfos.size());
+    for (size_t ti : optimalIndices)
+    {
+        newSpringInfos.push_back(springInfos[ti]);
+    }
+
+    return newSpringInfos;
 }
 
 std::vector<ShipBuilder::TriangleInfo> ShipBuilder::ReorderOptimally(
     std::vector<TriangleInfo> & triangleInfos,
     size_t vertexCount)
 {
-    //
-    // Initialization
-    //
-
     std::vector<VertexData> vertexData(vertexCount);
     std::vector<ElementData> elementData(triangleInfos.size());
 
-    // Fill-in cross-references between vertices and elements
+    // Fill-in cross-references between vertices and triangles
     for (size_t t = 0; t < triangleInfos.size(); ++t)
     {
         vertexData[triangleInfos[t].PointAIndex].RemainingElementIndices.push_back(t);
@@ -725,10 +735,31 @@ std::vector<ShipBuilder::TriangleInfo> ShipBuilder::ReorderOptimally(
         elementData[t].VertexIndices.push_back(triangleInfos[t].PointCIndex);
     }
 
+    // Get optimal indices
+    auto optimalIndices = ReorderOptimally<3>(
+        vertexData,
+        elementData);
+
+    // Build optimally-ordered set of triangles
+    std::vector<TriangleInfo> newTriangleInfos;
+    newTriangleInfos.reserve(triangleInfos.size());
+    for (size_t ti : optimalIndices)
+    {
+        newTriangleInfos.push_back(triangleInfos[ti]);
+    }
+
+    return newTriangleInfos;
+}
+
+template <size_t VerticesInElement>
+std::vector<size_t> ShipBuilder::ReorderOptimally(
+    std::vector<VertexData> & vertexData,
+    std::vector<ElementData> & elementData)
+{
     // Calculate vertex scores
     for (VertexData & v : vertexData)
     {
-        v.CurrentScore = CalculateVertexScore<3>(v);
+        v.CurrentScore = CalculateVertexScore<VerticesInElement>(v);
     }
 
     // Calculate element scores, remembering best so far
@@ -750,15 +781,15 @@ std::vector<ShipBuilder::TriangleInfo> ShipBuilder::ReorderOptimally(
 
 
     //
-    // Main loop - run until we've drawn all triangles
+    // Main loop - run until we've drawn all elements
     //
 
     std::list<size_t> modelLruVertexCache;
 
-    std::vector<size_t> optimalIndices;
-    optimalIndices.reserve(triangleInfos.size());
+    std::vector<size_t> optimalElementIndices;
+    optimalElementIndices.reserve(elementData.size());
 
-    while (optimalIndices.size() < triangleInfos.size())
+    while (optimalElementIndices.size() < elementData.size())
     {
         //
         // Find best element
@@ -783,7 +814,7 @@ std::vector<ShipBuilder::TriangleInfo> ShipBuilder::ReorderOptimally(
         assert(!elementData[*bestElementIndex].HasBeenDrawn);
 
         // Add the best element to the optimal list
-        optimalIndices.push_back(*bestElementIndex);
+        optimalElementIndices.push_back(*bestElementIndex);
 
         // Mark the best element as drawn
         elementData[*bestElementIndex].HasBeenDrawn = true;
@@ -810,7 +841,7 @@ std::vector<ShipBuilder::TriangleInfo> ShipBuilder::ReorderOptimally(
                 ? currentCachePosition
                 : -1;
 
-            vertexData[*it].CurrentScore = CalculateVertexScore<3>(vertexData[*it]);
+            vertexData[*it].CurrentScore = CalculateVertexScore<VerticesInElement>(vertexData[*it]);
 
             // Zero the score of this vertices' elements, as we'll be updating it next
             for (size_t ei : vertexData[*it].RemainingElementIndices)
@@ -819,7 +850,7 @@ std::vector<ShipBuilder::TriangleInfo> ShipBuilder::ReorderOptimally(
             }
         }
 
-        // Update scores of all triangles in the cache, maintaining best score at the same time
+        // Update scores of all elements in the cache, maintaining best score at the same time
         bestElementScore = std::numeric_limits<float>::lowest();
         bestElementIndex = std::nullopt;
         for (size_t vi : modelLruVertexCache)
@@ -847,19 +878,7 @@ std::vector<ShipBuilder::TriangleInfo> ShipBuilder::ReorderOptimally(
         }
     }
 
-
-    //
-    // Return optimally-ordered set of triangles
-    //
-
-    std::vector<TriangleInfo> newTriangleInfos;
-    newTriangleInfos.reserve(triangleInfos.size());
-    for (size_t ti : optimalIndices)
-    {
-        newTriangleInfos.push_back(triangleInfos[ti]);
-    }
-
-    return newTriangleInfos;
+    return optimalElementIndices;
 }
 
 float ShipBuilder::CalculateACMR(std::vector<SpringInfo> const & springInfos)

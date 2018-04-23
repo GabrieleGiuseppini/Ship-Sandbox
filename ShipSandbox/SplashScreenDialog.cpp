@@ -74,6 +74,7 @@ SplashScreenDialog::SplashScreenDialog(ResourceLoader const & resourceLoader)
 	wxFont font(10, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 	mTextCtrl->SetFont(font);
 
+    mainSizer->AddSpacer(2);
     mainSizer->Add(mTextCtrl, 0, wxALIGN_CENTER);
 
 

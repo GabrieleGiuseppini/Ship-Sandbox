@@ -184,6 +184,12 @@ private:
         std::vector<TriangleInfo> & triangleInfos,
         size_t vertexCount);
 
+    template <size_t VerticesInElement>
+    static std::vector<size_t> ReorderOptimally(
+        std::vector<VertexData> & vertexData,
+        std::vector<ElementData> & elementData);
+
+
     static float CalculateACMR(std::vector<SpringInfo> const & springInfos);
 
     static float CalculateACMR(std::vector<TriangleInfo> const & triangleInfos);

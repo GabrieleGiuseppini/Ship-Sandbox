@@ -595,8 +595,8 @@ void Ship::LeakWater(GameParameters const & gameParameters)
     for (Point & point : mAllPoints)
     {
         //
-        // 1) Leak water: stuff some water into all the leaking nodes that are underwater, 
-        //    if the external pressure is larger
+        // Stuff some water into all the leaking nodes that are underwater, 
+        // if the external pressure is larger
         //
 
         if (point.IsLeaking())
@@ -605,11 +605,11 @@ void Ship::LeakWater(GameParameters const & gameParameters)
 
             float const externalWaterPressure = point.GetExternalWaterPressure(
                 waterLevel,
-                gameParameters);
+                gameParameters) * gameParameters.WaterPressureAdjustment;
 
             if (externalWaterPressure > point.GetWater())
             {
-                float newWater = GameParameters::SimulationStepTimeDuration<float> * gameParameters.WaterPressureAdjustment * (externalWaterPressure - point.GetWater());
+                float newWater = GameParameters::SimulationStepTimeDuration<float> * (externalWaterPressure - point.GetWater());
                 point.AddWater(newWater);
                 mTotalWater += newWater;
             }

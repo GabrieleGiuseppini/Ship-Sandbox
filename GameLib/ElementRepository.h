@@ -230,6 +230,11 @@ public:
         return mCurrentSize;
     }
 
+    inline size_t max_size() const noexcept
+    {
+        return mMaxSize;
+    }
+
     //
     // Modifiers
     //

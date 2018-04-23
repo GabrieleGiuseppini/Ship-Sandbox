@@ -50,11 +50,12 @@ Prev perf (before Optimizations)
 		+ Use own LRU cache and calculate current ACMR for triangles and springs
 			+ Spring ACMR: 0.516807
 			+ Triangle ACMR: 1.01986
-		- Do triangle vertex cache optimization
-			- New score:
-			- New FPS:
+		= Do triangle vertex cache optimization
+			+ New ACMR: 0.68174
+			+ FPS improvement: 19.1 -> 19.0
+			- Check if self-covering within same connected component now looks weird
 		- Do spring vertex cache optimization
-			- New score:
+			- New ACMR:
 			- New FPS:
 	- FPS: 
 	- Point & Spring Destructuring:

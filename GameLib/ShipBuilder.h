@@ -143,17 +143,62 @@ private:
     // Vertex cache optimization
     /////////////////////////////////////////////////////////////////
 
+    // See Tom's comments: using 32 is good enough; apparently 64 does not yield significant differences
+    static constexpr size_t VertexCacheSize = 32;
+
+    using ModelLRUVertexCache = std::list<size_t>;
+
+    struct VertexData
+    {
+        int32_t CachePosition;                          // Position in cache; -1 if not in cache
+        float CurrentScore;                             // Current score of the vertex
+        std::vector<size_t> RemainingElementIndices;    // Indices of not yet drawn elements that use this vertex
+
+        VertexData()
+            : CachePosition(-1)
+            , CurrentScore(0.0f)
+            , RemainingElementIndices()
+        {
+        }
+    };
+
+    struct ElementData
+    {
+        bool HasBeenDrawn;                  // Set to true when the element has been drawn already
+        float CurrentScore;                 // Current score of the element - sum of its vertices' scores
+        std::vector<size_t> VertexIndices;  // Indices of vertices in this element
+
+        ElementData()
+            : HasBeenDrawn(false)
+            , CurrentScore(0.0f)
+            , VertexIndices()
+        {
+        }
+    };
+
+    static std::vector<SpringInfo> ReorderOptimally(
+        std::vector<SpringInfo> & springInfos,
+        size_t vertexCount);
+
+    static std::vector<TriangleInfo> ReorderOptimally(
+        std::vector<TriangleInfo> & triangleInfos,
+        size_t vertexCount);
+
     static float CalculateACMR(std::vector<SpringInfo> const & springInfos);
+
     static float CalculateACMR(std::vector<TriangleInfo> const & triangleInfos);
 
+    static void AddVertexToCache(
+        size_t vertexIndex,
+        ModelLRUVertexCache & cache);
+
+    template <size_t VerticesInElement>
+    static float CalculateVertexScore(VertexData const & vertexData);
+
     template <size_t Size>
-    class LRUVertexCache
+    class TestLRUVertexCache
     {
     public:
-
-        LRUVertexCache() 
-            : mEntries() 
-        {}
 
         bool UseVertex(size_t vertexIndex);
 
@@ -162,5 +207,5 @@ private:
     private:
 
         std::list<size_t> mEntries;
-    };
+    };    
 };

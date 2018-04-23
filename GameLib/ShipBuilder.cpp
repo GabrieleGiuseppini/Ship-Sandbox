@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 
 using namespace Physics;
 
@@ -198,11 +199,13 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // 5. Optimize order of SpringInfo's to minimize cache misses
     //
 
-    float springACMR = CalculateACMR(springInfos);
+    float originalSpringACMR = CalculateACMR(springInfos);
 
-    // TODOHERE
+    springInfos = ReorderOptimally(springInfos, pointInfos.size());
 
-    LogMessage("Spring ACMR: ", springACMR);
+    float optimizedSpringACMR = CalculateACMR(springInfos);
+
+    LogMessage("Spring ACMR: original=", originalSpringACMR, ", optimized=", optimizedSpringACMR);
 
 
     //
@@ -211,11 +214,14 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // Applies to both GPU and CPU!
     //
 
-    float triangleACMR = CalculateACMR(triangleInfos);
+    float originalTriangleACMR = CalculateACMR(triangleInfos);
 
-    // TODOHERE
+    // TODOTEST
+    //triangleInfos = ReorderOptimally(triangleInfos, pointInfos.size());
 
-    LogMessage("Triangle ACMR: ", triangleACMR);
+    float optimizedTriangleACMR = CalculateACMR(triangleInfos);
+
+    LogMessage("Triangle ACMR: original=", originalTriangleACMR, ", optimized=", optimizedTriangleACMR);
 
 
     //
@@ -384,9 +390,9 @@ void ShipBuilder::CreatePoints(
     ElementRepository<vec3f> & pointColors,
     ElementRepository<vec2f> & pointTextureCoordinates)
 {
-    assert(points.size() == pointInfos.size());
-    assert(pointColors.size() == pointInfos.size());
-    assert(pointTextureCoordinates.size() == pointInfos.size());
+    assert(points.max_size() == pointInfos.size());
+    assert(pointColors.max_size() == pointInfos.size());
+    assert(pointTextureCoordinates.max_size() == pointInfos.size());
 
     for (size_t p = 0; p < pointInfos.size(); ++p)
     {
@@ -688,6 +694,174 @@ std::vector<ElectricalElement*> ShipBuilder::CreateElectricalElements(
 // Vertex cache optimization
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
+std::vector<ShipBuilder::SpringInfo> ShipBuilder::ReorderOptimally(
+    std::vector<SpringInfo> & springInfos,
+    size_t vertexCount)
+{
+    // TODOHERE
+    return springInfos;
+}
+
+std::vector<ShipBuilder::TriangleInfo> ShipBuilder::ReorderOptimally(
+    std::vector<TriangleInfo> & triangleInfos,
+    size_t vertexCount)
+{
+    //
+    // Initialization
+    //
+
+    std::vector<VertexData> vertexData(vertexCount);
+    std::vector<ElementData> elementData(triangleInfos.size());
+
+    // Fill-in cross-references between vertices and elements
+    for (size_t t = 0; t < triangleInfos.size(); ++t)
+    {
+        vertexData[triangleInfos[t].PointAIndex].RemainingElementIndices.push_back(t);
+        vertexData[triangleInfos[t].PointBIndex].RemainingElementIndices.push_back(t);
+        vertexData[triangleInfos[t].PointCIndex].RemainingElementIndices.push_back(t);
+
+        elementData[t].VertexIndices.push_back(triangleInfos[t].PointAIndex);
+        elementData[t].VertexIndices.push_back(triangleInfos[t].PointBIndex);
+        elementData[t].VertexIndices.push_back(triangleInfos[t].PointCIndex);
+    }
+
+    // Calculate vertex scores
+    for (VertexData & v : vertexData)
+    {
+        v.CurrentScore = CalculateVertexScore<3>(v);
+    }
+
+    // Calculate element scores, remembering best so far
+    float bestElementScore = std::numeric_limits<float>::lowest();
+    std::optional<size_t> bestElementIndex(std::nullopt);
+    for (size_t ei = 0; ei < elementData.size(); ++ei)
+    {
+        for (size_t vi : elementData[ei].VertexIndices)
+        {
+            elementData[ei].CurrentScore += vertexData[vi].CurrentScore;
+        }
+
+        if (elementData[ei].CurrentScore > bestElementScore)
+        {
+            bestElementScore = elementData[ei].CurrentScore;
+            bestElementIndex = ei;
+        }
+    }
+
+
+    //
+    // Main loop - run until we've drawn all triangles
+    //
+
+    std::list<size_t> modelLruVertexCache;
+
+    std::vector<size_t> optimalIndices;
+    optimalIndices.reserve(triangleInfos.size());
+
+    while (optimalIndices.size() < triangleInfos.size())
+    {
+        //
+        // Find best element
+        //
+
+        if (!bestElementIndex)
+        {
+            // Have to find best element
+            bestElementScore = std::numeric_limits<float>::lowest();
+            for (size_t ei = 0; ei < elementData.size(); ++ei)
+            {
+                if (!elementData[ei].HasBeenDrawn
+                    && elementData[ei].CurrentScore > bestElementScore)
+                {
+                    bestElementScore = elementData[ei].CurrentScore > bestElementScore;
+                    bestElementIndex = ei;
+                }
+            }
+        }
+
+        assert(!!bestElementIndex);
+        assert(!elementData[*bestElementIndex].HasBeenDrawn);
+
+        // Add the best element to the optimal list
+        optimalIndices.push_back(*bestElementIndex);
+
+        // Mark the best element as drawn
+        elementData[*bestElementIndex].HasBeenDrawn = true;
+
+        // Update all of the element's vertices
+        for (auto vi : elementData[*bestElementIndex].VertexIndices)
+        {
+            // Remove the best element element from the lists of remaining elements for this vertex
+            vertexData[vi].RemainingElementIndices.erase(
+                std::remove(
+                    vertexData[vi].RemainingElementIndices.begin(),
+                    vertexData[vi].RemainingElementIndices.end(),
+                    *bestElementIndex));
+
+            // Update the LRU cache with this vertex
+            AddVertexToCache(vi, modelLruVertexCache);
+        }
+
+        // Re-assign positions and scores of all vertices in the cache
+        int32_t currentCachePosition = 0;
+        for (auto it = modelLruVertexCache.begin(); it != modelLruVertexCache.end(); ++it, ++currentCachePosition)
+        {
+            vertexData[*it].CachePosition = (currentCachePosition < VertexCacheSize)
+                ? currentCachePosition
+                : -1;
+
+            vertexData[*it].CurrentScore = CalculateVertexScore<3>(vertexData[*it]);
+
+            // Zero the score of this vertices' elements, as we'll be updating it next
+            for (size_t ei : vertexData[*it].RemainingElementIndices)
+            {
+                elementData[ei].CurrentScore = 0.0f;
+            }
+        }
+
+        // Update scores of all triangles in the cache, maintaining best score at the same time
+        bestElementScore = std::numeric_limits<float>::lowest();
+        bestElementIndex = std::nullopt;
+        for (size_t vi : modelLruVertexCache)
+        {
+            for (size_t ei : vertexData[vi].RemainingElementIndices)
+            {
+                assert(!elementData[ei].HasBeenDrawn);
+
+                // Add this vertex's score to the element's score
+                elementData[ei].CurrentScore += vertexData[vi].CurrentScore;
+
+                // Check if best so far
+                if (elementData[ei].CurrentScore > bestElementScore)
+                {
+                    bestElementScore = elementData[ei].CurrentScore;
+                    bestElementIndex = ei;
+                }
+            }
+        }
+
+        // Shrink cache back to its size
+        if (modelLruVertexCache.size() > VertexCacheSize)
+        {
+            modelLruVertexCache.resize(VertexCacheSize);
+        }
+    }
+
+
+    //
+    // Return optimally-ordered set of triangles
+    //
+
+    std::vector<TriangleInfo> newTriangleInfos;
+    newTriangleInfos.reserve(triangleInfos.size());
+    for (size_t ti : optimalIndices)
+    {
+        newTriangleInfos.push_back(triangleInfos[ti]);
+    }
+
+    return newTriangleInfos;
+}
+
 float ShipBuilder::CalculateACMR(std::vector<SpringInfo> const & springInfos)
 {
     //
@@ -699,8 +873,7 @@ float ShipBuilder::CalculateACMR(std::vector<SpringInfo> const & springInfos)
         return 0.0f;
     }
 
-    // Using 32 is good enough; apparently 64 does not yield significant differences
-    LRUVertexCache<32> cache;
+    TestLRUVertexCache<VertexCacheSize> cache;
 
     float cacheMisses = 0.0f;
 
@@ -731,8 +904,7 @@ float ShipBuilder::CalculateACMR(std::vector<TriangleInfo> const & triangleInfos
         return 0.0f;
     }
 
-    // Using 32 is good enough; apparently 64 does not yield significant differences
-    LRUVertexCache<32> cache;
+    TestLRUVertexCache<VertexCacheSize> cache;
 
     float cacheMisses = 0.0f;
 
@@ -757,8 +929,85 @@ float ShipBuilder::CalculateACMR(std::vector<TriangleInfo> const & triangleInfos
     return cacheMisses / static_cast<float>(triangleInfos.size());
 }
 
+void ShipBuilder::AddVertexToCache(
+    size_t vertexIndex,
+    ModelLRUVertexCache & cache)
+{
+    for (auto it = cache.begin(); it != cache.end(); ++it)
+    {
+        if (vertexIndex == *it)
+        {
+            // It's already in the cache...
+            // ...move it to front
+            cache.erase(it);
+            cache.push_front(vertexIndex);
+
+            return;
+        }
+    }
+
+    // Not in the cache...
+    // ...insert in front of cache
+    cache.push_front(vertexIndex);
+}
+
+template <size_t VerticesInElement>
+float ShipBuilder::CalculateVertexScore(VertexData const & vertexData)
+{
+    static_assert(VerticesInElement < VertexCacheSize);
+
+    //
+    // Almost verbatim from Tom Forsyth
+    //
+
+    static constexpr float FindVertexScore_CacheDecayPower = 1.5f;
+    static constexpr float FindVertexScore_LastElementScore = 0.75f;
+    static constexpr float FindVertexScore_ValenceBoostScale = 2.0f;
+    static constexpr float FindVertexScore_ValenceBoostPower = 0.5f;        
+
+    if (vertexData.RemainingElementIndices.size() == 0)
+    {
+        // No elements left using this vertex, give it a bad score
+        return -1.0f;
+    }
+
+    float score = 0.0f;
+    if (vertexData.CachePosition >= 0)
+    {
+        // This vertex is in the cache
+
+        if (vertexData.CachePosition < VerticesInElement)
+        {
+            // This vertex was used in the last element,
+            // so it has a fixed score, whichever of the vertices
+            // it is. Otherwise, you can get very different
+            // answers depending on whether you add, for example,
+            // a triangle's 1,2,3 or 3,1,2 - which is silly.
+            score = FindVertexScore_LastElementScore;
+        }
+        else
+        {
+            assert(vertexData.CachePosition < VertexCacheSize);
+
+            // Score vertices high for being high in the cache
+            float const scaler = 1.0f / (VertexCacheSize - VerticesInElement);
+            score = 1.0f - (vertexData.CachePosition - VerticesInElement) * scaler;
+            score = powf(score, FindVertexScore_CacheDecayPower);
+        }
+    }
+
+    // Bonus points for having a low number of elements still 
+    // using this vertex, so we get rid of lone vertices quickly
+    float valenceBoost = powf(
+        static_cast<float>(vertexData.RemainingElementIndices.size()),
+        -FindVertexScore_ValenceBoostPower);
+    score += FindVertexScore_ValenceBoostScale * valenceBoost;
+
+    return score;
+}
+
 template<size_t Size>
-bool ShipBuilder::LRUVertexCache<Size>::UseVertex(size_t vertexIndex)
+bool ShipBuilder::TestLRUVertexCache<Size>::UseVertex(size_t vertexIndex)
 {
     for (auto it = mEntries.begin(); it != mEntries.end(); ++it)
     {
@@ -789,7 +1038,7 @@ bool ShipBuilder::LRUVertexCache<Size>::UseVertex(size_t vertexIndex)
 }
 
 template<size_t Size>
-std::optional<size_t> ShipBuilder::LRUVertexCache<Size>::GetCachePosition(size_t vertexIndex)
+std::optional<size_t> ShipBuilder::TestLRUVertexCache<Size>::GetCachePosition(size_t vertexIndex)
 {
     size_t position = 0;
     for (auto const & vi : mEntries)

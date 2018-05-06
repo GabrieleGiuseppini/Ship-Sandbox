@@ -123,7 +123,8 @@ private:
 
     static float CalculateStiffnessCoefficient(
         Point const & pointA,
-        Point const & pointB);
+        Point const & pointB,
+        float springStiffness);
 
     static float CalculateDampingCoefficient(
         Point const & pointA,

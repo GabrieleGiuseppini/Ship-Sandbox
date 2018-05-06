@@ -30,7 +30,7 @@ struct GameParameters
     //
 
     template <typename T>
-    static constexpr T NumDynamicIterations = 8;
+    static constexpr T NumDynamicIterations = 12;
 
 
     //
@@ -50,7 +50,7 @@ struct GameParameters
 	float const GravityMagnitude;
 
 	float StrengthAdjustment;
-	static constexpr float MinStrengthAdjustment = 0.0025f;
+	static constexpr float MinStrengthAdjustment = 0.0010f;
 	static constexpr float MaxStrengthAdjustment = 0.5f;
 
 	float BuoyancyAdjustment;

@@ -32,7 +32,7 @@ Spring::Spring(
 	, mPointA(a)
 	, mPointB(b)
 	, mRestLength(restLength)
-    , mStiffnessCoefficient(CalculateStiffnessCoefficient(*mPointA, *mPointB))
+    , mStiffnessCoefficient(CalculateStiffnessCoefficient(*mPointA, *mPointB, material->Stiffness))
     , mDampingCoefficient(CalculateDampingCoefficient(*mPointA, *mPointB))
     , mCharacteristics(characteristics)
 	, mMaterial(material)
@@ -81,7 +81,8 @@ void Spring::Destroy(Point const * pointSource)
 
 float Spring::CalculateStiffnessCoefficient(
     Point const & pointA,
-    Point const & pointB)
+    Point const & pointB,
+    float springStiffness)
 {
     // The empirically-determined constant for the spring stiffness
     //
@@ -93,7 +94,7 @@ float Spring::CalculateStiffnessCoefficient(
     float const massFactor = (pointA.GetMass() * pointB.GetMass()) / (pointA.GetMass() + pointB.GetMass());
     static constexpr float dtSquared = GameParameters::DynamicsSimulationStepTimeDuration<float> * GameParameters::DynamicsSimulationStepTimeDuration<float>;
 
-    return C * massFactor / dtSquared;
+    return C * springStiffness * massFactor / dtSquared;
 }
 
 float Spring::CalculateDampingCoefficient(

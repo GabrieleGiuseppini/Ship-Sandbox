@@ -79,6 +79,7 @@ The game looks like this now:
 - Make lights turn off (after flickering) when generator is wet or when electrical cables break
 - Add time-of-day (i.e. day light change during the game)
 - Add multiple ships and collision detection
+- Place bombs that can later be triggered to explode (thanks Mart!)
 
 I tried to do my best to craft the CMake files in a platform-independent way, but I'm working on this exclusively in Visual Studio, hence I'm sure some unportable features have slipped in. Feel free to send pull requests for CMake edits for other platforms.
 You'll need the following libraries in order to build the game:

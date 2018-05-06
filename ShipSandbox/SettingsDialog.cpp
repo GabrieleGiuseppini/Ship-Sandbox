@@ -697,17 +697,17 @@ void SettingsDialog::RealValueToLinearSlider(
 
 float SettingsDialog::StrengthSliderToRealValue() const
 {
-    // 0.0001 + ((exp(x/70)-1)/1.75)^2.4
+    // 0.001 + ((exp(x/70)-1)/2.3)^3.4
 
     int sliderValue = mStrengthSlider->GetValue();    
-    float realValue = (exp(static_cast<float>(sliderValue) / 70.0f) - 1.0f) / 1.75f;
-    realValue = 0.0001f + powf(realValue, 2.4f);
+    float realValue = (exp(static_cast<float>(sliderValue) / 70.0f) - 1.0f) / 2.3f;
+    realValue = 0.0001f + powf(realValue, 3.4f);
     return realValue;
 }
 
 void SettingsDialog::RealValueToStrengthSlider(float value) const
 {
-    value = powf(value - 0.0001f, 1.0f/2.4f);
-    float sliderValue = 70.0f * log((1.75f * value) + 1.0f);
+    value = powf(value - 0.0001f, 1.0f/3.4f);
+    float sliderValue = 70.0f * log((2.3f * value) + 1.0f);
     mStrengthSlider->SetValue(static_cast<int>(roundf(sliderValue)));
 }

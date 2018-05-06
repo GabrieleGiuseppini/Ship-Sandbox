@@ -2,25 +2,25 @@
 Current perf
 =================================================
 =================================================
-- fps: 19.3/19.5 (Samsung: TBD (Krafting)) (Mattia's: TBD (Krafting))
-- GameController::DoStep: 51.73%
-	- Ship::Update: 50.82%
-		- UpdateDynamics: 31.23%
-			- UpdateSpringForces: 19.39%
-			- UpdatePointForces: 5.27%
-			- Integrate: 3.40%
-			- HandleCollisionsWithSeafloor: 3.16%
-		- BalancePressure: 8.47%
-		- GravitateWater: 8.98%
-		- LeakWater: 0.25%
-	- DiffuseLight: 0.81%
-	- WaterSurface::Update: 0.07%
-- MainFrame::RenderGame: 41.60%
-	- Ship::Render: 36.88% (Incl) 0.50% (Excl)
-		- ShipRenderContext::RenderTriangles: 14.78%
-		- ShipRenderContext::RenderSprings: 21.17%
-		- ShipRenderContext::RenderRopes: 0.35%
-	- RenderContext::RenderCloudsEnd: 2.05%
+- fps: 17.8/18.1 (Samsung: TBD (Krafting)) (Mattia's: TBD (Krafting))
+- GameController::DoStep: 56.52%
+	- Ship::Update: 55.82% (Incl) 1.50% (Excl)
+		- UpdateDynamics: 41.74%
+			- UpdateSpringForces: 24.76%
+			- UpdatePointForces: 6.77%
+			- HandleCollisionsWithSeafloor: 5.11%
+			- Integrate: 5.08%
+		- GravitateWater: 6.58%
+		- BalancePressure: 5.84%
+		- LeakWater: 0.16%
+	- DiffuseLight: 0.65%
+	- WaterSurface::Update: 0.05%
+- MainFrame::RenderGame: 35.98%
+	- Ship::Render: 31.92% (Incl) 0.39% (Excl)
+		- ShipRenderContext::RenderSprings: 17.91%
+		- ShipRenderContext::RenderTriangles: 13.24%
+		- ShipRenderContext::RenderRopes: 0.30%
+	- RenderContext::RenderCloudsEnd: 1.69%
 
 =================================================
 Prev perf (before Optimizations)
@@ -83,63 +83,65 @@ Prev perf (before Optimizations)
 		+ Have VBOs per connected component
 	+ FPS: 19.0/19.4/19.7/19.9
 	- Redo full baseline
+	- Branch
 	- Point & Spring Destructuring:
 		- Main goal: improve cache locality
 		- Secondary goal: make vectorization-friendly
-		- Test first with GravitateWater and BalancePressure if N buffers make a difference vs 1 larger buffer:
-			- 1a: explode Spring as Spring (==now) and Spring_WaterDynamics (Point*,Point*,Coeff1,Coeff2)
-				- Made at Ship::cctor
-				- Use at SpringDynamics
-				- Get baseline 1:
-					- FPS:
-					- Step:
-					- SpringDynamics
-			- 1b: explode Spring as Spring (==now), Spring_Point(Point*,Point*), and Spring_WaterDynamics (Coeff1,Coeff2)
-				- Get baseline 2:
-					- FPS:
-					- Step:
-					- SpringDynamics
 		- Replace Point, Spring, Triangle with Points, Springs, Triangles
-			- Base is ShipElementContainer
+			- Base is ElementContainer
 				- Defines aliases (ElementCount, ElementIndex) - uint32
 				- ElementCount GetCount() const
 					- Number of elements
 					- passed at cctor
 				- Parent ship
 			- They contain N buffers:
-				- Points: Position, Velocity, Force, MassFactor, IsDeleted ...
+				- Points: Position, Velocity, Force, MassFactor, Color, Water, IsDeleted ...
 					- All scalars of a point that are only used for both x and y (e.g. MassFactor) are stored 
-					 (and updated, if any) twice
+					 (and updated, if any) twice, as vec2f (only MassFactor?)
 					- All scalars of a point that are used as scalars (e.g. Buoyancy) are stored once
+					- Test first to see if N buffers make a difference vs 1 larger buffer: 
+						- 1: Do Position, Velocity, Force, and MassFactors first in own buffer
+							- Get baseline 1:
+							- FPS:
+						- 2: Do separate Position, Velocity, Force, and MassFactors 
+							- Get baseline 2:
+							- FPS:
 				- Springs: Points, dynamics coefficients, water coefficients, ...
+				- Triangles: Points, Network
 				- Structure of buffers:
 					- For SSE2, need to be simple floats
 					- For handling, need to be structured
-					- Should probably go for union, and SSE loops only see float *
+					- Are exposed as structures, but at times as floats as well (e.g. Position, for Integrate())
+						- should probably go for union, and SSE loops only see float *
 						- e.g., union for 2d vectors: (float[2], vec2f component})
-				- Buffers are ElementContainer
+				- Buffers are class Buffer
 					- Need to be mem-aligned
-			- They expose buffer getters for each buffer (as float*)
-				- Those needed as vectors (e.g. Position, needed by UpdatePointForces()) are *also* exposed
-				  as Type* (e.g. vec2f* GetPositionBufferAsVectors())
+					- cctor(size)
+					- data()/size()/emplace_back()
+					- uq_ptr
+			- They expose buffer getters for each buffer (as the structured type, e.g. vec2f *, or PointNetwork *, or float * for lonely scalars)
+				- e.g. vec2f* GetPositionBuffer()
+				- When vec2f's needed as floats, they are *also* exposed
+				  as float* (e.g. float* GetPositionBufferAsFloat()); size math left to caller
 			- When needed, they expose getters and generally operations on single elements, via 32-bit index argument (aliased as ElementIndex)
 				- e.g. void Destroy(ElementIndex)
 				- e.g. float GetMass(ElementIndex)
 			- Destroy(ElementIndex) takes care of telling ship that element count is dirty
-				- Or even better, see if can set directly in Ship whenever we know we destroy something
+				- Or even better, see if can set directly in Ship at initiation of Destroy chain, whenever we know we destroy something
 			- Pointers to springs & points are replaced by 32-bit indices
 				- Funcs that need to follow pointers (e.g. Destroy() and SpringDynamics()) also must take whole containers 
 			- They expose own Upload(RenderContext &)
-			- Move ElectricalElement to ElementContainer (move it here from PointerContainer)
-			- Nuke ShipElement
-			- Nuke PointerContainer
+			- Keep PointerContainer for ElectricalElement's (they're virtual classes after all)
+			- Nuke ShipElement, if it's now only implemented by ElectricalElement
+				- See if manage to not need to tell Ship as well, see above
+			- Nuke ElementRepository when no one uses it anymore
 		- Integrate():
 			- Just simple 1-Point loop, compiler makes times four
-			- Caller gives buffers directly from Points (GetPositionBuffer()->float *), which Integrate() take as __restrict,
+			- Caller gives buffers directly from Points (GetPositionBufferAsFloat()->float *), which Integrate() take as __restrict,
 			  and adjusted count (i.e. times 2)
 				- Integrate() uses indices in the buffers
 		- UpdatePointForces():
-			- Uses Points.GetPosition/Velocity/ForceBufferAsVectors() and point-based indices
+			- Uses Points.GetPosition/Velocity/Force/MassFactorBuffer() and point-based indices
 		==========================
 		- TODOOLD: If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
 			- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
@@ -201,6 +203,9 @@ Prev perf (before Optimizations)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
+	- Test:
+		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
+		- Debug to see if bounds ever exceeded
 	- See if can draw a bit more often
 	- Pin points
 		- Point: Pinned Characteristic
@@ -234,18 +239,6 @@ Prev perf (before Optimizations)
 						- If one of the connected points is already a frontier, then the new frontier points
 						  take that frontierId
 						- TODO
-	- See more iterations to decrease jellying 
-		- Recalc both Spring::K's in terms of global, so that we can calculate the local ones based off NumIterations
-		- More iterations => becomes extremely strong, hence requires adjusting stiffness and possibly damping
-		- Test:
-			- Self-adjustment of kDamp based off paper's formula (H and L bounds)
-			- Debug to see if bounds ever exceeded
-	- Set springs' K in material
-		- Substitutes C (0.8) in Spring::CalculateStiffnessCoefficient()
-		- Fix Titanic masts
-	- Fix ropes (they don't move as fluid and continuous as before)
-		- Make test ship for it, need two floating bases with masts
-		- Test with own K for ropes (start with half K)
 	- Experiment with:
 		- Runge-Kutta
 		- Semi-implicit Euler (https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf)
@@ -1097,6 +1090,17 @@ IF WX:
 					+ Set to 0.0 at Destroy() ("...avoid draining water to destroyed points...")
 				+ Remove two if's at BalancePressure and GravitateWater
 				+ FPS: 17.3/17.5
+	+ Set springs' K in material
+		+ Multiplies with C (0.8) in Spring::CalculateStiffnessCoefficient()
+		+ Fix Titanic masts
+			+ See if need to increase iterations
+			+ Testing wood: 1.10 to 1.15
+		+ Fix ropes (they don't move as fluid and continuous as before)
+			+ Test with own K for ropes (start with half K)
+		+ Change exponential of StrengthAdjustment, for expanded small values
+			+ 0.001+((exp(x/70)-1)/2.3)^3.4
+			+ Verify inverted formula
+			+ finalize default StrengthAdjustment: 0.03421?
 
 + Debug light/drag issue
 	+ Could be due to distance too close and shooting light to sky

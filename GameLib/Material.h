@@ -27,6 +27,7 @@ struct Material
     std::string const Name;
     float const Strength;
     float const Mass;
+    float const Stiffness;
     vec3f const StructuralColour;
     std::array<uint8_t, 3u> StructuralColourRgb;
     vec3f const RenderColour;    
@@ -126,6 +127,7 @@ public:
         std::string name,
         float strength,
         float mass,
+        float stiffness,
         std::array<uint8_t, 3u> structuralColourRgb,
         std::array<uint8_t, 3u> renderColourRgb,
 		bool isHull,
@@ -135,6 +137,7 @@ public:
 		: Name(std::move(name))
 		, Strength(strength)
 		, Mass(mass)
+        , Stiffness(stiffness)
 		, StructuralColour(RgbToVec(structuralColourRgb))
         , StructuralColourRgb(structuralColourRgb)
         , RenderColour(RgbToVec(renderColourRgb))

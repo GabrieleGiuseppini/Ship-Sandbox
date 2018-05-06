@@ -14,8 +14,10 @@
 std::unique_ptr<Material> Material::Create(picojson::object const & materialJson)
 {
 	std::string name = Utils::GetOptionalJsonMember<std::string>(materialJson, "name", "Unspecified");
-	float mass = static_cast<float>(Utils::GetOptionalJsonMember<double>(materialJson, "mass", 1.0));
-	float strength = static_cast<float>(Utils::GetOptionalJsonMember<double>(materialJson, "strength", 1.0) / mass * 1000.0);
+    float mass = static_cast<float>(Utils::GetOptionalJsonMember<double>(materialJson, "mass", 1.0));
+    float strength = static_cast<float>(Utils::GetOptionalJsonMember<double>(materialJson, "strength", 1.0) / mass * 1000.0);
+    float stiffness = static_cast<float>(Utils::GetOptionalJsonMember<double>(materialJson, "stiffness", 1.0));
+	
     std::array<uint8_t, 3u> structuralColourRgb = Hex2RgbColour(Utils::GetMandatoryJsonMember<std::string>(materialJson, "structural_colour"));
     std::array<uint8_t, 3u> renderColourRgb = Hex2RgbColour(Utils::GetMandatoryJsonMember<std::string>(materialJson, "render_colour"));
 	bool isHull = Utils::GetOptionalJsonMember<bool>(materialJson, "isHull", false);
@@ -53,6 +55,7 @@ std::unique_ptr<Material> Material::Create(picojson::object const & materialJson
 			name,
 			strength,
 			mass,
+            stiffness,
             structuralColourRgb,
             renderColourRgb,
 			isHull,

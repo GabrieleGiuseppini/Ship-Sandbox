@@ -6,6 +6,8 @@
 set  (GAME_SOURCES
 	AABB.cpp
 	AABB.h
+	Buffer.h
+	ElementContainer.h
 	ElementRepository.h
 	FixedSizeVector.h
 	GameController.cpp
@@ -39,6 +41,7 @@ set  (GAME_SOURCES
 	ShipDefinitionFile.h
 	ShipRenderContext.cpp
 	ShipRenderContext.h
+	SysSpecifics.h
 	TupleKeys.h
 	Utils.cpp
 	Utils.h	
@@ -60,6 +63,8 @@ set  (PHYSICS_SOURCES
 	Physics.h
 	Point.cpp
 	Point.h
+	Points.cpp
+	Points.h
 	Ship.cpp
 	Ship.h
 	ShipElement.h

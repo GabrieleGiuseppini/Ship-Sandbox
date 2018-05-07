@@ -82,18 +82,18 @@ Prev perf (before Optimizations)
 	+ ShipRendering: upload triangles, ropes, springs only when they change
 		+ Have VBOs per connected component
 	+ FPS: 19.0/19.4/19.7/19.9
-	- Redo full baseline
-	- Branch
+	+ Redo full baseline
+	+ Branch
 	- Point & Spring Destructuring:
 		- Main goal: improve cache locality
 		- Secondary goal: make vectorization-friendly
 		- Replace Point, Spring, Triangle with Points, Springs, Triangles
-			- Base is ElementContainer
-				- Defines aliases (ElementCount, ElementIndex) - uint32
-				- ElementCount GetCount() const
+			= Base is ElementContainer
+				+ Defines aliases (ElementCount, ElementIndex) - uint32
+				+ ElementCount GetCount() const
 					- Number of elements
 					- passed at cctor
-				- Parent ship
+				- Parent ship?
 			- They contain N buffers:
 				- Points: Position, Velocity, Force, MassFactor, Color, Water, IsDeleted ...
 					- All scalars of a point that are only used for both x and y (e.g. MassFactor) are stored 
@@ -114,11 +114,11 @@ Prev perf (before Optimizations)
 					- Are exposed as structures, but at times as floats as well (e.g. Position, for Integrate())
 						- should probably go for union, and SSE loops only see float *
 						- e.g., union for 2d vectors: (float[2], vec2f component})
-				- Buffers are class Buffer
-					- Need to be mem-aligned
-					- cctor(size)
-					- data()/size()/emplace_back()
-					- uq_ptr
+				+ Buffers are class Buffer
+					+ Need to be mem-aligned
+					+ cctor(size)
+					+ data()/size()/emplace_back()
+					+ uq_ptr
 			- They expose buffer getters for each buffer (as the structured type, e.g. vec2f *, or PointNetwork *, or float * for lonely scalars)
 				- e.g. vec2f* GetPositionBuffer()
 				- When vec2f's needed as floats, they are *also* exposed

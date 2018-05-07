@@ -53,13 +53,16 @@ public:
         Characteristics characteristics,
 		Material const *material);
 
-    void Destroy(Point const * pointSource);
+    void Destroy(
+        Points & points, 
+        ElementContainer::ElementIndex sourcePointElementIndex);
 
     /*
      * Calculates the current strain - due to tension or compression - and acts depending on it.
      */
     inline void UpdateStrain(        
         GameParameters const & gameParameters,
+        Points & points,
         IGameEventHandler * gameEventHandler)
     {
         float const effectiveStrength = gameParameters.StrengthAdjustment * mMaterial->Strength;
@@ -68,7 +71,7 @@ public:
         if (strain > effectiveStrength)
         {
             // It's broken!
-            this->Destroy(nullptr);
+            this->Destroy(points, ElementContainer::NoneElementIndex);
 
             // Notify
             gameEventHandler->OnBreak(

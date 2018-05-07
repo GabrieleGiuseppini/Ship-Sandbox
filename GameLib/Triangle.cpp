@@ -25,15 +25,17 @@ Triangle::Triangle(
     c->AddConnectedTriangle(this);
 }
 
-void Triangle::Destroy(Point const * pointSource)
+void Triangle::Destroy(
+    Points & points,
+    ElementContainer::ElementIndex sourcePointElementIndex)
 {
     // Remove ourselves from each point
-    if (mPointA != pointSource)
-	    mPointA->RemoveConnectedTriangle(this);
-    if (mPointB != pointSource)
-	    mPointB->RemoveConnectedTriangle(this);
-    if (mPointC != pointSource)
-	    mPointC->RemoveConnectedTriangle(this);
+    if (mPointAIndex != sourcePointElementIndex)
+	    points.RemoveConnectedTriangle(mPointAIndex, this);
+    if (mPointBIndex != sourcePointElementIndex)
+        points.RemoveConnectedTriangle(mPointBIndex, this);
+    if (mPointCIndex != sourcePointElementIndex)
+        points.RemoveConnectedTriangle(mPointCIndex, this);
 
     // Remove ourselves from ship
     ShipElement::Destroy();

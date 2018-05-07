@@ -22,7 +22,9 @@ public:
         Point * b,
         Point * c);
 
-	void Destroy(Point const * pointSource);
+	void Destroy(
+        Points & points,
+        ElementContainer::ElementIndex sourcePointElementIndex);
 
 	inline Point const * GetPointA() const { return mPointA; }
 	inline Point const * GetPointB() const { return mPointB; }

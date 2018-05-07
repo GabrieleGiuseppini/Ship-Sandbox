@@ -44,26 +44,28 @@ Spring::Spring(
     b->AddConnectedSpring(this);
 }
 
-void Spring::Destroy(Point const * pointSource)
+void Spring::Destroy(
+    Points & points,
+    ElementContainer::ElementIndex sourcePointElementIndex)
 {
-    assert(!mPointA->IsDeleted());
-    assert(!mPointB->IsDeleted());
+    assert(!points.IsDeleted(mPointAIndex));
+    assert(!points.IsDeleted(mPointBIndex));
 
     // Used to do more complicated checks, but easier (and better) to make everything leak when it breaks
 
     // Make endpoints leak and destroy their triangles
     // Note: technically, should only destroy those triangles that contain the A-B side, and definitely
     // make both A and B leak
-    if (mPointA != pointSource)
-        mPointA->Breach();
-    if (mPointB != pointSource)
-        mPointB->Breach();
+    if (mPointAIndex != sourcePointElementIndex)
+        points.Breach(mPointAIndex);
+    if (mPointBIndex != sourcePointElementIndex)
+        points.Breach(mPointBIndex);
 
     // Remove ourselves from our endpoints
-    if (mPointA != pointSource)
-        mPointA->RemoveConnectedSpring(this);
-    if (mPointB != pointSource)
-        mPointB->RemoveConnectedSpring(this);
+    if (mPointAIndex != sourcePointElementIndex)
+        points.RemoveConnectedSpring(mPointAIndex, this);
+    if (mPointBIndex != sourcePointElementIndex)
+        points.RemoveConnectedSpring(mPointBIndex, this);
 
     // Zero out our dynamics factors, so that we can still calculate Hooke's 
     // and damping forces for this spring without running the risk of 

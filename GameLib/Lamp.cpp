@@ -9,10 +9,10 @@ namespace Physics {
 
 Lamp::Lamp(
     Ship * parentShip,
-    Point * point)
+    ElementContainer::ElementIndex pointIndex)
     : ElectricalElement(        
         parentShip,
-        point,
+        pointIndex,
         ElectricalElement::Type::Lamp)
 {
 }

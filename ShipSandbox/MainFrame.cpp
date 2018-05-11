@@ -509,6 +509,7 @@ void MainFrame::OnKeyDown(wxKeyEvent & event)
         vec2f screenCoordinates(mMouseInfo.x, mMouseInfo.y);
         vec2f worldCoordinates = mGameController->ScreenToWorld(screenCoordinates);
 
+        /* TODO: fix
         Physics::Point const * point = mGameController->GetNearestPointAt(screenCoordinates);
         if (nullptr != point)
         {
@@ -520,6 +521,7 @@ void MainFrame::OnKeyDown(wxKeyEvent & event)
             // TODO: write directly onto window
             LogMessage("@ ", worldCoordinates.toString(), ": no points");
         }
+        */
     }
 	
 	event.Skip();

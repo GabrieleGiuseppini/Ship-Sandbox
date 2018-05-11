@@ -16,7 +16,7 @@ public:
 
 	Lamp(
         Ship * parentShip,
-        Point * point);
+        ElementContainer::ElementIndex pointIndex);
 
 private:
 };

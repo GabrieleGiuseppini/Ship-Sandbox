@@ -54,7 +54,6 @@ World::World(
     , mOceanFloor()
     , mCurrentTime(0.0f)
     , mCurrentStepSequenceNumber(1u)
-    , mCollisionTree(BVHNode::AllocateTree())
     , mGameEventHandler(std::move(gameEventHandler))
 {
     // Initialize random engine
@@ -113,28 +112,30 @@ void World::DrawTo(
     }
 }
 
-Point const * World::GetNearestPointAt(
+ElementContainer::ElementIndex World::GetNearestPointAt(
     vec2 const & targetPos,
     float radius) const
 {
-    Point const * bestPoint = nullptr;
+    ElementContainer::ElementIndex bestPointIndex = ElementContainer::NoneElementIndex;
     float bestDistance = std::numeric_limits<float>::max();
 
     for (auto const & ship : mAllShips)
     {
-        Point const * shipBestPoint = ship->GetNearestPointAt(targetPos, radius);
-        if (nullptr != shipBestPoint)
+        auto shipBestPointIndex = ship->GetNearestPointIndexAt(targetPos, radius);
+        if (ElementContainer::NoneElementIndex != shipBestPointIndex)
         {
+            /* TODO
             float distance = (shipBestPoint->GetPosition() - targetPos).length();
             if (distance < bestDistance)
             {
                 bestPoint = shipBestPoint;
                 bestDistance = distance;
             }
+            */
         }
     }
 
-    return bestPoint;
+    return bestPointIndex;
 }
 
 void World::Update(GameParameters const & gameParameters)
@@ -279,57 +280,6 @@ void World::UploadLandAndWater(
     }
 
     renderContext.UploadLandAndWaterEnd();
-}
-
-///////////////////////////////////////////////////////////////////////////////////
-// Experimental
-///////////////////////////////////////////////////////////////////////////////////
-
-void World::BuildBVHTree(bool splitInX, std::vector<Point*> &pointlist, BVHNode *thisnode, int depth)
-{
-    size_t npoints = pointlist.size();
-    if (npoints != 0)
-        thisnode->volume = pointlist[0]->GetAABB();
-    for (size_t i = 1; i < npoints; i++)
-        thisnode->volume.extendTo(pointlist[i]->GetAABB());
-
-    thisnode->volume.render();
-    if (npoints <= BVHNode::MAX_N_POINTS || depth >= BVHNode::MAX_DEPTH)
-    {
-        thisnode->isLeaf = true;
-        thisnode->pointCount = npoints;
-        for (size_t i = 0; i < npoints; i++)
-            thisnode->points[i] = pointlist[i];
-    }
-    else
-    {
-        float pivotline = splitInX ?
-            medianOf3(pointlist[0]->GetPosition().x, pointlist[npoints / 2]->GetPosition().x, pointlist[npoints - 1]->GetPosition().x) :
-            medianOf3(pointlist[0]->GetPosition().y, pointlist[npoints / 2]->GetPosition().y, pointlist[npoints - 1]->GetPosition().y);
-        std::vector<Point*> listL;
-        std::vector<Point*> listR;
-        listL.reserve(npoints / 2);
-        listR.reserve(npoints / 2);
-        for (size_t i = 0; i < npoints; i++)
-        {
-            if (splitInX ? pointlist[i]->GetPosition().x < pivotline : pointlist[i]->GetPosition().y < pivotline)
-                listL.push_back(pointlist[i]);
-            else
-                listR.push_back(pointlist[i]);
-        }
-        BuildBVHTree(!splitInX, listL, thisnode->l, depth + 1);
-        BuildBVHTree(!splitInX, listR, thisnode->r, depth + 1);
-    }
-}
-
-World::BVHNode* World::BVHNode::AllocateTree(int depth)
-{
-    if (depth <= 0)
-        return 0;
-    BVHNode *thisnode = new BVHNode;
-    thisnode->l = AllocateTree(depth - 1);
-    thisnode->r = AllocateTree(depth - 1);
-    return thisnode;
 }
 
 }

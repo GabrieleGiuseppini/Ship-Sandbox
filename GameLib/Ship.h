@@ -30,7 +30,7 @@ public:
         World * parentWorld);
 
     void Initialize(
-        ElementRepository<Point> && allPoints,
+        Points && points,
         ElementRepository<vec3f> && allPointColors,
         ElementRepository<vec2f> && allPointTextureCoordinates,
         ElementRepository<Spring> && allSprings,
@@ -38,7 +38,7 @@ public:
         std::vector<ElectricalElement *> && allElectricalElements,
         uint64_t currentStepSequenceNumber)
     {
-        mAllPoints = std::move(allPoints);
+        mPoints = std::move(points);
         mAllPointColors = std::move(allPointColors);
         mAllPointTextureCoordinates = std::move(allPointTextureCoordinates);
         mAllSprings = std::move(allSprings);
@@ -61,8 +61,8 @@ public:
     auto const & GetElectricalElements() const { return mAllElectricalElements; }
     auto & GetElectricalElements() { return mAllElectricalElements; }
 
-    auto const & GetPoints() const { return mAllPoints; }
-    auto & GetPoints() { return mAllPoints; }
+    auto const & GetPoints() const { return mPoints; }
+    auto & GetPoints() { return mPoints; }
 
     auto const & GetSprings() const { return mAllSprings; }
     auto & GetSprings() { return mAllSprings; }
@@ -78,7 +78,7 @@ public:
         vec2 const & targetPos,
         float strength);
 
-    Point const * GetNearestPointAt(
+    ElementContainer::ElementIndex GetNearestPointIndexAt(
         vec2 const & targetPos,
         float radius) const;
 
@@ -112,7 +112,7 @@ public:
 
     void UpdateDrawForces(
         vec2f const & position,
-        float strength);
+        float forceStrength);
 
     void UpdatePointForces(GameParameters const & gameParameters);
 
@@ -138,7 +138,7 @@ private:
     World * const mParentWorld;
 
     // All the ship elements - never removed, the repositories maintain their own size forever
-    ElementRepository<Point> mAllPoints;
+    Points mPoints;
     ElementRepository<vec3f> mAllPointColors;
     ElementRepository<vec2f> mAllPointTextureCoordinates;
     ElementRepository<Spring> mAllSprings;
@@ -183,17 +183,6 @@ private:
 
     std::optional<DrawForce> mCurrentDrawForce;
 };
-
-template<>
-inline void Ship::RegisterDestruction(Point * /* element */)
-{    
-    // Remember that we need to re-upload ship elements
-    mAreElementsDirty = true;
-
-    // We don't mark the point count as dirty, as at this moment we keep 
-    // uploading all points, including deleted ones, to the rendering engine.
-    // We are content with only updating the point *elements*
-}
 
 template<>
 inline void Ship::RegisterDestruction(Spring * /* element */)

@@ -16,7 +16,7 @@ public:
 
     Generator(
         Ship * parentShip,
-        Point * point);
+        ElementContainer::ElementIndex pointIndex);
 
 private:
 };

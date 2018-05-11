@@ -1,7 +1,7 @@
 /***************************************************************************************
-* Original Author:		Gabriele Giuseppini
-* Created:				2018-04-22
-* Copyright:			Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
+* Original Author:      Gabriele Giuseppini
+* Created:              2018-04-22
+* Copyright:            Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
 ***************************************************************************************/
 #pragma once
 
@@ -54,8 +54,8 @@ private:
 
     struct RopeSegment
     {
-        std::optional<size_t> PointAIndex;
-        std::optional<size_t> PointBIndex;
+        std::optional<ElementContainer::ElementIndex> PointAIndex;
+        std::optional<ElementContainer::ElementIndex> PointBIndex;
 
         RopeSegment()
             : PointAIndex(std::nullopt)
@@ -66,12 +66,12 @@ private:
 
     struct SpringInfo
     {
-        size_t PointAIndex;
-        size_t PointBIndex;
+        ElementContainer::ElementIndex PointAIndex;
+        ElementContainer::ElementIndex PointBIndex;
 
         SpringInfo(
-            size_t pointAIndex,
-            size_t pointBIndex)
+            ElementContainer::ElementIndex pointAIndex,
+            ElementContainer::ElementIndex pointBIndex)
             : PointAIndex(pointAIndex)
             , PointBIndex(pointBIndex)
         {
@@ -80,14 +80,14 @@ private:
 
     struct TriangleInfo
     {
-        size_t PointAIndex;
-        size_t PointBIndex;
-        size_t PointCIndex;
+        ElementContainer::ElementIndex PointAIndex;
+        ElementContainer::ElementIndex PointBIndex;
+        ElementContainer::ElementIndex PointCIndex;
 
         TriangleInfo(
-            size_t pointAIndex,
-            size_t pointBIndex,
-            size_t pointCIndex)
+            ElementContainer::ElementIndex pointAIndex,
+            ElementContainer::ElementIndex pointBIndex,
+            ElementContainer::ElementIndex pointCIndex)
             : PointAIndex(pointAIndex)
             , PointBIndex(pointBIndex)
             , PointCIndex(pointCIndex)
@@ -111,14 +111,14 @@ private:
     static void CreatePoints(
         std::vector<PointInfo> const & pointInfos,
         Physics::Ship * ship,
-        ElementRepository<Physics::Point> & points,
+        Physics::Points & points,
         ElementRepository<vec3f> & pointColors,
         ElementRepository<vec2f> & pointTextureCoordinates);
 
     static void CreateShipElementInfos(
-        std::unique_ptr<std::unique_ptr<std::optional<size_t>[]>[]> const & pointIndexMatrix,
+        std::unique_ptr<std::unique_ptr<std::optional<ElementContainer::ElementIndex>[]>[]> const & pointIndexMatrix,
         ImageSize const & structureImageSize,
-        ElementRepository<Physics::Point> & points,
+        Physics::Points & points,
         std::vector<SpringInfo> & springInfos,
         std::vector<TriangleInfo> & triangleInfos,
         size_t & leakingPointsCount);
@@ -126,15 +126,15 @@ private:
     static ElementRepository<Physics::Spring> CreateSprings(
         std::vector<SpringInfo> const & springInfos,
         Physics::Ship * ship,
-        ElementRepository<Physics::Point> & points);
+        Physics::Points & points);
 
     static ElementRepository<Physics::Triangle> CreateTriangles(
         std::vector<TriangleInfo> const & triangleInfos,
         Physics::Ship * ship,
-        ElementRepository<Physics::Point> & points);
+        Physics::Points & points);
 
     static std::vector<Physics::ElectricalElement*> CreateElectricalElements(
-        ElementRepository<Physics::Point> & points,
+        Physics::Points & points,
         Physics::Ship * ship);
 
 private:
@@ -143,7 +143,7 @@ private:
     // Vertex cache optimization
     /////////////////////////////////////////////////////////////////
 
-    // See Tom's comments: using 32 is good enough; apparently 64 does not yield significant differences
+    // See Tom Forsyth's comments: using 32 is good enough; apparently 64 does not yield significant differences
     static constexpr size_t VertexCacheSize = 32;
 
     using ModelLRUVertexCache = std::list<size_t>;

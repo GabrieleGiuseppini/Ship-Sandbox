@@ -33,7 +33,7 @@ Ship::Ship(
     World * parentWorld)
     : mId(id)
     , mParentWorld(parentWorld)    
-    , mAllPoints(0)
+    , mPoints(0)
     , mAllPointColors(0)
     , mAllPointTextureCoordinates(0)
     , mAllSprings(0)
@@ -61,20 +61,27 @@ void Ship::DestroyAt(
     float radius)
 {
     // Destroy all points within the radius
-    for (Point & point : mAllPoints)
+    for (auto pointIndex : mPoints)
     {
-        if (!point.IsDeleted())
+        if (!mPoints.IsDeleted(pointIndex))
         {
-            if ((point.GetPosition() - targetPos).length() < radius)
+            if ((mPoints.GetPosition(pointIndex) - targetPos).length() < radius)
             {
+                //
+                // This point must be deleted
+                //
+
                 // Notify
                 mParentWorld->GetGameEventHandler()->OnDestroy(
-                    point.GetMaterial(), 
-                    mParentWorld->IsUnderwater(point.GetPosition()),
+                    mPoints.GetMaterial(pointIndex), 
+                    mParentWorld->IsUnderwater(mPoints.GetPosition(pointIndex)),
                     1u);
 
                 // Destroy point
-                point.Destroy();
+                mPoints.Destroy(pointIndex);
+
+                // Remember the elements are now dirty
+                mAreElementsDirty = true;
             }
         }
     }
@@ -86,32 +93,32 @@ void Ship::DrawTo(
     vec2f const & targetPos,
     float strength)
 {
-    // Store
+    // Store the force
     assert(!mCurrentDrawForce);
     mCurrentDrawForce.emplace(targetPos, strength);
 }
 
-Point const * Ship::GetNearestPointAt(
+ElementContainer::ElementIndex Ship::GetNearestPointIndexAt(
     vec2 const & targetPos, 
     float radius) const
 {
-    Point const * bestPoint = nullptr;
+    ElementContainer::ElementIndex bestPointIndex = ElementContainer::NoneElementIndex;
     float bestDistance = std::numeric_limits<float>::max();
 
-    for (Point const & point : mAllPoints)
+    for (auto pointIndex : mPoints)
     {
-        if (!point.IsDeleted())
+        if (!mPoints.IsDeleted(pointIndex))
         {
-            float distance = (point.GetPosition() - targetPos).length();
+            float distance = (mPoints.GetPosition(pointIndex) - targetPos).length();
             if (distance < radius && distance < bestDistance)
             {
-                bestPoint = &point;
+                bestPointIndex = pointIndex;
                 bestDistance = distance;
             }
         }
     }
 
-    return bestPoint;
+    return bestPointIndex;
 }
 
 void Ship::Update(
@@ -137,7 +144,15 @@ void Ship::Update(
         // Avoid breaking deleted springs
         if (!spring.IsDeleted())
         {
-            spring.UpdateStrain(gameParameters, gameEventHandler);
+            if (spring.UpdateStrain(
+                gameParameters,
+                mPoints,
+                gameEventHandler))
+            {
+                // The spring just broke up...
+                // ...remember the elements are now dirty
+                mAreElementsDirty = true;
+            }
         }
     }
 
@@ -203,21 +218,9 @@ void Ship::Render(
     // Upload points
     //
 
-    renderContext.UploadShipPointsStart(
+    mPoints.Upload(
         mId,
-        mAllPoints.size());
-
-    for (Point const & point : mAllPoints)
-    {
-        renderContext.UploadShipPoint(
-            mId,
-            point.GetPosition().x,
-            point.GetPosition().y,
-            point.GetLight(),
-            point.GetWater());
-    }
-
-    renderContext.UploadShipPointsEnd(mId);
+        renderContext);
 
 
     //
@@ -237,19 +240,12 @@ void Ship::Render(
                 mConnectedComponentSizes);
 
             //
-            // Upload all the points
+            // Upload all the point elements
             //
 
-            for (Point const & point : mAllPoints)
-            {
-                if (!point.IsDeleted())
-                {
-                    renderContext.UploadShipElementPoint(
-                        mId,
-                        point.GetElementIndex(),
-                        point.GetConnectedComponentId());
-                }
-            }
+            mPoints.UploadElements(
+                mId,
+                renderContext);
 
             //
             // Upload all the springs (including ropes)
@@ -259,23 +255,23 @@ void Ship::Render(
             {
                 if (!spring.IsDeleted())
                 {
-                    assert(spring.GetPointA()->GetConnectedComponentId() == spring.GetPointB()->GetConnectedComponentId());
+                    assert(mPoints.GetConnectedComponentId(spring.GetPointAIndex()) == mPoints.GetConnectedComponentId(spring.GetPointBIndex()));
 
                     if (spring.IsRope())
                     {
                         renderContext.UploadShipElementRope(
                             mId,
-                            spring.GetPointA()->GetElementIndex(),
-                            spring.GetPointB()->GetElementIndex(),
-                            spring.GetPointA()->GetConnectedComponentId());
+                            spring.GetPointAIndex(),
+                            spring.GetPointBIndex(),
+                            mPoints.GetConnectedComponentId(spring.GetPointAIndex()));
                     }
                     else
                     {
                         renderContext.UploadShipElementSpring(
                             mId,
-                            spring.GetPointA()->GetElementIndex(),
-                            spring.GetPointB()->GetElementIndex(),
-                            spring.GetPointA()->GetConnectedComponentId());
+                            spring.GetPointAIndex(),
+                            spring.GetPointBIndex(),
+                            mPoints.GetConnectedComponentId(spring.GetPointAIndex()));
                     }
                 }
             }
@@ -289,15 +285,15 @@ void Ship::Render(
             {
                 if (!triangle.IsDeleted())
                 {
-                    assert(triangle.GetPointA()->GetConnectedComponentId() == triangle.GetPointB()->GetConnectedComponentId()
-                        && triangle.GetPointA()->GetConnectedComponentId() == triangle.GetPointC()->GetConnectedComponentId());
+                    assert(mPoints.GetConnectedComponentId(triangle.GetPointAIndex()) == mPoints.GetConnectedComponentId(triangle.GetPointBIndex())
+                        && mPoints.GetConnectedComponentId(triangle.GetPointAIndex()) == mPoints.GetConnectedComponentId(triangle.GetPointCIndex()));
 
                     renderContext.UploadShipElementTriangle(
                         mId,
-                        triangle.GetPointA()->GetElementIndex(),
-                        triangle.GetPointB()->GetElementIndex(),
-                        triangle.GetPointC()->GetElementIndex(),
-                        triangle.GetPointA()->GetConnectedComponentId());
+                        triangle.GetPointAIndex(),
+                        triangle.GetPointBIndex(),
+                        triangle.GetPointCIndex(),
+                        mPoints.GetConnectedComponentId(triangle.GetPointAIndex()));
                 }
             }
 
@@ -321,13 +317,13 @@ void Ship::Render(
                 {
                     if (spring.IsStressed())
                     {
-                        assert(spring.GetPointA()->GetConnectedComponentId() == spring.GetPointB()->GetConnectedComponentId());
+                        assert(mPoints.GetConnectedComponentId(spring.GetPointAIndex()) == mPoints.GetConnectedComponentId(spring.GetPointBIndex()));
 
                         renderContext.UploadShipElementStressedSpring(
                             mId,
-                            spring.GetPointA()->GetElementIndex(),
-                            spring.GetPointB()->GetElementIndex(),
-                            spring.GetPointA()->GetConnectedComponentId());
+                            spring.GetPointAIndex(),
+                            spring.GetPointBIndex(),
+                            mPoints.GetConnectedComponentId(spring.GetPointAIndex()));
                     }
                 }
             }
@@ -383,13 +379,15 @@ void Ship::UpdateDynamics(GameParameters const & gameParameters)
 
 void Ship::UpdateDrawForces(
     vec2f const & position,
-    float strength)
+    float forceStrength)
 {
-    for (Point & point : mAllPoints)
+    auto newtonzBuffer = mPoints.GetNewtonzBuffer();
+
+    for (auto pointIndex : mPoints)
     {
-        vec2f displacement = (position - point.GetPosition());
-        float forceMagnitude = strength / sqrtf(0.1f + displacement.length());
-        point.AddToForce(displacement.normalise() * forceMagnitude);
+        vec2f displacement = (position - newtonzBuffer[pointIndex].Position);
+        float forceMagnitude = forceStrength / sqrtf(0.1f + displacement.length());
+        newtonzBuffer[pointIndex].Force += displacement.normalise() * forceMagnitude;
     }
 }
 
@@ -400,28 +398,28 @@ void Ship::UpdatePointForces(GameParameters const & gameParameters)
     // The higher the value, the more viscous the water looks when a body moves through it
     constexpr float WaterDragCoefficient = 0.020f; // ~= 1.0f - powf(0.6f, 0.02f)
     
-    for (Point & point : mAllPoints)
+    for (auto pointIndex : mPoints)
     {
         // Get height of water at this point
-        float const waterHeightAtThisPoint = mParentWorld->GetWaterHeightAt(point.GetPosition().x);
+        float const waterHeightAtThisPoint = mParentWorld->GetWaterHeightAt(mPoints.GetPosition(pointIndex).x);
 
 
         //
         // 1. Add gravity and buoyancy
         //
 
-        float const effectiveBuoyancy = gameParameters.BuoyancyAdjustment * point.GetBuoyancy();
+        float const effectiveBuoyancy = gameParameters.BuoyancyAdjustment * mPoints.GetBuoyancy(pointIndex);
 
         // Mass = own + contained water (clamped to 1)
-        float effectiveMassMultiplier = 1.0f + std::min(point.GetWater(), 1.0f) * effectiveBuoyancy;
-        if (point.GetPosition().y < waterHeightAtThisPoint)
+        float effectiveMassMultiplier = 1.0f + std::min(mPoints.GetWater(pointIndex), 1.0f) * effectiveBuoyancy;
+        if (mPoints.GetPosition(pointIndex).y < waterHeightAtThisPoint)
         {
             // Apply buoyancy of own mass (i.e. 1 * effectiveBuoyancy), which is
             // opposite to gravity
             effectiveMassMultiplier -= effectiveBuoyancy;
         }
 
-        point.AddToForce(gameParameters.Gravity * point.GetMaterial()->Mass * effectiveMassMultiplier);
+        mPoints.AddToForce(pointIndex, gameParameters.Gravity * mPoints.GetMaterial(pointIndex)->Mass * effectiveMassMultiplier);
 
 
         //
@@ -432,9 +430,9 @@ void Ship::UpdatePointForces(GameParameters const & gameParameters)
         // this would ensure that masses would also have a horizontal velocity component when sinking
         //
 
-        if (point.GetPosition().y < waterHeightAtThisPoint)
+        if (mPoints.GetPosition(pointIndex).y < waterHeightAtThisPoint)
         {
-            point.AddToForce(point.GetVelocity() * (-WaterDragCoefficient));
+            mPoints.AddToForce(pointIndex, mPoints.GetVelocity(pointIndex) * (-WaterDragCoefficient));
         }
     }
 }
@@ -446,7 +444,7 @@ void Ship::UpdateSpringForces(GameParameters const & /*gameParameters*/)
         // No need to check whether the spring is deleted, as a deleted spring
         // has zero coefficients
 
-        vec2f const displacement = (spring.GetPointB()->GetPosition() - spring.GetPointA()->GetPosition());
+        vec2f const displacement = mPoints.GetPosition(spring.GetPointBIndex()) - mPoints.GetPosition(spring.GetPointAIndex());
         float const displacementLength = displacement.length();
         vec2f const springDir = displacement.normalise(displacementLength);
 
@@ -459,8 +457,8 @@ void Ship::UpdateSpringForces(GameParameters const & /*gameParameters*/)
         vec2f const fSpringA = springDir * (displacementLength - spring.GetRestLength()) * spring.GetStiffnessCoefficient();
 
         // Apply force 
-        spring.GetPointA()->AddToForce(fSpringA);
-        spring.GetPointB()->AddToForce(-fSpringA);
+        mPoints.AddToForce(spring.GetPointAIndex(), fSpringA);
+        mPoints.AddToForce(spring.GetPointBIndex(), -fSpringA);
 
 
         //
@@ -471,12 +469,12 @@ void Ship::UpdateSpringForces(GameParameters const & /*gameParameters*/)
         //
 
         // Calculate damp force on point A
-        vec2f const relVelocity = (spring.GetPointB()->GetVelocity() - spring.GetPointA()->GetVelocity());
+        vec2f const relVelocity = mPoints.GetVelocity(spring.GetPointBIndex()) - mPoints.GetVelocity(spring.GetPointAIndex());
         vec2f const fDampA = springDir * relVelocity.dot(springDir) * spring.GetDampingCoefficient();
 
         // Apply force
-        spring.GetPointA()->AddToForce(fDampA);
-        spring.GetPointB()->AddToForce(-fDampA);
+        mPoints.AddToForce(spring.GetPointAIndex(), fDampA);
+        mPoints.AddToForce(spring.GetPointBIndex(), -fDampA);
     }
 }
 
@@ -489,36 +487,37 @@ void Ship::Integrate()
     // Note: it's not technically a drag force, it's just a dimensionless deceleration
     float constexpr GlobalDampCoefficient = 0.9996f;
 
-    for (Point & point : mAllPoints)
+    auto newtonz = mPoints.GetNewtonzBuffer();
+    for (auto pointIndex : mPoints)
     {
         // Verlet (fourth order, with velocity being first order)
         // - For each point: 6 * mul + 4 * add
-        auto const deltaPos = point.GetVelocity() * dt + point.GetForce() * point.GetMassFactor();
-        point.SetPosition(point.GetPosition() + deltaPos);
-        point.SetVelocity(deltaPos * GlobalDampCoefficient / dt);
-        point.ZeroForce();
+        vec2f const deltaPos = newtonz[pointIndex].Velocity * dt + newtonz[pointIndex].Force * newtonz[pointIndex].MassFactor.x;
+        newtonz[pointIndex].Position += deltaPos;
+        newtonz[pointIndex].Velocity = deltaPos * GlobalDampCoefficient / dt;
+        newtonz[pointIndex].Force = vec2f(0.0f, 0.0f);
     }
 }
 
 void Ship::HandleCollisionsWithSeaFloor()
 {
-    for (Point & point : mAllPoints)
+    for (auto pointIndex : mPoints)
     {
         // Check if point is now below the sea floor
-        float const floorheight = mParentWorld->GetOceanFloorHeightAt(point.GetPosition().x);
-        if (point.GetPosition().y < floorheight)
+        float const floorheight = mParentWorld->GetOceanFloorHeightAt(mPoints.GetPosition(pointIndex).x);
+        if (mPoints.GetPosition(pointIndex).y < floorheight)
         {
             // Calculate normal to sea floor
             vec2f seaFloorNormal = vec2f(
-                floorheight - mParentWorld->GetOceanFloorHeightAt(point.GetPosition().x + 0.01f),
+                floorheight - mParentWorld->GetOceanFloorHeightAt(mPoints.GetPosition(pointIndex).x + 0.01f),
                 0.01f).normalise();
 
             // Calculate displacement to move point back to sea floor, along the normal to the floor
-            vec2f bounceDisplacement = seaFloorNormal * (floorheight - point.GetPosition().y);
+            vec2f bounceDisplacement = seaFloorNormal * (floorheight - mPoints.GetPosition(pointIndex).y);
 
             // Move point back along normal
-            point.AddToPosition(bounceDisplacement);
-            point.SetVelocity(bounceDisplacement / GameParameters::DynamicsSimulationStepTimeDuration<float>);
+            mPoints.GetPosition(pointIndex) += bounceDisplacement;
+            mPoints.GetVelocity(pointIndex) = bounceDisplacement / GameParameters::DynamicsSimulationStepTimeDuration<float>;
         }
     }
 }
@@ -528,16 +527,16 @@ void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)
     mConnectedComponentSizes.clear();
 
     uint64_t currentConnectedComponentId = 0;
-    std::queue<Point *> pointsToVisitForConnectedComponents;    
+    std::queue<ElementContainer::ElementIndex> pointsToVisitForConnectedComponents;    
 
     // Visit all points
-    for (Point & point : mAllPoints)
+    for (auto pointIndex : mPoints)
     {
         // Don't visit destroyed points, or we run the risk of creating a zillion connected components
-        if (!point.IsDeleted())
+        if (!mPoints.IsDeleted(pointIndex))
         {
             // Check if visited
-            if (point.GetCurrentConnectedComponentDetectionStepSequenceNumber() != currentStepSequenceNumber)
+            if (mPoints.GetCurrentConnectedComponentDetectionStepSequenceNumber(pointIndex) != currentStepSequenceNumber)
             {
                 // This node has not been visited, hence it's the beginning of a new connected component
                 ++currentConnectedComponentId;
@@ -548,37 +547,37 @@ void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)
                 //
 
                 assert(pointsToVisitForConnectedComponents.empty());
-                pointsToVisitForConnectedComponents.push(&point);
-                point.SetConnectedComponentDetectionStepSequenceNumber(currentStepSequenceNumber);
+                pointsToVisitForConnectedComponents.push(pointIndex);
+                mPoints.SetCurrentConnectedComponentDetectionStepSequenceNumber(pointIndex, currentStepSequenceNumber);
 
                 while (!pointsToVisitForConnectedComponents.empty())
                 {
-                    Point * currentPoint = pointsToVisitForConnectedComponents.front();
+                    auto currentPointIndex = pointsToVisitForConnectedComponents.front();
                     pointsToVisitForConnectedComponents.pop();
 
                     // Assign the connected component ID
-                    currentPoint->SetConnectedComponentId(currentConnectedComponentId);
+                    mPoints.SetConnectedComponentId(currentPointIndex, currentConnectedComponentId);
                     ++pointsInCurrentConnectedComponent;
 
                     // Go through this point's adjacents
-                    for (Spring * spring : currentPoint->GetConnectedSprings())
+                    for (Spring * spring : mPoints.GetConnectedSprings(currentPointIndex))
                     {
                         assert(!spring->IsDeleted());
 
-                        Point * const pointA = spring->GetPointA();
-                        assert(!pointA->IsDeleted());
-                        if (pointA->GetCurrentConnectedComponentDetectionStepSequenceNumber() != currentStepSequenceNumber)
+                        auto pointAIndex = spring->GetPointAIndex();
+                        assert(!mPoints.IsDeleted(pointAIndex));
+                        if (mPoints.GetCurrentConnectedComponentDetectionStepSequenceNumber(pointAIndex) != currentStepSequenceNumber)
                         {
-                            pointA->SetConnectedComponentDetectionStepSequenceNumber(currentStepSequenceNumber);
-                            pointsToVisitForConnectedComponents.push(pointA);
+                            mPoints.SetCurrentConnectedComponentDetectionStepSequenceNumber(pointAIndex, currentStepSequenceNumber);
+                            pointsToVisitForConnectedComponents.push(pointAIndex);
                         }
 
-                        Point * const pointB = spring->GetPointB();
-                        assert(!pointB->IsDeleted());
-                        if (pointB->GetCurrentConnectedComponentDetectionStepSequenceNumber() != currentStepSequenceNumber)
+                        auto pointBIndex = spring->GetPointBIndex();
+                        assert(!mPoints.IsDeleted(pointBIndex));
+                        if (mPoints.GetCurrentConnectedComponentDetectionStepSequenceNumber(pointBIndex) != currentStepSequenceNumber)
                         {
-                            pointB->SetConnectedComponentDetectionStepSequenceNumber(currentStepSequenceNumber);
-                            pointsToVisitForConnectedComponents.push(pointB);
+                            mPoints.SetCurrentConnectedComponentDetectionStepSequenceNumber(pointBIndex, currentStepSequenceNumber);
+                            pointsToVisitForConnectedComponents.push(pointBIndex);
                         }
                     }
                 }
@@ -592,25 +591,26 @@ void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)
 
 void Ship::LeakWater(GameParameters const & gameParameters)
 {
-    for (Point & point : mAllPoints)
+    for (auto pointIndex : mPoints)
     {
         //
         // Stuff some water into all the leaking nodes that are underwater, 
         // if the external pressure is larger
         //
 
-        if (point.IsLeaking())
+        if (mPoints.IsLeaking(pointIndex))
         {
-            float waterLevel = mParentWorld->GetWaterHeightAt(point.GetPosition().x);
+            float waterLevel = mParentWorld->GetWaterHeightAt(mPoints.GetPosition(pointIndex).x);
 
-            float const externalWaterPressure = point.GetExternalWaterPressure(
+            float const externalWaterPressure = mPoints.GetExternalWaterPressure(
+                pointIndex,
                 waterLevel,
                 gameParameters) * gameParameters.WaterPressureAdjustment;
 
-            if (externalWaterPressure > point.GetWater())
+            if (externalWaterPressure > mPoints.GetWater(pointIndex))
             {
-                float newWater = GameParameters::SimulationStepTimeDuration<float> * (externalWaterPressure - point.GetWater());
-                point.AddWater(newWater);
+                float newWater = GameParameters::SimulationStepTimeDuration<float> * (externalWaterPressure - mPoints.GetWater(pointIndex));
+                mPoints.GetWater(pointIndex) += newWater;
                 mTotalWater += newWater;
             }
         }
@@ -621,7 +621,7 @@ void Ship::LeakWater(GameParameters const & gameParameters)
     //
 
     if (!mIsSinking
-        && mTotalWater > static_cast<float>(mAllPoints.size()) / 2.0f)
+        && mTotalWater > static_cast<float>(mPoints.GetElementCount()) / 2.0f)
     {
         // Started sinking
         mParentWorld->GetGameEventHandler()->OnSinkingBegin(mId);
@@ -642,11 +642,11 @@ void Ship::GravitateWater(GameParameters const & gameParameters)
     // Visit all connected non-hull points - i.e. non-hull springs
     for (Spring & spring : mAllSprings)
     {
-        Point * const pointA = spring.GetPointA();
-        Point * const pointB = spring.GetPointB();
+        auto const pointAIndex = spring.GetPointAIndex();
+        auto const pointBIndex = spring.GetPointBIndex();
 
         // cos_theta > 0 => pointA above pointB
-        float cos_theta = (pointB->GetPosition() - pointA->GetPosition()).normalise().dot(gameParameters.GravityNormal);
+        float cos_theta = (mPoints.GetPosition(pointBIndex) - mPoints.GetPosition(pointAIndex)).normalise().dot(gameParameters.GravityNormal);
 
         // This amount of water falls in a second; 
         // a value too high causes all the water to be stuffed into the lowest node
@@ -654,15 +654,15 @@ void Ship::GravitateWater(GameParameters const & gameParameters)
                 
         // Calculate amount of water that falls from highest point to lowest point
         float correction = spring.GetWaterPermeability() * (velocity * GameParameters::SimulationStepTimeDuration<float>)
-            * cos_theta  * (cos_theta > 0.0f ? pointA->GetWater() : pointB->GetWater());
+            * cos_theta  * (cos_theta > 0.0f ? mPoints.GetWater(pointAIndex) : mPoints.GetWater(pointBIndex));
 
         // TODO: use code below and store at Spring::WaterGravityFactorA/B
         ////float cos_theta_select = (1.0f + cos_theta) / 2.0f;
         ////float correction = 0.60f * cos_theta_select * pointA->GetWater() - 0.60f * (1.0f - cos_theta_select) * pointB->GetWater();
         ////correction *= GameParameters::SimulationStepTimeDuration<float>;
 
-        pointA->AddWater(-correction);
-        pointB->AddWater(correction);
+        mPoints.GetWater(pointAIndex) -= correction;
+        mPoints.GetWater(pointBIndex) += correction;
     }
 }
 
@@ -679,11 +679,11 @@ void Ship::BalancePressure(GameParameters const & /*gameParameters*/)
     // Visit all connected non-hull points - i.e. non-hull springs
     for (Spring & spring : mAllSprings)
     {
-        Point * const pointA = spring.GetPointA();
-        float const aWater = pointA->GetWater();
+        auto const pointAIndex = spring.GetPointAIndex();
+        float const aWater = mPoints.GetWater(pointAIndex);
 
-        Point * const pointB = spring.GetPointB();
-        float const bWater = pointB->GetWater();
+        auto const pointBIndex = spring.GetPointBIndex();
+        float const bWater = mPoints.GetWater(pointBIndex);
 
         if (aWater < 1 && bWater < 1)   // if water content below threshold, no need to force water out
             continue;
@@ -693,8 +693,8 @@ void Ship::BalancePressure(GameParameters const & /*gameParameters*/)
 
         // Move water from more wet to less wet
         float const correction = spring.GetWaterPermeability() * (bWater - aWater) * (velocity * GameParameters::SimulationStepTimeDuration<float>);
-        pointA->AddWater(correction);
-        pointB->AddWater(-correction);
+        mPoints.GetWater(pointAIndex) += correction;
+        mPoints.GetWater(pointBIndex) -= correction;
     }
 }
 
@@ -709,11 +709,12 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
     float const adjustmentCoefficient = powf(1.0f - gameParameters.LightDiffusionAdjustment, 2.0f);
 
     // Visit all points
-    for (Point & point : mAllPoints)
+    for (auto pointIndex : mPoints)
     {
-        point.ZeroLight();
+        // Zero light
+        mPoints.GetLight(pointIndex) = 0.0f;
 
-        vec2f const & pointPosition = point.GetPosition();
+        vec2f const & pointPosition = mPoints.GetPosition(pointIndex);
 
         // Go through all lamps in the same connected component
         for (ElectricalElement * el : mAllElectricalElements)
@@ -721,22 +722,24 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
             assert(!el->IsDeleted());
 
             if (ElectricalElement::Type::Lamp == el->GetType()
-                && el->GetPoint()->GetConnectedComponentId() == point.GetConnectedComponentId())
+                && mPoints.GetConnectedComponentId(el->GetPointIndex()) == mPoints.GetConnectedComponentId(pointIndex))
             {
-                Point * const lampPoint = el->GetPoint();
+                auto lampPointIndex = el->GetPointIndex();
 
-                assert(!lampPoint->IsDeleted());
+                assert(!mPoints.IsDeleted(lampPointIndex));
 
                 // TODO: this needs to be replaced with getting Light from the lamp itself
                 float const lampLight = 1.0f;
 
                 float squareDistance = std::max(
                     1.0f,
-                    (pointPosition - lampPoint->GetPosition()).squareLength() * adjustmentCoefficient);
+                    (pointPosition - mPoints.GetPosition(lampPointIndex)).squareLength() * adjustmentCoefficient);
 
                 assert(squareDistance >= 1.0f);
 
-                point.AdjustLight(lampLight / squareDistance);
+                float newLight = lampLight / squareDistance;
+                if (newLight > mPoints.GetLight(pointIndex))
+                    mPoints.GetLight(pointIndex) = newLight;
             }
         }
     }

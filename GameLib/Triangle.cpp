@@ -11,18 +11,14 @@ namespace Physics {
 
 Triangle::Triangle(
     Ship * parentShip,
-    Point * a,
-    Point * b,
-    Point * c)
+    ElementContainer::ElementIndex pointAIndex,
+    ElementContainer::ElementIndex pointBIndex,
+    ElementContainer::ElementIndex pointCIndex)
     : ShipElement(parentShip)
-    , mPointA(a)
-    , mPointB(b)
-    , mPointC(c)
+    , mPointAIndex(pointAIndex)
+    , mPointBIndex(pointBIndex)
+    , mPointCIndex(pointCIndex)
 {
-    // Add ourselves to each point
-    a->AddConnectedTriangle(this);
-    b->AddConnectedTriangle(this);
-    c->AddConnectedTriangle(this);
 }
 
 void Triangle::Destroy(

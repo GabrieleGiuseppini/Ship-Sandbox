@@ -23,25 +23,23 @@ namespace Physics {
 
 Spring::Spring(
 	Ship * parentShip,
-	Point * a,
-	Point * b,
-	float restLength,
+    Points & points,
+    ElementContainer::ElementIndex pointAIndex,
+    ElementContainer::ElementIndex pointBIndex,
+    float restLength,
     Characteristics characteristics,
 	Material const *material)
 	: ShipElement(parentShip)
-	, mPointA(a)
-	, mPointB(b)
+	, mPointAIndex(pointAIndex)
+	, mPointBIndex(pointBIndex)
 	, mRestLength(restLength)
-    , mStiffnessCoefficient(CalculateStiffnessCoefficient(*mPointA, *mPointB, material->Stiffness))
-    , mDampingCoefficient(CalculateDampingCoefficient(*mPointA, *mPointB))
+    , mStiffnessCoefficient(CalculateStiffnessCoefficient(points, mPointAIndex, mPointBIndex, material->Stiffness))
+    , mDampingCoefficient(CalculateDampingCoefficient(points, mPointAIndex, mPointBIndex))
     , mCharacteristics(characteristics)
 	, mMaterial(material)
     , mWaterPermeability(Characteristics::None != (mCharacteristics & Characteristics::Hull) ? 0.0f : 1.0f)
     , mIsStressed(false)
 {
-    // Add ourselves to our endpoints
-    a->AddConnectedSpring(this);
-    b->AddConnectedSpring(this);
 }
 
 void Spring::Destroy(
@@ -82,8 +80,9 @@ void Spring::Destroy(
 }
 
 float Spring::CalculateStiffnessCoefficient(
-    Point const & pointA,
-    Point const & pointB,
+    Points const & points,
+    ElementContainer::ElementIndex pointAIndex,
+    ElementContainer::ElementIndex pointBIndex,
     float springStiffness)
 {
     // The empirically-determined constant for the spring stiffness
@@ -93,15 +92,16 @@ float Spring::CalculateStiffnessCoefficient(
     // - 0.95 makes everything explode (this was the equivalent of Luke's original code)
     static constexpr float C = 0.8f;
 
-    float const massFactor = (pointA.GetMass() * pointB.GetMass()) / (pointA.GetMass() + pointB.GetMass());
+    float const massFactor = (points.GetMass(pointAIndex) * points.GetMass(pointBIndex)) / (points.GetMass(pointAIndex) + points.GetMass(pointBIndex));
     static constexpr float dtSquared = GameParameters::DynamicsSimulationStepTimeDuration<float> * GameParameters::DynamicsSimulationStepTimeDuration<float>;
 
     return C * springStiffness * massFactor / dtSquared;
 }
 
 float Spring::CalculateDampingCoefficient(
-    Point const & pointA,
-    Point const & pointB)
+    Points const & points,
+    ElementContainer::ElementIndex pointAIndex,
+    ElementContainer::ElementIndex pointBIndex)
 {
     // The empirically-determined constant for the spring damping
     //
@@ -110,7 +110,7 @@ float Spring::CalculateDampingCoefficient(
     // - 0.8 makes everything explode (this was the equivalent of Luke's original code)
     static constexpr float C = 0.03f;
 
-    float const massFactor = (pointA.GetMass() * pointB.GetMass()) / (pointA.GetMass() + pointB.GetMass());
+    float const massFactor = (points.GetMass(pointAIndex) * points.GetMass(pointBIndex)) / (points.GetMass(pointAIndex) + points.GetMass(pointBIndex));
     static constexpr float dt = GameParameters::DynamicsSimulationStepTimeDuration<float>;
 
     return C * massFactor / dt;

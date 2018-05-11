@@ -18,23 +18,23 @@ public:
 
     Triangle(
         Ship * parentShip,
-        Point * a,
-        Point * b,
-        Point * c);
+        ElementContainer::ElementIndex pointAIndex,
+        ElementContainer::ElementIndex pointBIndex,
+        ElementContainer::ElementIndex pointCIndex);
 
 	void Destroy(
         Points & points,
         ElementContainer::ElementIndex sourcePointElementIndex);
 
-	inline Point const * GetPointA() const { return mPointA; }
-	inline Point const * GetPointB() const { return mPointB; }
-	inline Point const * GetPointC() const { return mPointC; }
+	inline ElementContainer::ElementIndex GetPointAIndex() const { return mPointAIndex; }
+	inline ElementContainer::ElementIndex GetPointBIndex() const { return mPointBIndex; }
+	inline ElementContainer::ElementIndex GetPointCIndex() const { return mPointCIndex; }
 
 private:
 	
-	Point * const mPointA;
-	Point * const mPointB;
-	Point * const mPointC;
+    ElementContainer::ElementIndex const mPointAIndex;
+    ElementContainer::ElementIndex const mPointBIndex;
+    ElementContainer::ElementIndex const mPointCIndex;
 };
 
 }

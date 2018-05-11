@@ -10,6 +10,7 @@
 #include "FixedSizeVector.h"
 #include "GameParameters.h"
 #include "Material.h"
+#include "RenderContext.h"
 #include "Vectors.h"
 
 #include <cassert>
@@ -17,7 +18,7 @@
 namespace Physics
 {
 
-class Points : ElementContainer
+class Points : public ElementContainer
 {
 public:
 
@@ -89,6 +90,12 @@ public:
     {
     }
 
+    Points(Points && other) = default;
+
+    // TODOREMOVE: only for phase I, this is needed for ship ::Initialize() which will go, substituted
+    // by ship cctor()
+    Points & operator=(Points && other) = default;
+
     void Add(
         vec2 const & position,
         Material const * material,
@@ -118,6 +125,17 @@ public:
         // TODOHERE: others
     }
 
+    // TODO: caller must also ensure that Ship::mAreElementsDirty is set
+    void Destroy(ElementIndex pointElementIndex);
+
+    void Upload(
+        int shipId,
+        RenderContext & renderContext) const;
+
+    void UploadElements(
+        int shipId,
+        RenderContext & renderContext) const;
+
 public:
 
     //
@@ -132,11 +150,10 @@ public:
     inline bool IsDeleted(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
+
         return mIsDeletedBuffer[pointElementIndex];
     }
 
-    // TODO: caller must also ensure that Ship::mAreElementsDirty is set
-    void Destroy(ElementIndex pointElementIndex);
 
     //
     // Material
@@ -145,6 +162,13 @@ public:
     inline Material const * const * GetMaterialBuffer() const
     {
         return mMaterialBuffer.data();
+    }
+
+    inline Material const * GetMaterial(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mMaterialBuffer[pointElementIndex];
     }
 
     //
@@ -156,9 +180,53 @@ public:
         return mNewtonzBuffer.data();
     }
 
+    vec2f const & GetPosition(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNewtonzBuffer[pointElementIndex].Position;
+    }
+
+    vec2f & GetPosition(ElementIndex pointElementIndex) 
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNewtonzBuffer[pointElementIndex].Position;
+    }
+
+    vec2f const & GetVelocity(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNewtonzBuffer[pointElementIndex].Velocity;
+    }
+
+    vec2f & GetVelocity(ElementIndex pointElementIndex)
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNewtonzBuffer[pointElementIndex].Velocity;
+    }
+
+    inline void AddToForce(
+        ElementIndex pointElementIndex,
+        vec2f force)
+    {
+        assert(pointElementIndex < mElementCount);
+
+        mNewtonzBuffer[pointElementIndex].Force += force;
+    }
+
     inline float const * GetMassBuffer() const
     {
         return mMassBuffer.data();
+    }
+
+    float GetMass(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mMassBuffer[pointElementIndex];
     }
 
     //
@@ -170,14 +238,68 @@ public:
         return mBuoyancyBuffer.data();
     }
 
+    inline float GetBuoyancy(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mBuoyancyBuffer[pointElementIndex];
+    }
+
     inline float * GetWaterBuffer()
     {
         return mWaterBuffer.data();
     }
 
+    inline float GetWater(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mWaterBuffer[pointElementIndex];
+    }
+
+    inline float & GetWater(ElementIndex pointElementIndex)
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mWaterBuffer[pointElementIndex];
+    }
+
+    float GetExternalWaterPressure(
+        ElementIndex pointElementIndex,
+        float waterLevel,
+        GameParameters const & gameParameters) const
+    {
+        // Negative Y == under water line
+        if (GetPosition(pointElementIndex).y < waterLevel)
+        {
+            return gameParameters.GravityMagnitude * (waterLevel - GetPosition(pointElementIndex).y) * 0.1f;  // 0.1 = scaling constant, represents 1/ship width
+        }
+        else
+        {
+            return 0.0f;
+        }
+    }
+
+
     inline bool * GetIsLeakingBuffer()
     {
         return mIsLeakingBuffer.data();
+    }
+
+    // TODO: needed?
+    inline bool IsLeaking(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mIsLeakingBuffer[pointElementIndex];
+    }
+
+    // TODO: needed?
+    inline void SetLeaking(ElementIndex pointElementIndex) 
+    { 
+        assert(pointElementIndex < mElementCount);
+
+        mIsLeakingBuffer[pointElementIndex] = true;
     }
 
     //
@@ -189,6 +311,20 @@ public:
         return mLightBuffer.data();
     }
 
+    inline float GetLight(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mLightBuffer[pointElementIndex];
+    }
+
+    inline float & GetLight(ElementIndex pointElementIndex)
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mLightBuffer[pointElementIndex];
+    }
+
     //
     // Network
     //
@@ -196,6 +332,13 @@ public:
     inline Network const * GetNetworkBuffer() const
     {
         return mNetworkBuffer.data();
+    }
+
+    inline auto const & GetConnectedSprings(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNetworkBuffer[pointElementIndex].ConnectedSprings;
     }
 
     inline void AddConnectedSpring(
@@ -240,16 +383,24 @@ public:
         (void)found;
     }
 
+    inline ElectricalElement * GetConnectedElectricalElement(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNetworkBuffer[pointElementIndex].ConnectedElectricalElement;
+    }
+
     inline void SetConnectedElectricalElement(
         ElementIndex pointElementIndex,
         ElectricalElement * electricalElement)
     {
         assert(pointElementIndex < mElementCount);
-        assert(nullptr == mConnectedElectricalElement);
+        assert(nullptr == mNetworkBuffer[pointElementIndex].ConnectedElectricalElement);
 
         mNetworkBuffer[pointElementIndex].ConnectedElectricalElement = electricalElement;
     }
 
+    void Breach(ElementIndex pointElementIndex);
 
     //
     // Connected component
@@ -258,6 +409,39 @@ public:
     inline ConnectedComponent const * GetConnectedComponentBuffer() const
     {
         return mConnectedComponentBuffer.data();
+    }
+
+    inline uint64_t GetConnectedComponentId(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mConnectedComponentBuffer[pointElementIndex].ConnectedComponentId;
+    }
+
+    inline void SetConnectedComponentId(
+        ElementIndex pointElementIndex,
+        uint64_t connectedComponentId) 
+    { 
+        assert(pointElementIndex < mElementCount);
+
+        mConnectedComponentBuffer[pointElementIndex].ConnectedComponentId = connectedComponentId; 
+    }
+
+    inline uint64_t GetCurrentConnectedComponentDetectionStepSequenceNumber(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mConnectedComponentBuffer[pointElementIndex].CurrentConnectedComponentDetectionStepSequenceNumber;
+    }
+
+    inline void SetCurrentConnectedComponentDetectionStepSequenceNumber(
+        ElementIndex pointElementIndex,
+        uint64_t connectedComponentDetectionStepSequenceNumber) 
+    { 
+        assert(pointElementIndex < mElementCount);
+
+        mConnectedComponentBuffer[pointElementIndex].CurrentConnectedComponentDetectionStepSequenceNumber = 
+            connectedComponentDetectionStepSequenceNumber;
     }
 
 private:

@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 
 /*
@@ -34,12 +35,68 @@ public:
     using ElementIndex = std::uint32_t;
     static constexpr ElementIndex NoneElementIndex = std::numeric_limits<ElementIndex>::max();
 
+    /*
+     * Our iterator, which simply iterates through indices.
+     */
+    struct iterator
+    {
+    public:
+
+        typedef std::input_iterator_tag iterator_category;
+
+    public:
+
+        inline bool operator==(iterator const & other) const noexcept
+        {
+            return mCurrent == other.mCurrent;
+        }
+
+        inline bool operator!=(iterator const & other) const noexcept
+        {
+            return !(mCurrent == other.mCurrent);
+        }
+
+        inline void operator++() noexcept
+        {
+            ++mCurrent;
+        }
+
+        inline ElementIndex operator*() noexcept
+        {
+            return mCurrent;
+        }
+
+    private:
+
+        friend class ElementContainer;
+
+        explicit iterator(ElementIndex current) noexcept
+            : mCurrent(current)
+        {}
+
+        ElementIndex mCurrent;
+    };
+
 public:
 
     /*
      * Gets the number of elements in this container.
      */
     ElementCount GetElementCount() const { return mElementCount; }
+
+    /*
+     * Visitors.
+     */
+
+    inline iterator begin() const noexcept
+    {
+        return iterator(0u);
+    }
+
+    inline iterator end() const noexcept
+    {
+        return iterator(mElementCount);
+    }
 
 protected:
 
@@ -48,5 +105,6 @@ protected:
     {
     }
 
-    ElementCount const mElementCount;
+    // TODO: make const after phase I - this is now needed by move assignment
+    ElementCount /*const*/ mElementCount;
 };

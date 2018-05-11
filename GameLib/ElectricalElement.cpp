@@ -9,16 +9,13 @@ namespace Physics {
 
 ElectricalElement::ElectricalElement(    
     Ship * parentShip,
-    Point * point,
+    ElementContainer::ElementIndex pointIndex,
     Type type)
     : ShipElement(parentShip)
-    , mPoint(point)
+    , mPointIndex(pointIndex)
     , mType(type)
     , mLastGraphVisitStepSequenceNumber(0u)
 {
-    // Add ourselves to the point
-    assert(nullptr == point->GetConnectedElectricalElement());
-    point->SetConnectedElectricalElement(this);
 }
 
 void ElectricalElement::Destroy()

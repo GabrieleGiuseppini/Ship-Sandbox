@@ -31,14 +31,9 @@ public:
 
     void Destroy();
 
-    inline Point const * GetPoint() const
+    inline ElementContainer::ElementIndex GetPointIndex() const
     {
-        return mPoint;
-    }
-
-    inline Point * GetPoint() 
-    {
-        return mPoint;
+        return mPointIndex;
     }
 
     inline Type GetType() const
@@ -60,10 +55,10 @@ protected:
 
     ElectricalElement(        
         Ship * parentShip,
-        Point * point,
+        ElementContainer::ElementIndex pointIndex,
         Type type);
 
-    Point * const mPoint;
+    ElementContainer::ElementIndex const mPointIndex;
     Type const mType;
 
     // The sequence number of the step on which we last graph-visited this element

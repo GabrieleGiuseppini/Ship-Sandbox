@@ -13,7 +13,6 @@ namespace Physics
     class Generator;
     class Lamp;
     class OceanFloor;
-    class Point; // TODOREMOVE
 	class Points;
 	class Ship;
 	class Spring;
@@ -23,6 +22,7 @@ namespace Physics
 }
 
 #include "ShipElement.h"
+#include "ElementContainer.h"
 
 #include "ElectricalElement.h"
 
@@ -33,7 +33,6 @@ namespace Physics
 #include "Cloud.h"
 #include "Generator.h"
 #include "Lamp.h"
-#include "Point.h" // TODOREMOVE
 #include "Points.h"
 #include "Ship.h"
 #include "Spring.h"

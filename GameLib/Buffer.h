@@ -26,7 +26,10 @@ public:
         : mSize(size)
         , mCurrentSize(0)
     {
-        mBuffer = static_cast<TElement *>(aligned_alloc(sizeof(TElement), size * sizeof(TElement)));
+        size_t elementSize = sizeof(TElement);
+        int elementSizePower2 = 2;
+        while (elementSize >>= 1) elementSizePower2 <<= 1;
+        mBuffer = static_cast<TElement *>(aligned_alloc(elementSizePower2, size * sizeof(TElement)));
         assert(nullptr != mBuffer);
     }
 
@@ -44,6 +47,22 @@ public:
         {
             aligned_free(reinterpret_cast<void *>(mBuffer));
         }
+    }
+
+    Buffer & operator=(Buffer && other)
+    {
+        if (nullptr != mBuffer)
+        {
+            aligned_free(reinterpret_cast<void *>(mBuffer));
+        }
+
+        mBuffer = other.mBuffer;
+        mSize = other.mSize;
+        mCurrentSize = other.mCurrentSize;
+
+        other.mBuffer = nullptr;
+
+        return *this;
     }
 
     /*
@@ -99,6 +118,7 @@ public:
 private:
 
     TElement * mBuffer;
-    size_t const mSize;
+    // TODO: make const after phase I
+    size_t /*const*/ mSize;
     size_t mCurrentSize;
 };

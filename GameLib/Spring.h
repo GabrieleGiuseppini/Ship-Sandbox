@@ -31,15 +31,17 @@ public:
 
 	Spring(
 		Ship * parentShip,
-		Point * a,
-		Point * b,
+        Points & points,
+        ElementContainer::ElementIndex pointAIndex,
+        ElementContainer::ElementIndex pointBIndex,
         Characteristics characteristics,
 		Material const * material)
 		: Spring(
 			parentShip,
-			a,
-			b,			
-			(a->GetPosition() - b->GetPosition()).length(),
+            points,
+            pointAIndex,
+            pointBIndex,
+			(points.GetPosition(pointAIndex) - points.GetPosition(pointBIndex)).length(),
             characteristics,
 			material)
 	{
@@ -47,9 +49,10 @@ public:
 
 	Spring(
 		Ship * parentShip,
-		Point * a,
-		Point * b,
-		float restLength,
+        Points & points,
+        ElementContainer::ElementIndex pointAIndex,
+        ElementContainer::ElementIndex pointBIndex,
+        float restLength,
         Characteristics characteristics,
 		Material const *material);
 
@@ -59,15 +62,17 @@ public:
 
     /*
      * Calculates the current strain - due to tension or compression - and acts depending on it.
+     *
+     * Returns true if the spring got broken.
      */
-    inline void UpdateStrain(        
+    inline bool UpdateStrain(        
         GameParameters const & gameParameters,
         Points & points,
         IGameEventHandler * gameEventHandler)
     {
         float const effectiveStrength = gameParameters.StrengthAdjustment * mMaterial->Strength;
 
-        float strain = GetStrain();
+        float strain = GetStrain(points);
         if (strain > effectiveStrength)
         {
             // It's broken!
@@ -76,8 +81,10 @@ public:
             // Notify
             gameEventHandler->OnBreak(
                 mMaterial, 
-                GetParentShip()->GetParentWorld()->IsUnderwater(mPointA->GetPosition()),
+                GetParentShip()->GetParentWorld()->IsUnderwater(points.GetPosition(mPointAIndex)),
                 1);
+
+            return true;
         }
         else if (strain > 0.25f * effectiveStrength)
         {
@@ -89,7 +96,7 @@ public:
                 // Notify
                 gameEventHandler->OnStress(
                     mMaterial, 
-                    GetParentShip()->GetParentWorld()->IsUnderwater(mPointA->GetPosition()),
+                    GetParentShip()->GetParentWorld()->IsUnderwater(points.GetPosition(mPointAIndex)),
                     1);
             }
         }
@@ -98,6 +105,8 @@ public:
             // Just fine
             mIsStressed = false;
         }
+
+        return false;
     }
 
 	inline bool IsStressed() const
@@ -105,11 +114,8 @@ public:
         return mIsStressed;
 	}
 
-    inline Point * GetPointA() { return mPointA; }
-	inline Point const * GetPointA() const { return mPointA; }
-
-    inline Point * GetPointB() { return mPointB; }
-	inline Point const * GetPointB() const { return mPointB; }
+    inline ElementContainer::ElementIndex GetPointAIndex() const { return mPointAIndex; }
+    inline ElementContainer::ElementIndex GetPointBIndex() const { return mPointBIndex; }
 
     inline float GetRestLength() const { return mRestLength; }
     inline float GetStiffnessCoefficient() const { return mStiffnessCoefficient; }
@@ -125,28 +131,30 @@ public:
 private:
 
     static float CalculateStiffnessCoefficient(
-        Point const & pointA,
-        Point const & pointB,
+        Points const & points,
+        ElementContainer::ElementIndex pointAIndex,
+        ElementContainer::ElementIndex pointBIndex,
         float springStiffness);
 
     static float CalculateDampingCoefficient(
-        Point const & pointA,
-        Point const & pointB);
+        Points const & points,
+        ElementContainer::ElementIndex pointAIndex,
+        ElementContainer::ElementIndex pointBIndex);
 
     // Strain: 
     // 0  = no tension nor compression
     // >0 = tension or compression, symmetrical
-    inline float GetStrain() const
+    inline float GetStrain(Points & points) const
     {
-        float dx = (mPointA->GetPosition() - mPointB->GetPosition()).length();
+        float dx = (points.GetPosition(mPointAIndex) - points.GetPosition(mPointBIndex)).length();
         return fabs(this->mRestLength - dx) / this->mRestLength;
     }
 
 private:
 
-	Point * const mPointA;
-	Point * const mPointB;
-	
+    ElementContainer::ElementIndex const mPointAIndex;
+    ElementContainer::ElementIndex const mPointBIndex;
+
     float const mRestLength;
     float mStiffnessCoefficient;
     float mDampingCoefficient;

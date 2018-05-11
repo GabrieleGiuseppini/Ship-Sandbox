@@ -16,7 +16,7 @@ public:
 
     Cable(
         Ship * parentShip,
-        Point * point);
+        ElementContainer::ElementIndex pointIndex);
 
 private:
 };

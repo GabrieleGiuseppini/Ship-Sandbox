@@ -105,13 +105,11 @@ Prev perf (before Optimizations & iterations increase)
 					+ cctor(size)
 					+ data()/size()/emplace_back()
 					+ uq_ptr
-			= They expose buffer getters for each buffer (as the structured type, e.g. vec2f *, or PointNetwork *, or float * for lonely scalars)
+			+ They expose buffer getters for each buffer (as the structured type, e.g. vec2f *, or PointNetwork *, or float * for lonely scalars)
 				+ e.g. vec2f* GetPositionBuffer()
-				- When needed also exposed as floats as well (e.g. Position, for Integrate())
-					- e.g. float* GetPositionBufferAsFloat()
-						- Should probably go for union, and SSE loops only see float *;
-						  for example, union for 2d vectors: {float[2], vec2f component}
-					- size math: expose getter, e.g. GetPositionAsFloatCount()
+				+ When needed also exposed as floats as well (e.g. Position, for Integrate())
+					+ e.g. float* GetPositionBufferAsFloat()
+					+ size math left to caller
 			+ When needed, they expose getters and generally operations on single elements, via 32-bit index argument (aliased as ElementIndex)
 				+ e.g. void Destroy(ElementIndex)
 				+ e.g. float GetMass(ElementIndex)
@@ -161,28 +159,19 @@ Prev perf (before Optimizations & iterations increase)
 				- Fix World::GetNearestPointIndexAt, by making use of Ship::GetPointPosition(idx)
 				- Also fix its use at MainFrame, by making use of Ship::GetStuff()
 				- Fix all warnings
-		= Phase 2: Integrate():
+		+ Phase 2: Integrate():
 			+ After NewtonzBuffer exploded
 			+ Test 1: use Points.GetWhatever(idx)
 			+ FPS=24.7/24.8/25.0
-			- Test 2: use __restrict pointers
-				- Just simple 1-Point-Component loop, compiler makes times four
-				- Pointers are locally declared as __restrict, and adjusts count (i.e. times 2) and uses
+			+ Test 2: use __restrict pointers
+				+ Just simple 1-Point-Component loop, compiler makes times four
+				+ Pointers are locally declared as __restrict, and adjusts count (i.e. times 2) and uses
 				  indices in pointers
-		==========================
-		- TODOOLD: If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
-			- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
-			  Positions, Velocities, Forces, and MassFactors, all
-			  allocated and populated at Ship::Create() 
-				- MassFactors of a point is copied to x and y
-				- Rounded to 2 (static constexpr = 16 / 2*sizeof(float) (16 = 128bit SSE, 2 = coordinates in 2D) with 0's
-			- Point has vec2f* Position, vec2f* Velocity, vec2f* Force 
-				- But own float Mass, it's const anyway
-					- See if even needed
-			- Integrate:
-				- Builds own 4-dimensional vector of dt's and GlobalDampCoefficient's
-				- Test with simple 1-Point loop, compiler should make times two
-			- Compare perfs (addtnl cost of Spring indirection to get to Point.Position/Velocity/Force)
+				+ Verify assembly
+			+ FPS=24.9/25.1/25.2
+		- Phase 3:
+			- Beginning FPS=
+			- Ending FPS=
 	- UpdatePointForces:
 		- Precalculate things that do not depend on position nor velocity
 			- Stored either in buffers (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)

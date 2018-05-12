@@ -151,6 +151,11 @@ public:
         return mPositionBuffer[pointElementIndex];
     }
 
+    float * __restrict GetPositionBufferAsFloat()
+    {
+        return reinterpret_cast<float *>(mPositionBuffer.data());
+    }
+
     vec2f const & GetVelocity(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
@@ -163,6 +168,11 @@ public:
         assert(pointElementIndex < mElementCount);
 
         return mVelocityBuffer[pointElementIndex];
+    }
+
+    float * __restrict GetVelocityBufferAsFloat()
+    {
+        return reinterpret_cast<float *>(mVelocityBuffer.data());
     }
 
     vec2f const & GetForce(ElementIndex pointElementIndex) const
@@ -179,11 +189,21 @@ public:
         return mForceBuffer[pointElementIndex];
     }
 
+    float * __restrict GetForceBufferAsFloat()
+    {
+        return reinterpret_cast<float *>(mForceBuffer.data());
+    }
+
     vec2f const & GetMassFactor(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
         return mMassFactorBuffer[pointElementIndex];
+    }
+
+    float * __restrict GetMassFactorBufferAsFloat()
+    {
+        return reinterpret_cast<float *>(mMassFactorBuffer.data());
     }
 
     float GetMass(ElementIndex pointElementIndex) const

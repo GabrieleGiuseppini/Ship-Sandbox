@@ -483,14 +483,22 @@ void Ship::Integrate()
     // Note: technically it's not a drag force, it's just a dimensionless deceleration
     float constexpr GlobalDampCoefficient = 0.9996f;
 
-    for (auto pointIndex : mPoints)
+    float * __restrict positionBuffer = mPoints.GetPositionBufferAsFloat();
+    float * __restrict velocityBuffer = mPoints.GetVelocityBufferAsFloat();
+    float * __restrict forceBuffer = mPoints.GetForceBufferAsFloat();
+    float * __restrict massFactorBuffer = mPoints.GetMassFactorBufferAsFloat();
+
+    size_t const numIterations = mPoints.GetElementCount() * 2;
+    for (size_t i = 0; i < numIterations; ++i)
     {
         // Verlet (fourth order, with velocity being first order)
         // - For each point: 6 * mul + 4 * add
-        vec2f const deltaPos = mPoints.GetVelocity(pointIndex) * dt + mPoints.GetForce(pointIndex) * mPoints.GetMassFactor(pointIndex).x;
-        mPoints.GetPosition(pointIndex) += deltaPos;
-        mPoints.GetVelocity(pointIndex) = deltaPos * GlobalDampCoefficient / dt;
-        mPoints.GetForce(pointIndex) = vec2f(0.0f, 0.0f);
+        float const deltaPos = velocityBuffer[i] * dt + forceBuffer[i] * massFactorBuffer[i];
+        positionBuffer[i] += deltaPos;
+        velocityBuffer[i] = deltaPos * GlobalDampCoefficient / dt;
+
+        // Zero out force now that we've integrated it
+        forceBuffer[i] = 0.0f;
     }
 }
 

@@ -117,7 +117,7 @@ public:
 
 private:
 
-    TElement * mBuffer;
+    TElement * __restrict mBuffer;
     // TODO: make const after phase I
     size_t /*const*/ mSize;
     size_t mCurrentSize;

@@ -68,7 +68,7 @@ public:
 
     inline void UploadElementPoint(
         int pointIndex,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -85,7 +85,7 @@ public:
     inline void UploadElementSpring(
         int pointIndex1,
         int pointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -103,7 +103,7 @@ public:
     inline void UploadElementRope(
         int pointIndex1,
         int pointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -122,7 +122,7 @@ public:
         int pointIndex1,
         int pointIndex2,
         int pointIndex3,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -146,7 +146,7 @@ public:
     inline void UploadElementStressedSpring(
         int pointIndex1,
         int pointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -174,7 +174,7 @@ public:
         float x,
         float y,
         float lightIntensity,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 

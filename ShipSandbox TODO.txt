@@ -57,11 +57,11 @@ Prev perf (before Optimizations & iterations increase)
 					- Number of elements
 					- passed at cctor
 			= They contain N buffers:
-				= Points: Position, Velocity, Force, MassFactor, Color, Water, IsDeleted ...
+				+ Points: Position, Velocity, Force, MassFactor, Color, Water, IsDeleted ...
 					+ All scalars of a point that are only used for both x and y (e.g. MassFactor) are stored 
 					 (and updated, if any) twice, as vec2f (only MassFactor?)
 					+ All scalars of a point that are used as scalars (e.g. Buoyancy) are stored once
-					= Test first to see if N buffers make a difference vs 1 larger buffer: 
+					+ Test first to see if N buffers make a difference vs 1 larger buffer: 
 						+ 1: Do Position, Velocity, Force, and MassFactors first in single Newtonz buffer
 							+ Get baseline 1:
 								- DoStep: 39.99%
@@ -76,18 +76,27 @@ Prev perf (before Optimizations & iterations increase)
 										- UpdateStrain: 1.03%
 								- Render: 51.69%
 							+ FPS=24.0/24.2/24.4
-						- 2: Do separate Position, Velocity, Force, and MassFactors 
-							- Get baseline 2:
-							- FPS=
-							- Also check assembly of UpdatePointForces to see if, for example, 
-							  mPoints.GetPosition(pointIndex).y < waterHeightAtThisPoint is still calc'd twice
-							  (as comiss xmm4,dword ptr [r10+r11+4])
-								- If not, try with restricted pointers
-									- @ Points class
-									- Locally
-				-Phase 2: Springs: Points, dynamics coefficients, water coefficients, ...					
-				-Phase 2: Triangles: Points, Network
-				-Phase 2: Change all ElementContainer::ElementIndex into ElementIndex
+						+ 2: Do separate Position, Velocity, Force, and MassFactors 
+							+ Get baseline 2:
+								- DoStep: 39.01%
+									- Ship::Update: 38.01%
+										- UpdateDynamics: 27.44%
+											- SpringForces: 19.97%
+											- PointForces: 3.65%
+											- CollisionsWithSeaFloor: 2.24%
+											- Integrate: 1.57%
+										- GravitateWater: 4.87%
+										- BalancePressure: 4.51%
+										- UpdateStrain: 0.90%
+								- Render: 52.69%
+							+ FPS=24.1/24.3/24.7/25.0
+							+ Make buffer __restrict
+							+ FPS=24.8/24.9/25.1
+					+ If makes sense to explode:
+						+ Also explode ConnectedComponent
+				- Phase 2: Springs: Points, dynamics coefficients, water coefficients, ...					
+				- Phase 2: Triangles: Points, Network
+				- Phase 2: Change all ElementContainer::ElementIndex into ElementIndex
 				+ Structure of buffers:
 					+ For SSE2, need to be simple floats
 					+ For handling, need to be structured
@@ -139,22 +148,23 @@ Prev perf (before Optimizations & iterations increase)
 					+ YES, read once into xmm4 and re-used later
 			+ End of checks after Phase 1.5: FPS=24.0/24.2/24.4
 			= Containers expose own Upload(RenderContext &)
-				- Phase 2: direct upload of buffers into GPU via RenderContext
-				- Phase 2: move texture coordinates and colors into Points, which uploads
+				- Phase 3: direct upload of buffers into GPU via RenderContext
+				- Phase 3: move texture coordinates and colors into Points, which uploads
 				  at Upload() via own mAreImmutablePropertiesUploaded state
-				- Phase 2: also Springs and Triangles
-			- Phase 2: Keep PointerContainer for ElectricalElement's (they're virtual classes after all)
-			- Phase 2: Nuke ShipElement, if it's now only implemented by ElectricalElement
+				- Phase 3: also Springs and Triangles
+			- Phase 3: Keep PointerContainer for ElectricalElement's (they're virtual classes after all)
+			- Phase 3: Nuke ShipElement, if it's now only implemented by ElectricalElement
 				- See if manage to not need to tell Ship as well, see above
-			- Phase 2: Nuke ElementRepository when no one uses it anymore
-			- Phase 3:
-				- Points also has MassBuffer, used at GetMass()
+			- Phase 3: Nuke ElementRepository when no one uses it anymore
+			- Phase 4:
 				- Fix power-of-2 calculation at Buffer::cctor()
 				- Fix World::GetNearestPointIndexAt, by making use of Ship::GetPointPosition(idx)
 				- Also fix its use at MainFrame, by making use of Ship::GetStuff()
-		- Phase 3: Integrate():
-			- After NewtonzBuffer exploded
-			- Test 1: use Points.GetWhatever(idx)
+				- Fix all warnings
+		= Phase 2: Integrate():
+			+ After NewtonzBuffer exploded
+			+ Test 1: use Points.GetWhatever(idx)
+			+ FPS=24.7/24.8/25.0
 			- Test 2: use __restrict pointers
 				- Just simple 1-Point-Component loop, compiler makes times four
 				- Pointers are locally declared as __restrict, and adjusts count (i.e. times 2) and uses

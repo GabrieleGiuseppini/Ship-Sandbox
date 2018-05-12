@@ -390,7 +390,7 @@ public:
     inline void UploadShipElementPoint(
         int shipId,
         int shipPointIndex,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -403,7 +403,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -417,7 +417,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -432,7 +432,7 @@ public:
         int shipPointIndex1,
         int shipPointIndex2,
         int shipPointIndex3,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -461,7 +461,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -497,7 +497,7 @@ public:
         float x,
         float y,
         float lightIntensity,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 

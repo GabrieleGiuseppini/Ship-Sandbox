@@ -26,8 +26,8 @@ void Points::UploadMutableGraphicalAttributes(
     {
         renderContext.UploadShipPoint(
             shipId,
-            mNewtonzBuffer[i].Position.x,
-            mNewtonzBuffer[i].Position.y,
+            mPositionBuffer[i].x,
+            mPositionBuffer[i].y,
             mLightBuffer[i],
             mWaterBuffer[i]);
     }
@@ -46,7 +46,7 @@ void Points::UploadElements(
             renderContext.UploadShipElementPoint(
                 shipId,
                 i,
-                mConnectedComponentBuffer[i].ConnectedComponentId);
+                mConnectedComponentIdBuffer[i]);
         }
     }
 }

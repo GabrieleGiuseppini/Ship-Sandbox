@@ -480,7 +480,7 @@ void Ship::Integrate()
 
     // Global damp - lowers velocity uniformly, damping oscillations originating between gravity and buoyancy
     // Note: it's extremely sensitive, big difference between 0.9995 and 0.9998
-    // Note: it's not technically a drag force, it's just a dimensionless deceleration
+    // Note: technically it's not a drag force, it's just a dimensionless deceleration
     float constexpr GlobalDampCoefficient = 0.9996f;
 
     for (auto pointIndex : mPoints)
@@ -521,7 +521,7 @@ void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)
 {
     mConnectedComponentSizes.clear();
 
-    uint64_t currentConnectedComponentId = 0;
+    uint32_t currentConnectedComponentId = 0;
     std::queue<ElementContainer::ElementIndex> pointsToVisitForConnectedComponents;    
 
     // Visit all points

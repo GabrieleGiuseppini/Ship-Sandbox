@@ -20,29 +20,11 @@ namespace Physics
 
 class Points : public ElementContainer
 {
-public:
+private:
 
-    // TODO: this is just a test to check whether 4 small buffers are really
-    // better than one bigger buffer
-    struct Newtonz
-    {
-        vec2f Position;
-        vec2f Velocity;
-        vec2f Force;
-        vec2f MassFactor;
-
-        Newtonz(
-            vec2f position,
-            vec2f velocity,
-            vec2f force,
-            vec2f massFactor)
-            : Position(position)
-            , Velocity(velocity)
-            , Force(force)
-            , MassFactor(massFactor)
-        {}
-    };
-
+    /*
+     * The elements connected to a point.
+     */
     struct Network
     {
         // 8 neighbours and 1 rope spring, when this is a rope endpoint
@@ -57,17 +39,6 @@ public:
         {}
     };
 
-    struct ConnectedComponent
-    {
-        size_t ConnectedComponentId; // Starts from 1
-        size_t CurrentConnectedComponentDetectionStepSequenceNumber;
-
-        ConnectedComponent()
-            : ConnectedComponentId(0u)
-            , CurrentConnectedComponentDetectionStepSequenceNumber(0u)
-        {}
-    };
-
 public:
 
     Points(ElementCount elementCount)
@@ -75,7 +46,10 @@ public:
         , mIsDeletedBuffer(elementCount)
         , mMaterialBuffer(elementCount)
         // Dynamics
-        , mNewtonzBuffer(elementCount)
+        , mPositionBuffer(elementCount)
+        , mVelocityBuffer(elementCount)
+        , mForceBuffer(elementCount)
+        , mMassFactorBuffer(elementCount)
         , mMassBuffer(elementCount)
         // Water dynamics
         , mBuoyancyBuffer(elementCount)        
@@ -86,7 +60,8 @@ public:
         // Structure
         , mNetworkBuffer(elementCount)
         // Connected component
-        , mConnectedComponentBuffer(elementCount)
+        , mConnectedComponentIdBuffer(elementCount)
+        , mCurrentConnectedComponentDetectionStepSequenceNumberBuffer(elementCount)
     {
     }
 
@@ -105,11 +80,10 @@ public:
 
         mMaterialBuffer.emplace_back(material);
 
-        mNewtonzBuffer.emplace_back(
-            position,
-            vec2f(0.0f, 0.0f),
-            vec2f(0.0f, 0.0f),
-            CalculateMassFactor(material->Mass));
+        mPositionBuffer.emplace_back(position);
+        mVelocityBuffer.emplace_back(vec2f(0.0f, 0.0f));
+        mForceBuffer.emplace_back(vec2f(0.0f, 0.0f));
+        mMassFactorBuffer.emplace_back(CalculateMassFactor(material->Mass));
         mMassBuffer.emplace_back(material->Mass);
 
         mBuoyancyBuffer.emplace_back(buoyancy);
@@ -120,7 +94,8 @@ public:
 
         mNetworkBuffer.emplace_back();
 
-        mConnectedComponentBuffer.emplace_back();
+        mConnectedComponentIdBuffer.emplace_back(0u);
+        mCurrentConnectedComponentDetectionStepSequenceNumberBuffer.emplace_back(0u);
     }
 
     void Destroy(ElementIndex pointElementIndex);
@@ -162,58 +137,53 @@ public:
     // Dynamics
     //
 
-    inline Newtonz * GetNewtonzBuffer()
-    {
-        return mNewtonzBuffer.data();
-    }
-
     vec2f const & GetPosition(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
-        return mNewtonzBuffer[pointElementIndex].Position;
+        return mPositionBuffer[pointElementIndex];
     }
 
     vec2f & GetPosition(ElementIndex pointElementIndex) 
     {
         assert(pointElementIndex < mElementCount);
 
-        return mNewtonzBuffer[pointElementIndex].Position;
+        return mPositionBuffer[pointElementIndex];
     }
 
     vec2f const & GetVelocity(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
-        return mNewtonzBuffer[pointElementIndex].Velocity;
+        return mVelocityBuffer[pointElementIndex];
     }
 
     vec2f & GetVelocity(ElementIndex pointElementIndex)
     {
         assert(pointElementIndex < mElementCount);
 
-        return mNewtonzBuffer[pointElementIndex].Velocity;
+        return mVelocityBuffer[pointElementIndex];
     }
 
     vec2f const & GetForce(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
-        return mNewtonzBuffer[pointElementIndex].Force;
+        return mForceBuffer[pointElementIndex];
     }
 
     vec2f & GetForce(ElementIndex pointElementIndex)
     {
         assert(pointElementIndex < mElementCount);
 
-        return mNewtonzBuffer[pointElementIndex].Force;
+        return mForceBuffer[pointElementIndex];
     }
 
     vec2f const & GetMassFactor(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
-        return mNewtonzBuffer[pointElementIndex].MassFactor;
+        return mMassFactorBuffer[pointElementIndex];
     }
 
     float GetMass(ElementIndex pointElementIndex) const
@@ -379,27 +349,27 @@ public:
     // Connected component
     //
 
-    inline uint64_t GetConnectedComponentId(ElementIndex pointElementIndex) const
+    inline uint32_t GetConnectedComponentId(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
-        return mConnectedComponentBuffer[pointElementIndex].ConnectedComponentId;
+        return mConnectedComponentIdBuffer[pointElementIndex];
     }
 
     inline void SetConnectedComponentId(
         ElementIndex pointElementIndex,
-        uint64_t connectedComponentId) 
+        uint32_t connectedComponentId) 
     { 
         assert(pointElementIndex < mElementCount);
 
-        mConnectedComponentBuffer[pointElementIndex].ConnectedComponentId = connectedComponentId; 
+        mConnectedComponentIdBuffer[pointElementIndex] = connectedComponentId;
     }
 
     inline uint64_t GetCurrentConnectedComponentDetectionStepSequenceNumber(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
-        return mConnectedComponentBuffer[pointElementIndex].CurrentConnectedComponentDetectionStepSequenceNumber;
+        return mCurrentConnectedComponentDetectionStepSequenceNumberBuffer[pointElementIndex];
     }
 
     inline void SetCurrentConnectedComponentDetectionStepSequenceNumber(
@@ -408,7 +378,7 @@ public:
     { 
         assert(pointElementIndex < mElementCount);
 
-        mConnectedComponentBuffer[pointElementIndex].CurrentConnectedComponentDetectionStepSequenceNumber = 
+        mCurrentConnectedComponentDetectionStepSequenceNumberBuffer[pointElementIndex] =
             connectedComponentDetectionStepSequenceNumber;
     }
 
@@ -428,8 +398,10 @@ private:
     // Dynamics
     //
 
-    Buffer<Newtonz> mNewtonzBuffer;
-
+    Buffer<vec2f> mPositionBuffer;
+    Buffer<vec2f> mVelocityBuffer;
+    Buffer<vec2f> mForceBuffer;
+    Buffer<vec2f> mMassFactorBuffer;
     Buffer<float> mMassBuffer;
 
     //
@@ -460,7 +432,8 @@ private:
     // Connected component
     //
 
-    Buffer<ConnectedComponent> mConnectedComponentBuffer;
+    Buffer<uint32_t> mConnectedComponentIdBuffer; // Connected component IDs start from 1
+    Buffer<uint64_t> mCurrentConnectedComponentDetectionStepSequenceNumberBuffer;
 };
 
 }

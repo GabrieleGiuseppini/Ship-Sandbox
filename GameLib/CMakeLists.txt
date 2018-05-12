@@ -61,8 +61,6 @@ set  (PHYSICS_SOURCES
 	OceanFloor.cpp
 	OceanFloor.h
 	Physics.h
-	Point.cpp
-	Point.h
 	Points.cpp
 	Points.h
 	Ship.cpp

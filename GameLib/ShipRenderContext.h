@@ -33,7 +33,7 @@ public:
     // Points
     //
 
-    void UploadPointVisualAttributes(
+    void UploadPointImmutableGraphicalAttributes(
         vec3f const * colors, 
         vec2f const * textureCoordinates,
         size_t pointCount);

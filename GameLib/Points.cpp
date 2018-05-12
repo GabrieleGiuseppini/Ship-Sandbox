@@ -9,7 +9,7 @@
 
 namespace Physics {
 
-void Points::Upload(
+void Points::UploadMutableGraphicalAttributes(
     int shipId,
     RenderContext & renderContext) const
 {
@@ -55,40 +55,40 @@ void Points::Destroy(ElementIndex pointElementIndex)
 {
     assert(pointElementIndex < mElementCount);
 
-    Network & network = mNetworkBuffer[pointElementIndex];
+    Network & pointNetwork = mNetworkBuffer[pointElementIndex];
 
     //
     // Destroy all springs attached to this point
     //
 
-    for (Spring * spring : network.ConnectedSprings)
+    for (Spring * spring : pointNetwork.ConnectedSprings)
     {
         assert(!spring->IsDeleted());
         spring->Destroy(*this, pointElementIndex);
     }
 
-    network.ConnectedSprings.clear();
+    pointNetwork.ConnectedSprings.clear();
 
     //
     // Destroy all triangles connected to this point
     //
 
-    for (Triangle * triangle : network.ConnectedTriangles)
+    for (Triangle * triangle : pointNetwork.ConnectedTriangles)
     {
         assert(!triangle->IsDeleted());
         triangle->Destroy(*this, pointElementIndex);
     }
 
-    network.ConnectedTriangles.clear();
+    pointNetwork.ConnectedTriangles.clear();
 
     //
     // Destroy the connected electrical element
     //
 
-    if (nullptr != network.ConnectedElectricalElement)
+    if (nullptr != pointNetwork.ConnectedElectricalElement)
     {
-        network.ConnectedElectricalElement->Destroy();
-        network.ConnectedElectricalElement = nullptr;
+        pointNetwork.ConnectedElectricalElement->Destroy();
+        pointNetwork.ConnectedElectricalElement = nullptr;
     }
 
 
@@ -113,15 +113,15 @@ void Points::Breach(ElementIndex pointElementIndex)
     // Destroy all of our connected triangles
     //
 
-    Network & network = mNetworkBuffer[pointElementIndex];
+    Network & pointNetwork = mNetworkBuffer[pointElementIndex];
 
-    for (Triangle * triangle : network.ConnectedTriangles)
+    for (Triangle * triangle : pointNetwork.ConnectedTriangles)
     {
         assert(!triangle->IsDeleted());
         triangle->Destroy(*this, pointElementIndex);
     }
 
-    network.ConnectedTriangles.clear();
+    pointNetwork.ConnectedTriangles.clear();
 }
 
 vec2f Points::CalculateMassFactor(float mass)

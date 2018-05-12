@@ -446,7 +446,7 @@ ShipRenderContext::~ShipRenderContext()
 
 //////////////////////////////////////////////////////////////////////////////////
 
-void ShipRenderContext::UploadPointVisualAttributes(
+void ShipRenderContext::UploadPointImmutableGraphicalAttributes(
     vec3f const * colors,
     vec2f const * textureCoordinates,
     size_t pointCount)

@@ -14,7 +14,7 @@
  * This class is the base class of all containers of core elements.
  *
  * For data locality, we don't work with "objects" in the OO way, but rather
- * with sets of objects, whose properties are destructured among multiple buffers.
+ * with sets of objects, whose properties are located in multiple, non-overlapping buffers.
  *
  * The container itself is not modifiable once all its elements have been created.
  */

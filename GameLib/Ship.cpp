@@ -50,10 +50,6 @@ Ship::Ship(
 
 Ship::~Ship()
 {
-    // Delete elements that are not unique_ptr's nor are kept
-    // in a PointerContainer
-
-    // (None now!)
 }
 
 void Ship::DestroyAt(
@@ -204,7 +200,7 @@ void Ship::Render(
         // Upload point colors and texture coordinates
         //
 
-        renderContext.UploadShipPointVisualAttributes(
+        renderContext.UploadShipPointImmutableGraphicalAttributes(
             mId,
             mAllPointColors.data(), 
             mAllPointTextureCoordinates.data(),
@@ -215,10 +211,10 @@ void Ship::Render(
 
 
     //
-    // Upload points
+    // Upload points's mutable graphical attributes
     //
 
-    mPoints.Upload(
+    mPoints.UploadMutableGraphicalAttributes(
         mId,
         renderContext);
 
@@ -248,7 +244,7 @@ void Ship::Render(
                 renderContext);
 
             //
-            // Upload all the springs (including ropes)
+            // Upload all the spring elements (including ropes)
             //
 
             for (Spring const & spring : mAllSprings)
@@ -278,7 +274,7 @@ void Ship::Render(
 
 
             //
-            // Upload all the triangles
+            // Upload all the triangle elements
             //
 
             for (Triangle const & triangle : mAllTriangles)
@@ -349,7 +345,7 @@ void Ship::UpdateDynamics(GameParameters const & gameParameters)
 {
     for (int iter = 0; iter < GameParameters::NumDynamicIterations<int>; ++iter)
     {
-        // Update draw forces
+        // Update draw forces, if we have any
         if (!!mCurrentDrawForce)
         {
             UpdateDrawForces(
@@ -381,13 +377,11 @@ void Ship::UpdateDrawForces(
     vec2f const & position,
     float forceStrength)
 {
-    auto newtonzBuffer = mPoints.GetNewtonzBuffer();
-
     for (auto pointIndex : mPoints)
     {
-        vec2f displacement = (position - newtonzBuffer[pointIndex].Position);
+        vec2f displacement = (position - mPoints.GetPosition(pointIndex));
         float forceMagnitude = forceStrength / sqrtf(0.1f + displacement.length());
-        newtonzBuffer[pointIndex].Force += displacement.normalise() * forceMagnitude;
+        mPoints.GetForce(pointIndex) += displacement.normalise() * forceMagnitude;
     }
 }
 
@@ -419,20 +413,21 @@ void Ship::UpdatePointForces(GameParameters const & gameParameters)
             effectiveMassMultiplier -= effectiveBuoyancy;
         }
 
-        mPoints.AddToForce(pointIndex, gameParameters.Gravity * mPoints.GetMaterial(pointIndex)->Mass * effectiveMassMultiplier);
+        mPoints.GetForce(pointIndex) += gameParameters.Gravity * mPoints.GetMass(pointIndex) * effectiveMassMultiplier;
 
 
         //
         // 2. Apply water drag
         //
-        // TBD: should replace with directional water drag, which acts on frontier points only, 
+        // FUTURE: should replace with directional water drag, which acts on frontier points only, 
         // proportional to angle between velocity and normal to surface at this point;
-        // this would ensure that masses would also have a horizontal velocity component when sinking
+        // this would ensure that masses would also have a horizontal velocity component when sinking,
+        // providing a "gliding" effect
         //
 
         if (mPoints.GetPosition(pointIndex).y < waterHeightAtThisPoint)
         {
-            mPoints.AddToForce(pointIndex, mPoints.GetVelocity(pointIndex) * (-WaterDragCoefficient));
+            mPoints.GetForce(pointIndex) += mPoints.GetVelocity(pointIndex) * (-WaterDragCoefficient);
         }
     }
 }
@@ -456,9 +451,6 @@ void Ship::UpdateSpringForces(GameParameters const & /*gameParameters*/)
         // Calculate spring force on point A
         vec2f const fSpringA = springDir * (displacementLength - spring.GetRestLength()) * spring.GetStiffnessCoefficient();
 
-        // Apply force 
-        mPoints.AddToForce(spring.GetPointAIndex(), fSpringA);
-        mPoints.AddToForce(spring.GetPointBIndex(), -fSpringA);
 
 
         //
@@ -472,9 +464,13 @@ void Ship::UpdateSpringForces(GameParameters const & /*gameParameters*/)
         vec2f const relVelocity = mPoints.GetVelocity(spring.GetPointBIndex()) - mPoints.GetVelocity(spring.GetPointAIndex());
         vec2f const fDampA = springDir * relVelocity.dot(springDir) * spring.GetDampingCoefficient();
 
-        // Apply force
-        mPoints.AddToForce(spring.GetPointAIndex(), fDampA);
-        mPoints.AddToForce(spring.GetPointBIndex(), -fDampA);
+
+        //
+        // Apply forces
+        //
+
+        mPoints.GetForce(spring.GetPointAIndex()) += fSpringA + fDampA;
+        mPoints.GetForce(spring.GetPointBIndex()) -= fSpringA + fDampA;
     }
 }
 
@@ -487,15 +483,14 @@ void Ship::Integrate()
     // Note: it's not technically a drag force, it's just a dimensionless deceleration
     float constexpr GlobalDampCoefficient = 0.9996f;
 
-    auto newtonz = mPoints.GetNewtonzBuffer();
     for (auto pointIndex : mPoints)
     {
         // Verlet (fourth order, with velocity being first order)
         // - For each point: 6 * mul + 4 * add
-        vec2f const deltaPos = newtonz[pointIndex].Velocity * dt + newtonz[pointIndex].Force * newtonz[pointIndex].MassFactor.x;
-        newtonz[pointIndex].Position += deltaPos;
-        newtonz[pointIndex].Velocity = deltaPos * GlobalDampCoefficient / dt;
-        newtonz[pointIndex].Force = vec2f(0.0f, 0.0f);
+        vec2f const deltaPos = mPoints.GetVelocity(pointIndex) * dt + mPoints.GetForce(pointIndex) * mPoints.GetMassFactor(pointIndex).x;
+        mPoints.GetPosition(pointIndex) += deltaPos;
+        mPoints.GetVelocity(pointIndex) = deltaPos * GlobalDampCoefficient / dt;
+        mPoints.GetForce(pointIndex) = vec2f(0.0f, 0.0f);
     }
 }
 

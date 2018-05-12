@@ -121,14 +121,11 @@ public:
         mNetworkBuffer.emplace_back();
 
         mConnectedComponentBuffer.emplace_back();
-
-        // TODOHERE: others
     }
 
-    // TODO: caller must also ensure that Ship::mAreElementsDirty is set
     void Destroy(ElementIndex pointElementIndex);
 
-    void Upload(
+    void UploadMutableGraphicalAttributes(
         int shipId,
         RenderContext & renderContext) const;
 
@@ -142,11 +139,6 @@ public:
     // IsDeleted
     //
 
-    inline bool const * GetIsDeletedBuffer() const
-    {
-        return mIsDeletedBuffer.data();
-    }
-
     inline bool IsDeleted(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
@@ -158,11 +150,6 @@ public:
     //
     // Material
     //
-
-    inline Material const * const * GetMaterialBuffer() const
-    {
-        return mMaterialBuffer.data();
-    }
 
     inline Material const * GetMaterial(ElementIndex pointElementIndex) const
     {
@@ -208,18 +195,25 @@ public:
         return mNewtonzBuffer[pointElementIndex].Velocity;
     }
 
-    inline void AddToForce(
-        ElementIndex pointElementIndex,
-        vec2f force)
+    vec2f const & GetForce(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
-        mNewtonzBuffer[pointElementIndex].Force += force;
+        return mNewtonzBuffer[pointElementIndex].Force;
     }
 
-    inline float const * GetMassBuffer() const
+    vec2f & GetForce(ElementIndex pointElementIndex)
     {
-        return mMassBuffer.data();
+        assert(pointElementIndex < mElementCount);
+
+        return mNewtonzBuffer[pointElementIndex].Force;
+    }
+
+    vec2f const & GetMassFactor(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNewtonzBuffer[pointElementIndex].MassFactor;
     }
 
     float GetMass(ElementIndex pointElementIndex) const
@@ -233,21 +227,11 @@ public:
     // Water dynamics
     //
 
-    inline float const * GetBuoyancyBuffer() const
-    {
-        return mBuoyancyBuffer.data();
-    }
-
     inline float GetBuoyancy(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
         return mBuoyancyBuffer[pointElementIndex];
-    }
-
-    inline float * GetWaterBuffer()
-    {
-        return mWaterBuffer.data();
     }
 
     inline float GetWater(ElementIndex pointElementIndex) const
@@ -280,13 +264,6 @@ public:
         }
     }
 
-
-    inline bool * GetIsLeakingBuffer()
-    {
-        return mIsLeakingBuffer.data();
-    }
-
-    // TODO: needed?
     inline bool IsLeaking(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
@@ -294,9 +271,8 @@ public:
         return mIsLeakingBuffer[pointElementIndex];
     }
 
-    // TODO: needed?
-    inline void SetLeaking(ElementIndex pointElementIndex) 
-    { 
+    inline void SetLeaking(ElementIndex pointElementIndex)
+    {
         assert(pointElementIndex < mElementCount);
 
         mIsLeakingBuffer[pointElementIndex] = true;
@@ -305,11 +281,6 @@ public:
     //
     // Electrical dynamics
     //
-
-    inline float * GetLightBuffer()
-    {
-        return mLightBuffer.data();
-    }
 
     inline float GetLight(ElementIndex pointElementIndex) const
     {
@@ -328,11 +299,6 @@ public:
     //
     // Network
     //
-
-    inline Network const * GetNetworkBuffer() const
-    {
-        return mNetworkBuffer.data();
-    }
 
     inline auto const & GetConnectedSprings(ElementIndex pointElementIndex) const
     {
@@ -360,6 +326,13 @@ public:
 
         assert(found);
         (void)found;
+    }
+
+    inline auto const & GetConnectedTriangles(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNetworkBuffer[pointElementIndex].ConnectedTriangles;
     }
 
     inline void AddConnectedTriangle(
@@ -405,11 +378,6 @@ public:
     //
     // Connected component
     //
-
-    inline ConnectedComponent const * GetConnectedComponentBuffer() const
-    {
-        return mConnectedComponentBuffer.data();
-    }
 
     inline uint64_t GetConnectedComponentId(ElementIndex pointElementIndex) const
     {

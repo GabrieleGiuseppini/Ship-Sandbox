@@ -70,9 +70,8 @@ public:
         Points & points,
         IGameEventHandler * gameEventHandler)
     {
+        float const strain = CalculateStrain(points);
         float const effectiveStrength = gameParameters.StrengthAdjustment * mMaterial->Strength;
-
-        float strain = GetStrain(points);
         if (strain > effectiveStrength)
         {
             // It's broken!
@@ -144,7 +143,7 @@ private:
     // Strain: 
     // 0  = no tension nor compression
     // >0 = tension or compression, symmetrical
-    inline float GetStrain(Points & points) const
+    inline float CalculateStrain(Points const & points) const
     {
         float dx = (points.GetPosition(mPointAIndex) - points.GetPosition(mPointBIndex)).length();
         return fabs(this->mRestLength - dx) / this->mRestLength;

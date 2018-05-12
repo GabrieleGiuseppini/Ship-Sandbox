@@ -48,27 +48,43 @@ Prev perf (before Optimizations & iterations increase)
 - Optimizations:
 	+ FPS: 19.0/19.4/19.7/19.9
 	= Point & Spring Destructuring:
-		- Main goal: improve cache locality
-		- Secondary goal: make vectorization-friendly
-		- Replace Point, Spring, Triangle with Points, Springs, Triangles
-			= Base is ElementContainer
+		+ Main goal: improve cache locality
+		+ Secondary goal: make vectorization-friendly
+		= Replace Point, Spring, Triangle with Points, Springs, Triangles
+			+ Base is ElementContainer
 				+ Defines aliases (ElementCount, ElementIndex) - uint32
 				+ ElementCount GetCount() const
 					- Number of elements
 					- passed at cctor
-				- Parent ship?
-			- They contain N buffers:
+			= They contain N buffers:
 				= Points: Position, Velocity, Force, MassFactor, Color, Water, IsDeleted ...
 					+ All scalars of a point that are only used for both x and y (e.g. MassFactor) are stored 
 					 (and updated, if any) twice, as vec2f (only MassFactor?)
 					+ All scalars of a point that are used as scalars (e.g. Buoyancy) are stored once
 					= Test first to see if N buffers make a difference vs 1 larger buffer: 
-						= 1: Do Position, Velocity, Force, and MassFactors first in own buffer
-							- Get baseline 1:
-							- FPS:
+						+ 1: Do Position, Velocity, Force, and MassFactors first in single Newtonz buffer
+							+ Get baseline 1:
+								- DoStep: 39.99%
+									- Ship::Update: 39.05%
+										- UpdateDynamics: 27.42%
+											- SpringForces: 20.18%
+											- PointForces: 3.77%
+											- CollisionsWithSeaFloor: 2.19%
+											- Integrate: 1.27%
+										- GravitateWater: 5.70%
+										- BalancePressure: 4.58%
+										- UpdateStrain: 1.03%
+								- Render: 51.69%
+							+ FPS=24.0/24.2/24.4
 						- 2: Do separate Position, Velocity, Force, and MassFactors 
 							- Get baseline 2:
-							- FPS:
+							- FPS=
+							- Also check assembly of UpdatePointForces to see if, for example, 
+							  mPoints.GetPosition(pointIndex).y < waterHeightAtThisPoint is still calc'd twice
+							  (as comiss xmm4,dword ptr [r10+r11+4])
+								- If not, try with restricted pointers
+									- @ Points class
+									- Locally
 				-Phase 2: Springs: Points, dynamics coefficients, water coefficients, ...					
 				-Phase 2: Triangles: Points, Network
 				-Phase 2: Change all ElementContainer::ElementIndex into ElementIndex
@@ -91,7 +107,7 @@ Prev perf (before Optimizations & iterations increase)
 				+ e.g. void Destroy(ElementIndex)
 				+ e.g. float GetMass(ElementIndex)
 			= Destroy(ElementIndex) takes care of telling ship that element count is dirty
-				= Phase 2: set directly in Ship at initiation of Destroy chain, whenever we know we destroy something
+				= Phase 3: set directly in Ship at initiation of Destroy chain, whenever we know we destroy something
 					+ Do at Spring::UpdateStrain: returns bool, true if destroyed
 					+ Do at tool's Destroy
 					- Then get rid of two-phase ship cctor - plain cctor with moved ElementRepo's
@@ -104,12 +120,24 @@ Prev perf (before Optimizations & iterations increase)
 					+ Remove code from Spring and Triangle and ElectricalElement-Cable-etc. cctors
 			+ Do Ship
 				+ Loop over indices, invoking Points::GetWhatever(index)
-			- Phase 1.5: check assembly for:
-				1 - loop over indices, invoking Points::GetWhatever(index)
-					vs
-				2 - loop over indices, taking buffers first and then dereferencing buffer with index
-				- Decide whether to keep bunch of GetWhatever(index) (both R and W) vs buffers
-				- Check also disassembly of index iterator
+			+ End of Phase 1: FPS=22.0/22.3/22.6
+			+ Phase 1.5: check assembly for:
+				+ 1: loop over indices, invoking Points::GetWhatever(index)
+				+ 2: loop over indices, taking buffers first and then dereferencing buffer with index
+				+ RESULT: IDENTICAL
+				+ Decide whether to keep bunch of GetWhatever(index) (both R and W) vs buffers
+				+ Check also disassembly of index iterator
+			+ End of Phase 1.5: FPS=23.2/23.3/23.4
+			+ To check:
+				+ UpdateDrawForces: see assembly difference for displacement.length() optimization
+					+ NO, actually compiler autonomously saves length for later, and explicit
+					  code looks a bit different
+				+ UpdateSpringForces(): see assembly to check whether point.Force's are updated twice
+					+ YES
+					+ Update force once with sum of forces
+				+ HandleCollisionsWithSeaFloor(): see assembly to check for twice GetPosition()
+					+ YES, read once into xmm4 and re-used later
+			+ End of checks after Phase 1.5: FPS=24.0/24.2/24.4
 			= Containers expose own Upload(RenderContext &)
 				- Phase 2: direct upload of buffers into GPU via RenderContext
 				- Phase 2: move texture coordinates and colors into Points, which uploads
@@ -120,16 +148,17 @@ Prev perf (before Optimizations & iterations increase)
 				- See if manage to not need to tell Ship as well, see above
 			- Phase 2: Nuke ElementRepository when no one uses it anymore
 			- Phase 3:
+				- Points also has MassBuffer, used at GetMass()
 				- Fix power-of-2 calculation at Buffer::cctor()
 				- Fix World::GetNearestPointIndexAt, by making use of Ship::GetPointPosition(idx)
 				- Also fix its use at MainFrame, by making use of Ship::GetStuff()
-		- Phase 2: Integrate():
-			- Just simple 1-Point loop, compiler makes times four
-			- Caller gives buffers directly from Points (GetPositionBufferAsFloat()->float *), which Integrate() take as __restrict,
-			  and adjusted count (i.e. times 2)
-				- Integrate() uses indices in the buffers
-		- Phase 2: UpdatePointForces():
-			- Uses Points.GetPosition/Velocity/Force/MassFactorBuffer() and point-based indices
+		- Phase 3: Integrate():
+			- After NewtonzBuffer exploded
+			- Test 1: use Points.GetWhatever(idx)
+			- Test 2: use __restrict pointers
+				- Just simple 1-Point-Component loop, compiler makes times four
+				- Pointers are locally declared as __restrict, and adjusts count (i.e. times 2) and uses
+				  indices in pointers
 		==========================
 		- TODOOLD: If ok: see if worth revisiting Pos, Vel, and Force into own vectors pointed to by Point
 			- Ship has 5 vectors of unions (float[4], {vec2f cPoint1, vec2f cPoint2}):
@@ -312,6 +341,9 @@ Prev perf (before Optimizations & iterations increase)
 	+ class Lamp()
 		+ points to Point and Point points optionally to ElectricalElement (base abstract of Lamp, Cable, Generator)
 			+ ElectricalElement::GetType(){return mType;}: non-virtual, it's optimized by compiler
+	- Diffusion improvement: see if can simply add light (rather than max'ing it)
+		- Need to ensure sum is always < 1.0
+			- May be via adding +1 to distance?
 	- Current Propagation Algo:
 		+ create new generation seq number; if new is 0 => 1
 		- ElectricalElement has SetVisited(curGen), bool IsVisited(curGen)

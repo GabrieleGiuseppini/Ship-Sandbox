@@ -327,7 +327,7 @@ public:
     // Ship Points
     //
 
-    void UploadShipPointVisualAttributes(
+    void UploadShipPointImmutableGraphicalAttributes(
         int shipId,
         vec3f const * colors,
         vec2f const * textureCoordinates,
@@ -335,7 +335,7 @@ public:
     {
         assert(shipId < mShips.size());
 
-        mShips[shipId]->UploadPointVisualAttributes(
+        mShips[shipId]->UploadPointImmutableGraphicalAttributes(
             colors,
             textureCoordinates,
             elementCount);

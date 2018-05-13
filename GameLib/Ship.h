@@ -11,7 +11,6 @@
 #include "GameParameters.h"
 #include "MaterialDatabase.h"
 #include "Physics.h"
-#include "PointerContainer.h"
 #include "RenderContext.h"
 #include "ShipDefinition.h"
 #include "Vectors.h"
@@ -27,29 +26,14 @@ public:
 
     Ship(
         int id,
-        World * parentWorld);
-
-    void Initialize(
+        World * parentWorld,
         Points && points,
         ElementRepository<vec3f> && allPointColors,
         ElementRepository<vec2f> && allPointTextureCoordinates,
         Springs && springs,
         Triangles && triangles,
-        std::vector<ElectricalElement *> && allElectricalElements,
-        uint64_t currentStepSequenceNumber)
-    {
-        mPoints = std::move(points);
-        mAllPointColors = std::move(allPointColors);
-        mAllPointTextureCoordinates = std::move(allPointTextureCoordinates);
-        mSprings = std::move(springs);
-        mTriangles = std::move(triangles);
-        mAllElectricalElements.initialize(std::move(allElectricalElements));
-
-        mIsPointCountDirty = true;
-        mAreElementsDirty = true;
-
-        DetectConnectedComponents(currentStepSequenceNumber);
-    }
+        ElectricalElements && electricalElements,
+        uint64_t currentStepSequenceNumber);
 
     ~Ship();
 
@@ -57,9 +41,6 @@ public:
 
     World const * GetParentWorld() const { return mParentWorld; }
     World * GetParentWorld() { return mParentWorld; }
-
-    auto const & GetElectricalElements() const { return mAllElectricalElements; }
-    auto & GetElectricalElements() { return mAllElectricalElements; }
 
     auto const & GetPoints() const { return mPoints; }
     auto & GetPoints() { return mPoints; }
@@ -69,6 +50,9 @@ public:
 
     auto const & GetTriangles() const { return mTriangles; }
     auto & GetTriangles() { return mTriangles; }
+
+    auto const & GetElectricalElements() const { return mElectricalElements; }
+    auto & GetElectricalElements() { return mElectricalElements; }
 
     void DestroyAt(
         vec2 const & targetPos,
@@ -89,18 +73,6 @@ public:
     void Render(
         GameParameters const & gameParameters,
         RenderContext & renderContext) const;
-
-public:
-
-    /*
-     * Invoked when an elements has been destroyed. Notifies the ship that the element
-     * can be removed (at the most appropriate time) from the ship's main container
-     * of element pointers, and that the pointer can be deleted.
-     *
-     * Implemented differently for the different elements.
-     */
-    template<typename TElement>
-    void RegisterDestruction(TElement * element);
 
 public:
 
@@ -143,9 +115,7 @@ private:
     ElementRepository<vec2f> mAllPointTextureCoordinates;
     Springs mSprings;
     Triangles mTriangles;
-
-    // Parts repository
-    PointerContainer<ElectricalElement> mAllElectricalElements;
+    ElectricalElements mElectricalElements;
 
     // Connected components metadata
     std::vector<std::size_t> mConnectedComponentSizes;
@@ -183,12 +153,5 @@ private:
 
     std::optional<DrawForce> mCurrentDrawForce;
 };
-
-template<>
-inline void Ship::RegisterDestruction(ElectricalElement * /* element */)
-{
-    // Also tell the pointer container, he'll take care of removing the element later
-    mAllElectricalElements.register_deletion();
-}
 
 }

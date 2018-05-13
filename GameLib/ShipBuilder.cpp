@@ -102,13 +102,13 @@ std::unique_ptr<Ship> ShipBuilder::Create(
                 {
                     // Store in RopeSegments
                     RopeSegment & ropeSegment = ropeSegments[rgbColour];
-                    if (!ropeSegment.PointAIndex)
+                    if (ElementContainer::NoneElementIndex == ropeSegment.PointAIndex)
                     {
-                        ropeSegment.PointAIndex = pointInfos.size();
+                        ropeSegment.PointAIndex = static_cast<ElementContainer::ElementIndex>(pointInfos.size());
                     }
-                    else if (!ropeSegment.PointBIndex)
+                    else if (ElementContainer::NoneElementIndex == ropeSegment.PointBIndex)
                     {
-                        ropeSegment.PointBIndex = pointInfos.size();
+                        ropeSegment.PointBIndex = static_cast<ElementContainer::ElementIndex>(pointInfos.size());
                     }
                     else
                     {
@@ -166,15 +166,12 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     //  - PointTextureCoordinates
     //
 
-    Ship *ship = new Ship(shipId, parentWorld);
-
     Points points(static_cast<ElementContainer::ElementCount>(pointInfos.size()));
     ElementRepository<vec3f> allPointColors(pointInfos.size());
     ElementRepository<vec2f> allPointTextureCoordinates(pointInfos.size());
 
     CreatePoints(
         pointInfos,
-        ship,
         points,
         allPointColors,
         allPointTextureCoordinates);
@@ -241,9 +238,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // Create Electrical Elements
     //
 
-    std::vector<ElectricalElement*> allElectricalElements = CreateElectricalElements(
-        points,
-        ship);
+    ElectricalElements electricalElements = CreateElectricalElements(points);
 
 
     //
@@ -252,18 +247,18 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
     LogMessage("Created ship: W=", shipDefinition.StructuralImage.Size.Width, ", H=", shipDefinition.StructuralImage.Size.Height, ", ",
         points.GetElementCount(), " points, ", springs.GetElementCount(), " springs, ", triangles.GetElementCount(), " triangles, ",
-        allElectricalElements.size(), " electrical elements.");
+        electricalElements.GetElementCount(), " electrical elements.");
 
-    ship->Initialize(
-        std::move(points),   
+    return std::make_unique<Ship>(
+        shipId, 
+        parentWorld,
+        std::move(points),
         std::move(allPointColors),
         std::move(allPointTextureCoordinates),
         std::move(springs),
         std::move(triangles),
-        std::move(allElectricalElements),
+        std::move(electricalElements),
         currentStepSequenceNumber);
-
-    return std::unique_ptr<Ship>(ship);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -288,8 +283,8 @@ void ShipBuilder::CreateRopeSegments(
         auto const & ropeSegment = ropeSegmentEntry.second;
 
         // Make sure we've got both endpoints
-        assert(!!ropeSegment.PointAIndex);
-        if (!ropeSegment.PointBIndex)
+        assert(ElementContainer::NoneElementIndex != ropeSegment.PointAIndex);
+        if (ElementContainer::NoneElementIndex == ropeSegment.PointBIndex)
         {
             throw GameException(
                 std::string("Only one rope endpoint found with index <")
@@ -298,8 +293,8 @@ void ShipBuilder::CreateRopeSegments(
         }
 
         // Get endpoint positions
-        vec2f startPos = pointInfos[*ropeSegment.PointAIndex].Position;
-        vec2f endPos = pointInfos[*ropeSegment.PointBIndex].Position;
+        vec2f startPos = pointInfos[ropeSegment.PointAIndex].Position;
+        vec2f endPos = pointInfos[ropeSegment.PointBIndex].Position;
 
         //
         // "Draw" line from start position to end position
@@ -335,7 +330,7 @@ void ShipBuilder::CreateRopeSegments(
             stepW = dy / fabs(dy);
         }
 
-        ElementContainer::ElementIndex curStartPointIndex = *ropeSegment.PointAIndex;
+        auto curStartPointIndex = ropeSegment.PointAIndex;
         while (true)
         {
             curW += stepW;
@@ -373,13 +368,12 @@ void ShipBuilder::CreateRopeSegments(
         }
 
         // Add last SpringInfo (no PointInfo as the endpoint has already a PointInfo)
-        springInfos.emplace_back(curStartPointIndex, *ropeSegment.PointBIndex);
+        springInfos.emplace_back(curStartPointIndex, ropeSegment.PointBIndex);
     }
 }
 
 void ShipBuilder::CreatePoints(
     std::vector<PointInfo> const & pointInfos,
-    Physics::Ship * ship,
     Points & points,
     ElementRepository<vec3f> & pointColors,
     ElementRepository<vec2f> & pointTextureCoordinates)
@@ -575,7 +569,7 @@ Physics::Springs ShipBuilder::CreateSprings(
     std::vector<SpringInfo> const & springInfos,
     Physics::Points & points)
 {
-    Physics::Springs springs(springInfos.size());
+    Physics::Springs springs(static_cast<ElementContainer::ElementIndex>(springInfos.size()));
 
     for (ElementContainer::ElementIndex s = 0; s < springInfos.size(); ++s)
     {
@@ -619,7 +613,7 @@ Physics::Triangles ShipBuilder::CreateTriangles(
     Physics::Points & points,
     Physics::Springs & springs)
 {
-    Physics::Triangles triangles(triangleInfos.size());
+    Physics::Triangles triangles(static_cast<ElementContainer::ElementIndex>(triangleInfos.size()));
 
     for (ElementContainer::ElementIndex t = 0; t < triangleInfos.size(); ++t)
     {
@@ -651,45 +645,54 @@ Physics::Triangles ShipBuilder::CreateTriangles(
     return triangles;
 }
 
-std::vector<ElectricalElement*> ShipBuilder::CreateElectricalElements(
-    Physics::Points & points,
-    Physics::Ship * ship)
+ElectricalElements ShipBuilder::CreateElectricalElements(
+    Physics::Points & points)
 {
-    std::vector<ElectricalElement*> allElectricalElements;
-
-    for (ElementContainer::ElementIndex pointIndex = 0; pointIndex < points.GetElementCount(); ++pointIndex)
+    ElementContainer::ElementIndex electricalElementsCount = 0;
+    for (auto pointIndex : points)
     {
         if (!!points.GetMaterial(pointIndex)->Electrical)
         {
-            ElectricalElement * electricalElement;
+            ++electricalElementsCount;
+        }
+    }
+
+    ElectricalElements electricalElements(electricalElementsCount);
+
+    ElementContainer::ElementIndex electricalElementIndex = 0;
+    for (auto pointIndex : points)
+    {
+        if (!!points.GetMaterial(pointIndex)->Electrical)
+        {
             switch (points.GetMaterial(pointIndex)->Electrical->ElementType)
             {
                 case Material::ElectricalProperties::ElectricalElementType::Cable:
                 {
-                    electricalElement = allElectricalElements.emplace_back(new Cable(ship, pointIndex));
+                    electricalElements.Add(std::unique_ptr<ElectricalElement>(new Cable(pointIndex)));
                     break;
                 }
 
                 case Material::ElectricalProperties::ElectricalElementType::Generator:
                 {
-                    electricalElement = allElectricalElements.emplace_back(new Generator(ship, pointIndex));
+                    electricalElements.Add(std::unique_ptr<ElectricalElement>(new Generator(pointIndex)));
                     break;
                 }
 
                 case Material::ElectricalProperties::ElectricalElementType::Lamp:
                 {
-                    electricalElement = allElectricalElements.emplace_back(new Lamp(ship, pointIndex));
+                    electricalElements.Add(std::unique_ptr<ElectricalElement>(new Lamp(pointIndex)));
                     break;
                 }
             }
 
             // Add electrical element to its point
-            assert(nullptr == points.GetConnectedElectricalElement(pointIndex));
-            points.SetConnectedElectricalElement(pointIndex, electricalElement);
+            points.SetConnectedElectricalElement(pointIndex, electricalElementIndex);
+
+            ++electricalElementIndex;
         }
     }
 
-    return allElectricalElements;
+    return electricalElements;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -30,15 +30,22 @@ namespace Physics {
 
 Ship::Ship(
     int id,
-    World * parentWorld)
+    World * parentWorld,
+    Points && points,
+    ElementRepository<vec3f> && allPointColors,
+    ElementRepository<vec2f> && allPointTextureCoordinates,
+    Springs && springs,
+    Triangles && triangles,
+    ElectricalElements && electricalElements,
+    uint64_t currentStepSequenceNumber)
     : mId(id)
     , mParentWorld(parentWorld)    
-    , mPoints(0)
-    , mAllPointColors(0)
-    , mAllPointTextureCoordinates(0)
-    , mSprings(0)
-    , mTriangles(0)
-    , mAllElectricalElements()
+    , mPoints(std::move(points))
+    , mAllPointColors(std::move(allPointColors))
+    , mAllPointTextureCoordinates(std::move(allPointTextureCoordinates))
+    , mSprings(std::move(springs))
+    , mTriangles(std::move(triangles))
+    , mElectricalElements(std::move(electricalElements))
     , mConnectedComponentSizes()
     , mIsPointCountDirty(true)
     , mAreElementsDirty(true)
@@ -46,6 +53,7 @@ Ship::Ship(
     , mTotalWater(0.0)
     , mCurrentDrawForce(std::nullopt)
 {
+    DetectConnectedComponents(currentStepSequenceNumber);
 }
 
 Ship::~Ship()
@@ -77,15 +85,14 @@ void Ship::DestroyAt(
                 mPoints.Destroy(
                     pointIndex,
                     mSprings,
-                    mTriangles);
+                    mTriangles,
+                    mElectricalElements);
 
                 // Remember the elements are now dirty
                 mAreElementsDirty = true;
             }
         }
     }
-
-    mAllElectricalElements.shrink_to_fit();
 }
 
 void Ship::DrawTo(
@@ -180,10 +187,6 @@ void Ship::Update(
     //
     // Update electrical dynamics
     //
-
-    // Clear up pointer containers, in case there have been deletions
-    // during or before this update step
-    mAllElectricalElements.shrink_to_fit();
 
     DiffuseLight(gameParameters);
 }
@@ -677,29 +680,30 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
         vec2f const & pointPosition = mPoints.GetPosition(pointIndex);
 
         // Go through all lamps in the same connected component
-        for (ElectricalElement * el : mAllElectricalElements)
+        for (auto electricaElementIndex : mElectricalElements)
         {
-            assert(!el->IsDeleted());
-
-            if (ElectricalElement::Type::Lamp == el->GetType()
-                && mPoints.GetConnectedComponentId(el->GetPointIndex()) == mPoints.GetConnectedComponentId(pointIndex))
+            if (!mElectricalElements.IsDeleted(electricaElementIndex))
             {
-                auto lampPointIndex = el->GetPointIndex();
+                if (ElectricalElement::Type::Lamp == mElectricalElements.GetElectricalElement(electricaElementIndex)->GetType()
+                    && mPoints.GetConnectedComponentId(mElectricalElements.GetElectricalElement(electricaElementIndex)->GetPointIndex()) == mPoints.GetConnectedComponentId(pointIndex))
+                {
+                    auto lampPointIndex = mElectricalElements.GetElectricalElement(electricaElementIndex)->GetPointIndex();
 
-                assert(!mPoints.IsDeleted(lampPointIndex));
+                    assert(!mPoints.IsDeleted(lampPointIndex));
 
-                // TODO: this needs to be replaced with getting Light from the lamp itself
-                float const lampLight = 1.0f;
+                    // TODO: this needs to be replaced with getting Light from the lamp itself
+                    float const lampLight = 1.0f;
 
-                float squareDistance = std::max(
-                    1.0f,
-                    (pointPosition - mPoints.GetPosition(lampPointIndex)).squareLength() * adjustmentCoefficient);
+                    float squareDistance = std::max(
+                        1.0f,
+                        (pointPosition - mPoints.GetPosition(lampPointIndex)).squareLength() * adjustmentCoefficient);
 
-                assert(squareDistance >= 1.0f);
+                    assert(squareDistance >= 1.0f);
 
-                float newLight = lampLight / squareDistance;
-                if (newLight > mPoints.GetLight(pointIndex))
-                    mPoints.GetLight(pointIndex) = newLight;
+                    float newLight = lampLight / squareDistance;
+                    if (newLight > mPoints.GetLight(pointIndex))
+                        mPoints.GetLight(pointIndex) = newLight;
+                }
             }
         }
     }

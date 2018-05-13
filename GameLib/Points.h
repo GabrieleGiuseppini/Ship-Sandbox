@@ -32,10 +32,10 @@ private:
 
         FixedSizeVector<ElementIndex, 8U> ConnectedTriangles;
 
-        ElectricalElement * ConnectedElectricalElement;
+        ElementIndex ConnectedElectricalElement;
 
         Network()
-            : ConnectedElectricalElement(nullptr)
+            : ConnectedElectricalElement(NoneElementIndex)
         {}
     };
 
@@ -66,11 +66,7 @@ public:
     }
 
     Points(Points && other) = default;
-
-    // TODOREMOVE: only for phase I, this is needed for ship ::Initialize() which will go, substituted
-    // by ship cctor()
-    Points & operator=(Points && other) = default;
-
+    
     void Add(
         vec2 const & position,
         Material const * material,
@@ -79,7 +75,8 @@ public:
     void Destroy(
         ElementIndex pointElementIndex,
         Springs & springs,
-        Triangles & triangles);
+        Triangles & triangles,
+        ElectricalElements & electricalElements);
 
     void Breach(
         ElementIndex pointElementIndex,
@@ -331,7 +328,7 @@ public:
         (void)found;
     }
 
-    inline ElectricalElement * GetConnectedElectricalElement(ElementIndex pointElementIndex) const
+    inline ElementIndex GetConnectedElectricalElement(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
@@ -340,12 +337,12 @@ public:
 
     inline void SetConnectedElectricalElement(
         ElementIndex pointElementIndex,
-        ElectricalElement * electricalElement)
+        ElementIndex electricalElementIndex)
     {
         assert(pointElementIndex < mElementCount);
-        assert(nullptr == mNetworkBuffer[pointElementIndex].ConnectedElectricalElement);
+        assert(NoneElementIndex == mNetworkBuffer[pointElementIndex].ConnectedElectricalElement);
 
-        mNetworkBuffer[pointElementIndex].ConnectedElectricalElement = electricalElement;
+        mNetworkBuffer[pointElementIndex].ConnectedElectricalElement = electricalElementIndex;
     }
 
     //

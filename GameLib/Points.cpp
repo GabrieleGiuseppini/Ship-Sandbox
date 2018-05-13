@@ -39,7 +39,8 @@ void Points::Add(
 void Points::Destroy(
     ElementIndex pointElementIndex,
     Springs & springs,
-    Triangles & triangles)
+    Triangles & triangles,
+    ElectricalElements & electricalElements)
 {
     assert(pointElementIndex < mElementCount);
 
@@ -73,10 +74,9 @@ void Points::Destroy(
     // Destroy the connected electrical element
     //
 
-    if (nullptr != pointNetwork.ConnectedElectricalElement)
+    if (NoneElementIndex != pointNetwork.ConnectedElectricalElement)
     {
-        pointNetwork.ConnectedElectricalElement->Destroy();
-        pointNetwork.ConnectedElectricalElement = nullptr;
+        electricalElements.Destroy(pointNetwork.ConnectedElectricalElement);
     }
 
 

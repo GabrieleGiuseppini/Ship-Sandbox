@@ -12,7 +12,7 @@
 namespace Physics
 {	
 
-class ElectricalElement : public ShipElement<ElectricalElement>
+class ElectricalElement
 {
 public:
 
@@ -28,9 +28,7 @@ public:
     virtual ~ElectricalElement()
     {
     }
-
-    void Destroy();
-
+    
     inline ElementContainer::ElementIndex GetPointIndex() const
     {
         return mPointIndex;
@@ -54,7 +52,6 @@ public:
 protected:
 
     ElectricalElement(        
-        Ship * parentShip,
         ElementContainer::ElementIndex pointIndex,
         Type type);
 

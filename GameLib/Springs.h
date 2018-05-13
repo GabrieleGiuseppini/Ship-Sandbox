@@ -84,10 +84,6 @@ public:
 
     Springs(Springs && other) = default;
 
-    // TODOREMOVE: only for phase I, this is needed for ship ::Initialize() which will go, substituted
-    // by ship cctor()
-    Springs & operator=(Springs && other) = default;
-
     void Add(
         ElementIndex pointAIndex,
         ElementIndex pointBIndex,

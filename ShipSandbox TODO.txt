@@ -113,12 +113,12 @@ Prev perf (before Optimizations & iterations increase)
 			+ When needed, they expose getters and generally operations on single elements, via 32-bit index argument (aliased as ElementIndex)
 				+ e.g. void Destroy(ElementIndex)
 				+ e.g. float GetMass(ElementIndex)
-			= Destroy(ElementIndex) takes care of telling ship that element count is dirty
-				= Phase 3: set directly in Ship at initiation of Destroy chain, whenever we know we destroy something
+			+ Destroy(ElementIndex) takes care of telling ship that element count is dirty
+				+ Phase 3: set directly in Ship at initiation of Destroy chain, whenever we know we destroy something
 					+ Do at Spring::UpdateStrain: returns bool, true if destroyed
 					+ Do at tool's Destroy
-					- Then get rid of two-phase ship cctor - plain cctor with moved ElementRepo's
-						- So can also remove move assignment at Points
+					+ Then get rid of two-phase ship cctor - plain cctor with moved ElementRepo's
+						+ So can also remove move assignment at Points
 			+ Pointers to points are replaced by 32-bit indices
 				+ Funcs that need to follow pointers (e.g. Destroy() and SpringDynamics()) also must take whole containers 
 				+ Phase 2: also pointers to Springs & Triangles
@@ -149,11 +149,11 @@ Prev perf (before Optimizations & iterations increase)
 				- Phase 3: direct upload of buffers into GPU via RenderContext
 				- Phase 3: move texture coordinates and colors into Points, which uploads
 				  at Upload() via own mAreImmutablePropertiesUploaded state
-				- Phase 3: also Springs and Triangles
-			- Phase 3: Keep PointerContainer for ElectricalElement's (they're virtual classes after all)
-			- Phase 3: Nuke ShipElement, if it's now only implemented by ElectricalElement
-				- See if manage to not need to tell Ship as well, see above
-			- Phase 3: Nuke ElementRepository when no one uses it anymore
+				  - Nuke Ship::mIsPointCountDirty
+				  - Nuke ElementRepository, as at this moment no one should be using it anymore
+			+ Phase 3: Nuke PointerContainer
+			+ Phase 3: Nuke ShipElement, if it's now only implemented by ElectricalElement
+				+ See if managed to not need to tell Ship as well, see above
 			- Phase 4:
 				- Fix power-of-2 calculation at Buffer::cctor()
 				- Fix World::GetNearestPointIndexAt, by making use of Ship::GetPointPosition(idx)
@@ -179,8 +179,9 @@ Prev perf (before Optimizations & iterations increase)
 			+ Beginning FPS=24.0/24.2/24.4
 			+ After exploded Newtonz FPS=24.8/24.9/25.1
 			+ Ending FPS=26.3/26.5
-		- Phase 3:
-			- Beginning FPS=
+		= Phase 3:
+			+ Beginning FPS=26.3/26.5
+			+ After cleanup FPS=26.3/26.5
 			- Ending FPS=
 	- UpdatePointForces:
 		- Precalculate things that do not depend on position nor velocity

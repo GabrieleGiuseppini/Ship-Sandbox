@@ -52,11 +52,7 @@ public:
     }
 
     Triangles(Triangles && other) = default;
-
-    // TODOREMOVE: only for phase I, this is needed for ship ::Initialize() which will go, substituted
-    // by ship cctor()
-    Triangles & operator=(Triangles && other) = default;
-
+    
     void Add(
         ElementIndex pointAIndex,
         ElementIndex pointBIndex,

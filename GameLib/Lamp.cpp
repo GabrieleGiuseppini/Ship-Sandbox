@@ -7,11 +7,8 @@
 
 namespace Physics {
 
-Lamp::Lamp(
-    Ship * parentShip,
-    ElementContainer::ElementIndex pointIndex)
+Lamp::Lamp(ElementContainer::ElementIndex pointIndex)
     : ElectricalElement(        
-        parentShip,
         pointIndex,
         ElectricalElement::Type::Lamp)
 {

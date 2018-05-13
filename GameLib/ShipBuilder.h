@@ -54,12 +54,12 @@ private:
 
     struct RopeSegment
     {
-        std::optional<ElementContainer::ElementIndex> PointAIndex;
-        std::optional<ElementContainer::ElementIndex> PointBIndex;
+        ElementContainer::ElementIndex PointAIndex;
+        ElementContainer::ElementIndex PointBIndex;
 
         RopeSegment()
-            : PointAIndex(std::nullopt)
-            , PointBIndex(std::nullopt)
+            : PointAIndex(ElementContainer::NoneElementIndex)
+            , PointBIndex(ElementContainer::NoneElementIndex)
         {
         }
     };
@@ -110,7 +110,6 @@ private:
 
     static void CreatePoints(
         std::vector<PointInfo> const & pointInfos,
-        Physics::Ship * ship,
         Physics::Points & points,
         ElementRepository<vec3f> & pointColors,
         ElementRepository<vec2f> & pointTextureCoordinates);
@@ -132,9 +131,8 @@ private:
         Physics::Points & points,
         Physics::Springs & springs);
 
-    static std::vector<Physics::ElectricalElement*> CreateElectricalElements(
-        Physics::Points & points,
-        Physics::Ship * ship);
+    static Physics::ElectricalElements CreateElectricalElements(
+        Physics::Points & points);
 
 private:
 

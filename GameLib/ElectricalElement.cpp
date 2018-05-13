@@ -8,20 +8,11 @@
 namespace Physics {
 
 ElectricalElement::ElectricalElement(    
-    Ship * parentShip,
     ElementContainer::ElementIndex pointIndex,
     Type type)
-    : ShipElement(parentShip)
-    , mPointIndex(pointIndex)
+    : mPointIndex(pointIndex)
     , mType(type)
     , mLastGraphVisitStepSequenceNumber(0u)
 {
 }
-
-void ElectricalElement::Destroy()
-{
-    // Remove ourselves
-    ShipElement::Destroy();
-}
-
 }

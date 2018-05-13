@@ -27,7 +27,6 @@ set  (GAME_SOURCES
 	Material.cpp
 	Material.h
 	MaterialDatabase.h
-	PointerContainer.h
 	ProgressCallback.h
 	RenderContext.cpp
 	RenderContext.h
@@ -54,6 +53,8 @@ set  (PHYSICS_SOURCES
 	Cloud.h
 	ElectricalElement.cpp
 	ElectricalElement.h
+	ElectricalElements.cpp
+	ElectricalElements.h
 	Generator.cpp
 	Generator.h
 	Lamp.cpp
@@ -65,7 +66,6 @@ set  (PHYSICS_SOURCES
 	Points.h
 	Ship.cpp
 	Ship.h
-	ShipElement.h
 	Springs.cpp
 	Springs.h
 	Triangles.cpp

@@ -14,9 +14,7 @@ class Lamp final : public ElectricalElement
 {
 public:
 
-	Lamp(
-        Ship * parentShip,
-        ElementContainer::ElementIndex pointIndex);
+	Lamp(ElementContainer::ElementIndex pointIndex);
 
 private:
 };

@@ -15,8 +15,8 @@ namespace Physics
     class OceanFloor;
 	class Points;
 	class Ship;
-	class Spring;
-	class Triangle;
+	class Springs;
+	class Triangles;
     class WaterSurface;
 	class World;
 }
@@ -25,6 +25,9 @@ namespace Physics
 #include "ElementContainer.h"
 
 #include "ElectricalElement.h"
+#include "Points.h"
+#include "Springs.h"
+#include "Triangles.h"
 
 #include "OceanFloor.h"
 #include "WaterSurface.h"
@@ -33,7 +36,4 @@ namespace Physics
 #include "Cloud.h"
 #include "Generator.h"
 #include "Lamp.h"
-#include "Points.h"
 #include "Ship.h"
-#include "Spring.h"
-#include "Triangle.h"

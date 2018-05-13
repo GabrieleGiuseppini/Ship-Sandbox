@@ -21,14 +21,15 @@ namespace /* anonymous */ {
 
     bool IsConnectedToNonRopePoints(
         ElementContainer::ElementIndex pointIndex,
-        Points const & points)
+        Points const & points,
+        Springs const & springs)
     {
         assert(points.GetMaterial(pointIndex)->IsRope);
 
-        for (auto const & spring : points.GetConnectedSprings(pointIndex))
+        for (auto springIndex : points.GetConnectedSprings(pointIndex))
         {
-            if (!points.GetMaterial(spring->GetPointAIndex())->IsRope
-                || !points.GetMaterial(spring->GetPointBIndex())->IsRope)
+            if (!points.GetMaterial(springs.GetPointAIndex(springIndex))->IsRope
+                || !points.GetMaterial(springs.GetPointBIndex(springIndex))->IsRope)
             {
                 return true;
             }
@@ -150,7 +151,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // - Fill-in springs between each pair of points in the rope, creating SpringInfo's for them
     //    
 
-    CreateRopes(
+    CreateRopeSegments(
         ropeSegments,
         shipDefinition.StructuralImage.Size,
         materials.GetRopeMaterial(),
@@ -219,9 +220,8 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // Create Springs for all SpringInfo's
     //
 
-    ElementRepository<Spring> allSprings = CreateSprings(
+    Springs springs = CreateSprings(
         springInfos,
-        ship,
         points);
 
 
@@ -231,10 +231,10 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // to rope points (these would be knots "sticking out" of the structure)
     //
 
-    ElementRepository<Triangle> allTriangles = CreateTriangles(
+    Triangles triangles = CreateTriangles(
         triangleInfos,
-        ship,
-        points);
+        points,
+        springs);
 
 
     //
@@ -251,15 +251,15 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     //
 
     LogMessage("Created ship: W=", shipDefinition.StructuralImage.Size.Width, ", H=", shipDefinition.StructuralImage.Size.Height, ", ",
-        points.GetElementCount(), " points, ", allSprings.size(), " springs, ", allTriangles.size(), " triangles, ", 
+        points.GetElementCount(), " points, ", springs.GetElementCount(), " springs, ", triangles.GetElementCount(), " triangles, ",
         allElectricalElements.size(), " electrical elements.");
 
     ship->Initialize(
         std::move(points),   
         std::move(allPointColors),
         std::move(allPointTextureCoordinates),
-        std::move(allSprings),
-        std::move(allTriangles),
+        std::move(springs),
+        std::move(triangles),
         std::move(allElectricalElements),
         currentStepSequenceNumber);
 
@@ -270,7 +270,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 // Building helpers
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ShipBuilder::CreateRopes(
+void ShipBuilder::CreateRopeSegments(
     std::map<std::array<uint8_t, 3u>, RopeSegment> const & ropeSegments,
     ImageSize const & structureImageSize,
     Material const & ropeMaterial,
@@ -571,17 +571,16 @@ void ShipBuilder::CreateShipElementInfos(
     }
 }
 
-ElementRepository<Spring> ShipBuilder::CreateSprings(
+Physics::Springs ShipBuilder::CreateSprings(
     std::vector<SpringInfo> const & springInfos,
-    Physics::Ship * ship,
     Physics::Points & points)
 {
-    ElementRepository<Spring> allSprings(springInfos.size());
+    Physics::Springs springs(springInfos.size());
 
-    for (SpringInfo const & springInfo : springInfos)
+    for (ElementContainer::ElementIndex s = 0; s < springInfos.size(); ++s)
     {
-        Material const * pointAMaterial = points.GetMaterial(springInfo.PointAIndex);
-        Material const * pointBMaterial = points.GetMaterial(springInfo.PointBIndex);
+        Material const * pointAMaterial = points.GetMaterial(springInfos[s].PointAIndex);
+        Material const * pointBMaterial = points.GetMaterial(springInfos[s].PointBIndex);
 
         // We choose the spring to be as strong as its strongest point
         Material const * const strongestMaterial = 
@@ -592,66 +591,64 @@ ElementRepository<Spring> ShipBuilder::CreateSprings(
         // The spring is hull if at least one node is hull 
         // (we don't propagate water along a hull spring)
         if (pointAMaterial->IsHull || pointBMaterial->IsHull)
-            characteristics |= static_cast<int>(Spring::Characteristics::Hull);
+            characteristics |= static_cast<int>(Springs::Characteristics::Hull);
 
         // If both nodes are rope, then the spring is rope 
         // (non-rope <-> rope springs are "connections" and not to be treated as ropes)
         if (pointAMaterial->IsRope && pointBMaterial->IsRope)
-            characteristics |= static_cast<int>(Spring::Characteristics::Rope);
+            characteristics |= static_cast<int>(Springs::Characteristics::Rope);
 
         // Create spring
-        Spring & spring = allSprings.emplace_back(
-            ship,
-            points,
-            springInfo.PointAIndex,
-            springInfo.PointBIndex,
-            static_cast<Spring::Characteristics>(characteristics),
-            strongestMaterial);
+        springs.Add(
+            springInfos[s].PointAIndex,
+            springInfos[s].PointBIndex,
+            static_cast<Springs::Characteristics>(characteristics),
+            strongestMaterial,
+            points);
 
         // Add spring to its endpoints
-        points.AddConnectedSpring(springInfo.PointAIndex, &spring);
-        points.AddConnectedSpring(springInfo.PointBIndex, &spring);
+        points.AddConnectedSpring(springInfos[s].PointAIndex, s);
+        points.AddConnectedSpring(springInfos[s].PointBIndex, s);
     }
 
-    return allSprings;
+    return springs;
 }
 
-ElementRepository<Physics::Triangle> ShipBuilder::CreateTriangles(
+Physics::Triangles ShipBuilder::CreateTriangles(
     std::vector<TriangleInfo> const & triangleInfos,
-    Physics::Ship * ship,
-    Physics::Points & points)
+    Physics::Points & points,
+    Physics::Springs & springs)
 {
-    ElementRepository<Triangle> allTriangles(triangleInfos.size());
+    Physics::Triangles triangles(triangleInfos.size());
 
-    for (TriangleInfo const & triangleInfo : triangleInfos)
+    for (ElementContainer::ElementIndex t = 0; t < triangleInfos.size(); ++t)
     {
-        if (points.GetMaterial(triangleInfo.PointAIndex)->IsRope
-            && points.GetMaterial(triangleInfo.PointBIndex)->IsRope
-            && points.GetMaterial(triangleInfo.PointCIndex)->IsRope)
+        if (points.GetMaterial(triangleInfos[t].PointAIndex)->IsRope
+            && points.GetMaterial(triangleInfos[t].PointBIndex)->IsRope
+            && points.GetMaterial(triangleInfos[t].PointCIndex)->IsRope)
         {
             // Do not add triangle if at least one vertex is connected to rope points only
-            if (!IsConnectedToNonRopePoints(triangleInfo.PointAIndex, points)
-                || !IsConnectedToNonRopePoints(triangleInfo.PointBIndex, points)
-                || !IsConnectedToNonRopePoints(triangleInfo.PointCIndex, points))
+            if (!IsConnectedToNonRopePoints(triangleInfos[t].PointAIndex, points, springs)
+                || !IsConnectedToNonRopePoints(triangleInfos[t].PointBIndex, points, springs)
+                || !IsConnectedToNonRopePoints(triangleInfos[t].PointCIndex, points, springs))
             {
                 continue;
             }
         }
 
         // Create triangle
-        Triangle & triangle = allTriangles.emplace_back(
-            ship,
-            triangleInfo.PointAIndex,
-            triangleInfo.PointBIndex,
-            triangleInfo.PointCIndex);
+        triangles.Add(
+            triangleInfos[t].PointAIndex,
+            triangleInfos[t].PointBIndex,
+            triangleInfos[t].PointCIndex);
 
         // Add triangle to its endpoints
-        points.AddConnectedTriangle(triangleInfo.PointAIndex, &triangle);
-        points.AddConnectedTriangle(triangleInfo.PointBIndex, &triangle);
-        points.AddConnectedTriangle(triangleInfo.PointCIndex, &triangle);
+        points.AddConnectedTriangle(triangleInfos[t].PointAIndex, t);
+        points.AddConnectedTriangle(triangleInfos[t].PointBIndex, t);
+        points.AddConnectedTriangle(triangleInfos[t].PointCIndex, t);
     }
 
-    return allTriangles;
+    return triangles;
 }
 
 std::vector<ElectricalElement*> ShipBuilder::CreateElectricalElements(

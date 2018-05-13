@@ -9,49 +9,37 @@
 
 namespace Physics {
 
-void Points::UploadMutableGraphicalAttributes(
-    int shipId,
-    RenderContext & renderContext) const
+void Points::Add(
+    vec2 const & position,
+    Material const * material,
+    float buoyancy)
 {
-    // TODO: once we get rid of Newtons
-    ////renderContext.UploadShipPoints(
-    ////    shipId,
-    ////    mPositionBuffer.data(),
-    ////    mLightBuffer.data(),
-    ////    mWaterBufffer.data());
+    mIsDeletedBuffer.emplace_back(false);
 
-    renderContext.UploadShipPointsStart(shipId, mElementCount);
-    
-    for (ElementIndex i = 0; i < mElementCount; ++i)
-    {
-        renderContext.UploadShipPoint(
-            shipId,
-            mPositionBuffer[i].x,
-            mPositionBuffer[i].y,
-            mLightBuffer[i],
-            mWaterBuffer[i]);
-    }
+    mMaterialBuffer.emplace_back(material);
 
-    renderContext.UploadShipPointsEnd(shipId);
+    mPositionBuffer.emplace_back(position);
+    mVelocityBuffer.emplace_back(vec2f(0.0f, 0.0f));
+    mForceBuffer.emplace_back(vec2f(0.0f, 0.0f));
+    mMassFactorBuffer.emplace_back(CalculateMassFactor(material->Mass));
+    mMassBuffer.emplace_back(material->Mass);
+
+    mBuoyancyBuffer.emplace_back(buoyancy);
+    mIsLeakingBuffer.emplace_back(false);
+    mWaterBuffer.emplace_back(0.0f);
+
+    mLightBuffer.emplace_back(0.0f);
+
+    mNetworkBuffer.emplace_back();
+
+    mConnectedComponentIdBuffer.emplace_back(0u);
+    mCurrentConnectedComponentDetectionStepSequenceNumberBuffer.emplace_back(0u);
 }
 
-void Points::UploadElements(
-    int shipId,
-    RenderContext & renderContext) const
-{
-    for (ElementIndex i = 0; i < mElementCount; ++i)
-    {
-        if (!mIsDeletedBuffer[i])
-        {
-            renderContext.UploadShipElementPoint(
-                shipId,
-                i,
-                mConnectedComponentIdBuffer[i]);
-        }
-    }
-}
-
-void Points::Destroy(ElementIndex pointElementIndex)
+void Points::Destroy(
+    ElementIndex pointElementIndex,
+    Springs & springs,
+    Triangles & triangles)
 {
     assert(pointElementIndex < mElementCount);
 
@@ -61,10 +49,10 @@ void Points::Destroy(ElementIndex pointElementIndex)
     // Destroy all springs attached to this point
     //
 
-    for (Spring * spring : pointNetwork.ConnectedSprings)
+    for (auto springIndex : pointNetwork.ConnectedSprings)
     {
-        assert(!spring->IsDeleted());
-        spring->Destroy(*this, pointElementIndex);
+        assert(!springs.IsDeleted(springIndex));
+        springs.Destroy(springIndex, pointElementIndex, *this, triangles);
     }
 
     pointNetwork.ConnectedSprings.clear();
@@ -73,10 +61,10 @@ void Points::Destroy(ElementIndex pointElementIndex)
     // Destroy all triangles connected to this point
     //
 
-    for (Triangle * triangle : pointNetwork.ConnectedTriangles)
+    for (auto triangleIndex : pointNetwork.ConnectedTriangles)
     {
-        assert(!triangle->IsDeleted());
-        triangle->Destroy(*this, pointElementIndex);
+        assert(!triangles.IsDeleted(triangleIndex));
+        triangles.Destroy(triangleIndex, pointElementIndex, *this);
     }
 
     pointNetwork.ConnectedTriangles.clear();
@@ -99,7 +87,9 @@ void Points::Destroy(ElementIndex pointElementIndex)
     mIsDeletedBuffer[pointElementIndex] = true;
 }
 
-void Points::Breach(ElementIndex pointElementIndex)
+void Points::Breach(
+    ElementIndex pointElementIndex,
+    Triangles & triangles)
 {
     assert(pointElementIndex < mElementCount);
 
@@ -115,13 +105,55 @@ void Points::Breach(ElementIndex pointElementIndex)
 
     Network & pointNetwork = mNetworkBuffer[pointElementIndex];
 
-    for (Triangle * triangle : pointNetwork.ConnectedTriangles)
+    for (auto triangleIndex : pointNetwork.ConnectedTriangles)
     {
-        assert(!triangle->IsDeleted());
-        triangle->Destroy(*this, pointElementIndex);
+        assert(!triangles.IsDeleted(triangleIndex));
+        triangles.Destroy(triangleIndex, pointElementIndex, *this);
     }
 
     pointNetwork.ConnectedTriangles.clear();
+}
+
+void Points::UploadMutableGraphicalAttributes(
+    int shipId,
+    RenderContext & renderContext) const
+{
+    // TODO: once we get rid of Newtons
+    ////renderContext.UploadShipPoints(
+    ////    shipId,
+    ////    mPositionBuffer.data(),
+    ////    mLightBuffer.data(),
+    ////    mWaterBufffer.data());
+
+    renderContext.UploadShipPointsStart(shipId, mElementCount);
+    
+    for (ElementIndex i : *this)
+    {
+        renderContext.UploadShipPoint(
+            shipId,
+            mPositionBuffer[i].x,
+            mPositionBuffer[i].y,
+            mLightBuffer[i],
+            mWaterBuffer[i]);
+    }
+
+    renderContext.UploadShipPointsEnd(shipId);
+}
+
+void Points::UploadElements(
+    int shipId,
+    RenderContext & renderContext) const
+{
+    for (ElementIndex i : *this)
+    {
+        if (!mIsDeletedBuffer[i])
+        {
+            renderContext.UploadShipElementPoint(
+                shipId,
+                i,
+                mConnectedComponentIdBuffer[i]);
+        }
+    }
 }
 
 vec2f Points::CalculateMassFactor(float mass)

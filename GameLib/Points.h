@@ -28,9 +28,9 @@ private:
     struct Network
     {
         // 8 neighbours and 1 rope spring, when this is a rope endpoint
-        FixedSizeVector<Spring *, 8U + 1U> ConnectedSprings; 
+        FixedSizeVector<ElementIndex, 8U + 1U> ConnectedSprings; 
 
-        FixedSizeVector<Triangle *, 8U> ConnectedTriangles;
+        FixedSizeVector<ElementIndex, 8U> ConnectedTriangles;
 
         ElectricalElement * ConnectedElectricalElement;
 
@@ -74,31 +74,16 @@ public:
     void Add(
         vec2 const & position,
         Material const * material,
-        float buoyancy)
-    {
-        mIsDeletedBuffer.emplace_back(false);
+        float buoyancy);
 
-        mMaterialBuffer.emplace_back(material);
+    void Destroy(
+        ElementIndex pointElementIndex,
+        Springs & springs,
+        Triangles & triangles);
 
-        mPositionBuffer.emplace_back(position);
-        mVelocityBuffer.emplace_back(vec2f(0.0f, 0.0f));
-        mForceBuffer.emplace_back(vec2f(0.0f, 0.0f));
-        mMassFactorBuffer.emplace_back(CalculateMassFactor(material->Mass));
-        mMassBuffer.emplace_back(material->Mass);
-
-        mBuoyancyBuffer.emplace_back(buoyancy);
-        mIsLeakingBuffer.emplace_back(false);
-        mWaterBuffer.emplace_back(0.0f);
-
-        mLightBuffer.emplace_back(0.0f);
-
-        mNetworkBuffer.emplace_back();
-
-        mConnectedComponentIdBuffer.emplace_back(0u);
-        mCurrentConnectedComponentDetectionStepSequenceNumberBuffer.emplace_back(0u);
-    }
-
-    void Destroy(ElementIndex pointElementIndex);
+    void Breach(
+        ElementIndex pointElementIndex,
+        Triangles & triangles);
 
     void UploadMutableGraphicalAttributes(
         int shipId,
@@ -151,7 +136,7 @@ public:
         return mPositionBuffer[pointElementIndex];
     }
 
-    float * __restrict GetPositionBufferAsFloat()
+    float * restrict GetPositionBufferAsFloat()
     {
         return reinterpret_cast<float *>(mPositionBuffer.data());
     }
@@ -170,7 +155,7 @@ public:
         return mVelocityBuffer[pointElementIndex];
     }
 
-    float * __restrict GetVelocityBufferAsFloat()
+    float * restrict GetVelocityBufferAsFloat()
     {
         return reinterpret_cast<float *>(mVelocityBuffer.data());
     }
@@ -189,7 +174,7 @@ public:
         return mForceBuffer[pointElementIndex];
     }
 
-    float * __restrict GetForceBufferAsFloat()
+    float * restrict GetForceBufferAsFloat()
     {
         return reinterpret_cast<float *>(mForceBuffer.data());
     }
@@ -201,7 +186,7 @@ public:
         return mMassFactorBuffer[pointElementIndex];
     }
 
-    float * __restrict GetMassFactorBufferAsFloat()
+    float * restrict GetMassFactorBufferAsFloat()
     {
         return reinterpret_cast<float *>(mMassFactorBuffer.data());
     }
@@ -299,20 +284,20 @@ public:
 
     inline void AddConnectedSpring(
         ElementIndex pointElementIndex,
-        Spring * spring)
+        ElementIndex springElementIndex)
     {
         assert(pointElementIndex < mElementCount);
 
-        mNetworkBuffer[pointElementIndex].ConnectedSprings.push_back(spring);
+        mNetworkBuffer[pointElementIndex].ConnectedSprings.push_back(springElementIndex);
     }
 
     inline void RemoveConnectedSpring(
         ElementIndex pointElementIndex,
-        Spring * spring)
+        ElementIndex springElementIndex)
     {
         assert(pointElementIndex < mElementCount);
         
-        bool found = mNetworkBuffer[pointElementIndex].ConnectedSprings.erase_first(spring);
+        bool found = mNetworkBuffer[pointElementIndex].ConnectedSprings.erase_first(springElementIndex);
 
         assert(found);
         (void)found;
@@ -327,20 +312,20 @@ public:
 
     inline void AddConnectedTriangle(
         ElementIndex pointElementIndex,
-        Triangle * triangle)
+        ElementIndex triangleElementIndex)
     {
         assert(pointElementIndex < mElementCount);
 
-        mNetworkBuffer[pointElementIndex].ConnectedTriangles.push_back(triangle);
+        mNetworkBuffer[pointElementIndex].ConnectedTriangles.push_back(triangleElementIndex);
     }
 
     inline void RemoveConnectedTriangle(
         ElementIndex pointElementIndex,
-        Triangle * triangle)
+        ElementIndex triangleElementIndex)
     {
         assert(pointElementIndex < mElementCount);
 
-        bool found = mNetworkBuffer[pointElementIndex].ConnectedTriangles.erase_first(triangle);
+        bool found = mNetworkBuffer[pointElementIndex].ConnectedTriangles.erase_first(triangleElementIndex);
 
         assert(found);
         (void)found;
@@ -362,8 +347,6 @@ public:
 
         mNetworkBuffer[pointElementIndex].ConnectedElectricalElement = electricalElement;
     }
-
-    void Breach(ElementIndex pointElementIndex);
 
     //
     // Connected component

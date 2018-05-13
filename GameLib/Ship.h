@@ -33,16 +33,16 @@ public:
         Points && points,
         ElementRepository<vec3f> && allPointColors,
         ElementRepository<vec2f> && allPointTextureCoordinates,
-        ElementRepository<Spring> && allSprings,
-        ElementRepository<Triangle> && allTriangles,
+        Springs && springs,
+        Triangles && triangles,
         std::vector<ElectricalElement *> && allElectricalElements,
         uint64_t currentStepSequenceNumber)
     {
         mPoints = std::move(points);
         mAllPointColors = std::move(allPointColors);
         mAllPointTextureCoordinates = std::move(allPointTextureCoordinates);
-        mAllSprings = std::move(allSprings);
-        mAllTriangles = std::move(allTriangles);
+        mSprings = std::move(springs);
+        mTriangles = std::move(triangles);
         mAllElectricalElements.initialize(std::move(allElectricalElements));
 
         mIsPointCountDirty = true;
@@ -64,11 +64,11 @@ public:
     auto const & GetPoints() const { return mPoints; }
     auto & GetPoints() { return mPoints; }
 
-    auto const & GetSprings() const { return mAllSprings; }
-    auto & GetSprings() { return mAllSprings; }
+    auto const & GetSprings() const { return mSprings; }
+    auto & GetSprings() { return mSprings; }
 
-    auto const & GetTriangles() const { return mAllTriangles; }
-    auto & GetTriangles() { return mAllTriangles; }
+    auto const & GetTriangles() const { return mTriangles; }
+    auto & GetTriangles() { return mTriangles; }
 
     void DestroyAt(
         vec2 const & targetPos,
@@ -141,8 +141,8 @@ private:
     Points mPoints;
     ElementRepository<vec3f> mAllPointColors;
     ElementRepository<vec2f> mAllPointTextureCoordinates;
-    ElementRepository<Spring> mAllSprings;
-    ElementRepository<Triangle> mAllTriangles;
+    Springs mSprings;
+    Triangles mTriangles;
 
     // Parts repository
     PointerContainer<ElectricalElement> mAllElectricalElements;
@@ -183,20 +183,6 @@ private:
 
     std::optional<DrawForce> mCurrentDrawForce;
 };
-
-template<>
-inline void Ship::RegisterDestruction(Spring * /* element */)
-{
-    // Remember that we need to re-upload ship elements
-    mAreElementsDirty = true;
-}
-
-template<>
-inline void Ship::RegisterDestruction(Triangle * /* element */)
-{
-    // Remember that we need to re-upload ship elements
-    mAreElementsDirty = true;
-}
 
 template<>
 inline void Ship::RegisterDestruction(ElectricalElement * /* element */)

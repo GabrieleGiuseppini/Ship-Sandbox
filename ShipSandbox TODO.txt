@@ -56,7 +56,7 @@ Prev perf (before Optimizations & iterations increase)
 				+ ElementCount GetCount() const
 					- Number of elements
 					- passed at cctor
-			= They contain N buffers:
+			+ They contain N buffers:
 				+ Points: Position, Velocity, Force, MassFactor, Color, Water, IsDeleted ...
 					+ All scalars of a point that are only used for both x and y (e.g. MassFactor) are stored 
 					 (and updated, if any) twice, as vec2f (only MassFactor?)
@@ -94,9 +94,9 @@ Prev perf (before Optimizations & iterations increase)
 							+ FPS=24.8/24.9/25.1
 					+ If makes sense to explode:
 						+ Also explode ConnectedComponent
-				- Phase 2: Springs: Points, dynamics coefficients, water coefficients, ...					
-				- Phase 2: Triangles: Points, Network
-				- Phase 2: Change all ElementContainer::ElementIndex into ElementIndex
+				+ Phase 2: Springs: Points, dynamics coefficients, water coefficients, ...					
+				+ Phase 2: Triangles: Points, Network
+				+ Phase 2: Change all ElementContainer::ElementIndex into ElementIndex
 				+ Structure of buffers:
 					+ For SSE2, need to be simple floats
 					+ For handling, need to be structured
@@ -119,9 +119,9 @@ Prev perf (before Optimizations & iterations increase)
 					+ Do at tool's Destroy
 					- Then get rid of two-phase ship cctor - plain cctor with moved ElementRepo's
 						- So can also remove move assignment at Points
-			= Pointers to points are replaced by 32-bit indices
-				= Funcs that need to follow pointers (e.g. Destroy() and SpringDynamics()) also must take whole containers 
-				- Phase 2: also pointers to Springs & Triangles
+			+ Pointers to points are replaced by 32-bit indices
+				+ Funcs that need to follow pointers (e.g. Destroy() and SpringDynamics()) also must take whole containers 
+				+ Phase 2: also pointers to Springs & Triangles
 			+ ShipBuilder creates Points & moves into ship
 				+ Points' ConnectedXYZ are updated at ShipBuilder time
 					+ Remove code from Spring and Triangle and ElectricalElement-Cable-etc. cctors
@@ -169,6 +169,16 @@ Prev perf (before Optimizations & iterations increase)
 				  indices in pointers
 				+ Verify assembly
 			+ FPS=24.9/25.1/25.2
+		+ Phase 1:
+			+ Beginning FPS=19.0/19.4/19.7/19.9
+			+ Ending FPS=22.0/22.3/22.6
+		+ Phase 1.5:
+			+ Beginning FPS=22.0/22.3/22.6
+			+ Ending FPS=24.0/24.2/24.4
+		+ Phase 2:
+			+ Beginning FPS=24.0/24.2/24.4
+			+ After exploded Newtonz FPS=24.8/24.9/25.1
+			+ Ending FPS=26.3/26.5
 		- Phase 3:
 			- Beginning FPS=
 			- Ending FPS=

@@ -28,6 +28,8 @@ inline void aligned_free(void * ptr)
     _aligned_free(ptr);
 }
 
+#define restrict __restrict
+
 #else
 
 #include <cstdlib>
@@ -43,5 +45,7 @@ inline void aligned_free(void * ptr)
 {
     std::free(ptr);
 }
+
+#define restrict __restrict
 
 #endif

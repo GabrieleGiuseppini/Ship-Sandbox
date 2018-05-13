@@ -66,10 +66,10 @@ set  (PHYSICS_SOURCES
 	Ship.cpp
 	Ship.h
 	ShipElement.h
-	Spring.cpp
-	Spring.h
-	Triangle.cpp
-	Triangle.h
+	Springs.cpp
+	Springs.h
+	Triangles.cpp
+	Triangles.h
 	WaterSurface.cpp
 	WaterSurface.h
 	World.cpp

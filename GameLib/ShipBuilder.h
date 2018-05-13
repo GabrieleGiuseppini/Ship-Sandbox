@@ -101,7 +101,7 @@ private:
     // Building helpers
     /////////////////////////////////////////////////////////////////
 
-    static void CreateRopes(
+    static void CreateRopeSegments(
         std::map<std::array<uint8_t, 3u>, RopeSegment> const & ropeSegments,
         ImageSize const & structureImageSize,
         Material const & ropeMaterial,        
@@ -123,15 +123,14 @@ private:
         std::vector<TriangleInfo> & triangleInfos,
         size_t & leakingPointsCount);
 
-    static ElementRepository<Physics::Spring> CreateSprings(
+    static Physics::Springs CreateSprings(
         std::vector<SpringInfo> const & springInfos,
-        Physics::Ship * ship,
         Physics::Points & points);
 
-    static ElementRepository<Physics::Triangle> CreateTriangles(
+    static Physics::Triangles CreateTriangles(
         std::vector<TriangleInfo> const & triangleInfos,
-        Physics::Ship * ship,
-        Physics::Points & points);
+        Physics::Points & points,
+        Physics::Springs & springs);
 
     static std::vector<Physics::ElectricalElement*> CreateElectricalElements(
         Physics::Points & points,

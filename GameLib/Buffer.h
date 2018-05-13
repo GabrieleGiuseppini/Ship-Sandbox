@@ -105,7 +105,7 @@ public:
      * Gets the buffer.
      */
 
-    inline TElement const * data() const
+    inline TElement const * restrict data() const
     {
         return mBuffer;
     }
@@ -117,7 +117,7 @@ public:
 
 private:
 
-    TElement * __restrict mBuffer;
+    TElement * restrict mBuffer;
     // TODO: make const after phase I
     size_t /*const*/ mSize;
     size_t mCurrentSize;

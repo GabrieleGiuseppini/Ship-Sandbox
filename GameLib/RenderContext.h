@@ -11,6 +11,7 @@
 #include "RenderTypes.h"
 #include "ResourceLoader.h"
 #include "ShipRenderContext.h"
+#include "SysSpecifics.h"
 #include "Vectors.h"
 
 #include <array>
@@ -341,38 +342,21 @@ public:
             elementCount);
     }
 
-    void UploadShipPointsStart(
+    void UploadShipPoints(
         int shipId,
-        size_t maxPoints)
+        size_t count,
+        float const * restrict position,
+        float const * restrict light,
+        float const * restrict water)
     {
         assert(shipId < mShips.size());
 
-        mShips[shipId]->UploadPointsStart(maxPoints);
-    }
-
-    inline void UploadShipPoint(
-        int shipId,
-        float x,
-        float y,
-        float light,
-        float water)
-    {
-        assert(shipId < mShips.size());
-
-        mShips[shipId]->UploadPoint(
-            x,
-            y,
+        mShips[shipId]->UploadPoints(
+            count,
+            position,
             light,
             water);
     }
-
-    void UploadShipPointsEnd(int shipId)
-    {
-        assert(shipId < mShips.size());
-
-        mShips[shipId]->UploadPointsEnd();
-    }
-
 
     //
     // Ship elements (points, springs, ropes, and triangles)

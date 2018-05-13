@@ -146,15 +146,17 @@ Prev perf (before Optimizations & iterations increase)
 					+ YES, read once into xmm4 and re-used later
 			+ End of checks after Phase 1.5: FPS=24.0/24.2/24.4
 			= Containers expose own Upload(RenderContext &)
-				- Phase 3: direct upload of buffers into GPU via RenderContext
+				+ Phase 3: direct upload of buffers into GPU via RenderContext
+					+ Nuke ShipRenderContext::mPointBuffer & friends
 				- Phase 3: move texture coordinates and colors into Points, which uploads
 				  at Upload() via own mAreImmutablePropertiesUploaded state
+					- Rename all UploadXYZ() to Upload()
 				  - Nuke Ship::mIsPointCountDirty
 				  - Nuke ElementRepository, as at this moment no one should be using it anymore
 			+ Phase 3: Nuke PointerContainer
 			+ Phase 3: Nuke ShipElement, if it's now only implemented by ElectricalElement
 				+ See if managed to not need to tell Ship as well, see above
-			- Phase 4:
+			- Phase 3:
 				- Fix power-of-2 calculation at Buffer::cctor()
 				- Fix World::GetNearestPointIndexAt, by making use of Ship::GetPointPosition(idx)
 				- Also fix its use at MainFrame, by making use of Ship::GetStuff()
@@ -181,7 +183,7 @@ Prev perf (before Optimizations & iterations increase)
 			+ Ending FPS=26.3/26.5
 		= Phase 3:
 			+ Beginning FPS=26.3/26.5
-			+ After cleanup FPS=26.3/26.5
+			+ After cleanup FPS=27.0/27.3/27.4
 			- Ending FPS=
 	- UpdatePointForces:
 		- Precalculate things that do not depend on position nor velocity

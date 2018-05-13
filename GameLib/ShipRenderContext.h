@@ -8,6 +8,7 @@
 #include "GameOpenGL.h"
 #include "ImageData.h"
 #include "RenderTypes.h"
+#include "SysSpecifics.h"
 #include "Vectors.h"
 
 #include <array>
@@ -38,26 +39,11 @@ public:
         vec2f const * textureCoordinates,
         size_t pointCount);
 
-    void UploadPointsStart(size_t maxPoints);
-
-    inline void UploadPoint(
-        float x,
-        float y,
-        float light,
-        float water)
-    {
-        assert(mPointBufferSize + 1u <= mPointBufferMaxSize);
-        ShipRenderContext::Point * point = &(mPointBuffer[mPointBufferSize]);
-
-        point->x = x;
-        point->y = y;
-        point->light = light;
-        point->water = water;
-
-        ++mPointBufferSize;
-    }
-
-    void UploadPointsEnd();
+    void UploadPoints(
+        size_t count,
+        float const * restrict position,
+        float const * restrict light,
+        float const * restrict water);
 
 
     //
@@ -238,23 +224,12 @@ private:
     //
     // Points
     //
-
-#pragma pack(push)
-    struct Point
-    {
-        float x;
-        float y;
-        float light;
-        float water;
-    };
-#pragma pack(pop)
-
+    
     size_t mPointCount;
-    std::unique_ptr<ShipRenderContext::Point[]> mPointBuffer;
-    size_t mPointBufferSize;
-    size_t mPointBufferMaxSize;
 
-    GameOpenGLVBO mPointVBO;
+    GameOpenGLVBO mPointPositionVBO;
+    GameOpenGLVBO mPointLightVBO;
+    GameOpenGLVBO mPointWaterVBO;
     GameOpenGLVBO mPointColorVBO;
     GameOpenGLVBO mPointElementTextureCoordinatesVBO;
     

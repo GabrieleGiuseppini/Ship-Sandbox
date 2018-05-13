@@ -118,26 +118,12 @@ void Points::UploadMutableGraphicalAttributes(
     int shipId,
     RenderContext & renderContext) const
 {
-    // TODO: once we get rid of Newtons
-    ////renderContext.UploadShipPoints(
-    ////    shipId,
-    ////    mPositionBuffer.data(),
-    ////    mLightBuffer.data(),
-    ////    mWaterBufffer.data());
-
-    renderContext.UploadShipPointsStart(shipId, mElementCount);
-    
-    for (ElementIndex i : *this)
-    {
-        renderContext.UploadShipPoint(
-            shipId,
-            mPositionBuffer[i].x,
-            mPositionBuffer[i].y,
-            mLightBuffer[i],
-            mWaterBuffer[i]);
-    }
-
-    renderContext.UploadShipPointsEnd(shipId);
+    renderContext.UploadShipPoints(
+        shipId,  
+        mElementCount,
+        reinterpret_cast<float const *>(mPositionBuffer.data()),
+        mLightBuffer.data(),
+        mWaterBuffer.data());
 }
 
 void Points::UploadElements(

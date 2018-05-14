@@ -8,6 +8,7 @@
 #include "GameOpenGL.h"
 #include "ImageData.h"
 #include "RenderTypes.h"
+#include "SysSpecifics.h"
 #include "Vectors.h"
 
 #include <array>
@@ -33,31 +34,16 @@ public:
     // Points
     //
 
-    void UploadPointVisualAttributes(
-        vec3f const * colors, 
-        vec2f const * textureCoordinates,
-        size_t pointCount);
+    void UploadPointImmutableGraphicalAttributes(
+        size_t count,
+        vec3f const * restrict color,
+        vec2f const * restrict textureCoordinates);
 
-    void UploadPointsStart(size_t maxPoints);
-
-    inline void UploadPoint(
-        float x,
-        float y,
-        float light,
-        float water)
-    {
-        assert(mPointBufferSize + 1u <= mPointBufferMaxSize);
-        ShipRenderContext::Point * point = &(mPointBuffer[mPointBufferSize]);
-
-        point->x = x;
-        point->y = y;
-        point->light = light;
-        point->water = water;
-
-        ++mPointBufferSize;
-    }
-
-    void UploadPointsEnd();
+    void UploadPoints(
+        size_t count,
+        vec2f const * restrict position,
+        float const * restrict light,
+        float const * restrict water);
 
 
     //
@@ -68,7 +54,7 @@ public:
 
     inline void UploadElementPoint(
         int pointIndex,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -85,7 +71,7 @@ public:
     inline void UploadElementSpring(
         int pointIndex1,
         int pointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -103,7 +89,7 @@ public:
     inline void UploadElementRope(
         int pointIndex1,
         int pointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -122,7 +108,7 @@ public:
         int pointIndex1,
         int pointIndex2,
         int pointIndex3,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -146,7 +132,7 @@ public:
     inline void UploadElementStressedSpring(
         int pointIndex1,
         int pointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -174,7 +160,7 @@ public:
         float x,
         float y,
         float lightIntensity,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -238,23 +224,12 @@ private:
     //
     // Points
     //
-
-#pragma pack(push)
-    struct Point
-    {
-        float x;
-        float y;
-        float light;
-        float water;
-    };
-#pragma pack(pop)
-
+    
     size_t mPointCount;
-    std::unique_ptr<ShipRenderContext::Point[]> mPointBuffer;
-    size_t mPointBufferSize;
-    size_t mPointBufferMaxSize;
 
-    GameOpenGLVBO mPointVBO;
+    GameOpenGLVBO mPointPositionVBO;
+    GameOpenGLVBO mPointLightVBO;
+    GameOpenGLVBO mPointWaterVBO;
     GameOpenGLVBO mPointColorVBO;
     GameOpenGLVBO mPointElementTextureCoordinatesVBO;
     

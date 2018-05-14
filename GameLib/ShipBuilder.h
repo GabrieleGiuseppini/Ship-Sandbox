@@ -1,7 +1,7 @@
 /***************************************************************************************
-* Original Author:		Gabriele Giuseppini
-* Created:				2018-04-22
-* Copyright:			Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
+* Original Author:      Gabriele Giuseppini
+* Created:              2018-04-22
+* Copyright:            Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
 ***************************************************************************************/
 #pragma once
 
@@ -54,24 +54,24 @@ private:
 
     struct RopeSegment
     {
-        std::optional<size_t> PointAIndex;
-        std::optional<size_t> PointBIndex;
+        ElementContainer::ElementIndex PointAIndex;
+        ElementContainer::ElementIndex PointBIndex;
 
         RopeSegment()
-            : PointAIndex(std::nullopt)
-            , PointBIndex(std::nullopt)
+            : PointAIndex(ElementContainer::NoneElementIndex)
+            , PointBIndex(ElementContainer::NoneElementIndex)
         {
         }
     };
 
     struct SpringInfo
     {
-        size_t PointAIndex;
-        size_t PointBIndex;
+        ElementContainer::ElementIndex PointAIndex;
+        ElementContainer::ElementIndex PointBIndex;
 
         SpringInfo(
-            size_t pointAIndex,
-            size_t pointBIndex)
+            ElementContainer::ElementIndex pointAIndex,
+            ElementContainer::ElementIndex pointBIndex)
             : PointAIndex(pointAIndex)
             , PointBIndex(pointBIndex)
         {
@@ -80,14 +80,14 @@ private:
 
     struct TriangleInfo
     {
-        size_t PointAIndex;
-        size_t PointBIndex;
-        size_t PointCIndex;
+        ElementContainer::ElementIndex PointAIndex;
+        ElementContainer::ElementIndex PointBIndex;
+        ElementContainer::ElementIndex PointCIndex;
 
         TriangleInfo(
-            size_t pointAIndex,
-            size_t pointBIndex,
-            size_t pointCIndex)
+            ElementContainer::ElementIndex pointAIndex,
+            ElementContainer::ElementIndex pointBIndex,
+            ElementContainer::ElementIndex pointCIndex)
             : PointAIndex(pointAIndex)
             , PointBIndex(pointBIndex)
             , PointCIndex(pointCIndex)
@@ -101,41 +101,35 @@ private:
     // Building helpers
     /////////////////////////////////////////////////////////////////
 
-    static void CreateRopes(
+    static void CreateRopeSegments(
         std::map<std::array<uint8_t, 3u>, RopeSegment> const & ropeSegments,
         ImageSize const & structureImageSize,
         Material const & ropeMaterial,        
         std::vector<PointInfo> & pointInfos,
         std::vector<SpringInfo> & springInfos);
 
-    static void CreatePoints(
-        std::vector<PointInfo> const & pointInfos,
-        Physics::Ship * ship,
-        ElementRepository<Physics::Point> & points,
-        ElementRepository<vec3f> & pointColors,
-        ElementRepository<vec2f> & pointTextureCoordinates);
+    static Physics::Points CreatePoints(
+        std::vector<PointInfo> const & pointInfos);
 
     static void CreateShipElementInfos(
-        std::unique_ptr<std::unique_ptr<std::optional<size_t>[]>[]> const & pointIndexMatrix,
+        std::unique_ptr<std::unique_ptr<std::optional<ElementContainer::ElementIndex>[]>[]> const & pointIndexMatrix,
         ImageSize const & structureImageSize,
-        ElementRepository<Physics::Point> & points,
+        Physics::Points & points,
         std::vector<SpringInfo> & springInfos,
         std::vector<TriangleInfo> & triangleInfos,
         size_t & leakingPointsCount);
 
-    static ElementRepository<Physics::Spring> CreateSprings(
+    static Physics::Springs CreateSprings(
         std::vector<SpringInfo> const & springInfos,
-        Physics::Ship * ship,
-        ElementRepository<Physics::Point> & points);
+        Physics::Points & points);
 
-    static ElementRepository<Physics::Triangle> CreateTriangles(
+    static Physics::Triangles CreateTriangles(
         std::vector<TriangleInfo> const & triangleInfos,
-        Physics::Ship * ship,
-        ElementRepository<Physics::Point> & points);
+        Physics::Points & points,
+        Physics::Springs & springs);
 
-    static std::vector<Physics::ElectricalElement*> CreateElectricalElements(
-        ElementRepository<Physics::Point> & points,
-        Physics::Ship * ship);
+    static Physics::ElectricalElements CreateElectricalElements(
+        Physics::Points & points);
 
 private:
 
@@ -143,7 +137,7 @@ private:
     // Vertex cache optimization
     /////////////////////////////////////////////////////////////////
 
-    // See Tom's comments: using 32 is good enough; apparently 64 does not yield significant differences
+    // See Tom Forsyth's comments: using 32 is good enough; apparently 64 does not yield significant differences
     static constexpr size_t VertexCacheSize = 32;
 
     using ModelLRUVertexCache = std::list<size_t>;

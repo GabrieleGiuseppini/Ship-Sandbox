@@ -9,19 +9,13 @@
 #include "MaterialDatabase.h"
 #include "ProgressCallback.h"
 #include "ShipDefinition.h"
+#include "SysSpecifics.h"
 
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
-
-// At the time of writing, VS 2017 shipped with std::filesystem being still experimental
-#ifdef _MSC_VER
-namespace std {
-    namespace filesystem = experimental::filesystem;
-}
-#endif
 
 class ResourceLoader
 {

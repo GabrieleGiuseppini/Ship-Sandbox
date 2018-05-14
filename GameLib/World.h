@@ -66,7 +66,7 @@ public:
         vec2 const & targetPos,
         float strength);
 
-    Point const * GetNearestPointAt(
+    ElementContainer::ElementIndex GetNearestPointAt(
         vec2 const & targetPos,
         float radius) const;
 
@@ -106,28 +106,6 @@ private:
 
     // The game event handler
     std::shared_ptr<IGameEventHandler> mGameEventHandler;
-
-private:
-
-	//
-	// TODO: experimental
-	//
-
-	struct BVHNode
-	{
-		AABB volume;
-		BVHNode *l, *r;
-		bool isLeaf;
-		size_t pointCount;
-		static const int MAX_DEPTH = 15;
-		static const int MAX_N_POINTS = 10;
-		Point* points[MAX_N_POINTS];
-		static BVHNode * AllocateTree(int depth = MAX_DEPTH);
-	};
-
-	void BuildBVHTree(bool splitInX, std::vector<Point*> &pointlist, BVHNode *thisnode, int depth = 1);
-
-	BVHNode * mCollisionTree;
 };
 
 }

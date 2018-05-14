@@ -11,6 +11,7 @@
 #include "RenderTypes.h"
 #include "ResourceLoader.h"
 #include "ShipRenderContext.h"
+#include "SysSpecifics.h"
 #include "Vectors.h"
 
 #include <array>
@@ -327,52 +328,35 @@ public:
     // Ship Points
     //
 
-    void UploadShipPointVisualAttributes(
+    void UploadShipPointImmutableGraphicalAttributes(
         int shipId,
-        vec3f const * colors,
-        vec2f const * textureCoordinates,
-        size_t elementCount)
+        size_t count,
+        vec3f const * restrict color,
+        vec2f const * restrict textureCoordinates)
     {
         assert(shipId < mShips.size());
 
-        mShips[shipId]->UploadPointVisualAttributes(
-            colors,
-            textureCoordinates,
-            elementCount);
+        mShips[shipId]->UploadPointImmutableGraphicalAttributes(
+            count,
+            color,
+            textureCoordinates);
     }
 
-    void UploadShipPointsStart(
+    void UploadShipPoints(
         int shipId,
-        size_t maxPoints)
+        size_t count,
+        vec2f const * restrict position,
+        float const * restrict light,
+        float const * restrict water)
     {
         assert(shipId < mShips.size());
 
-        mShips[shipId]->UploadPointsStart(maxPoints);
-    }
-
-    inline void UploadShipPoint(
-        int shipId,
-        float x,
-        float y,
-        float light,
-        float water)
-    {
-        assert(shipId < mShips.size());
-
-        mShips[shipId]->UploadPoint(
-            x,
-            y,
+        mShips[shipId]->UploadPoints(
+            count,
+            position,
             light,
             water);
     }
-
-    void UploadShipPointsEnd(int shipId)
-    {
-        assert(shipId < mShips.size());
-
-        mShips[shipId]->UploadPointsEnd();
-    }
-
 
     //
     // Ship elements (points, springs, ropes, and triangles)
@@ -390,7 +374,7 @@ public:
     inline void UploadShipElementPoint(
         int shipId,
         int shipPointIndex,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -403,7 +387,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -417,7 +401,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -432,7 +416,7 @@ public:
         int shipPointIndex1,
         int shipPointIndex2,
         int shipPointIndex3,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -461,7 +445,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -497,7 +481,7 @@ public:
         float x,
         float y,
         float lightIntensity,
-        size_t connectedComponentId)
+        uint32_t connectedComponentId)
     {
         assert(shipId < mShips.size());
 

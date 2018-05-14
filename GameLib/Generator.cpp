@@ -7,12 +7,9 @@
 
 namespace Physics {
 
-Generator::Generator(
-    Ship * parentShip,
-    Point * point)
+Generator::Generator(ElementContainer::ElementIndex pointIndex)
     : ElectricalElement(        
-        parentShip,
-        point,
+        pointIndex,
         ElectricalElement::Type::Generator)
 {
 }

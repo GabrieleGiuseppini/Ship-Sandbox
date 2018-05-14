@@ -5,6 +5,7 @@
 ***************************************************************************************/
 #pragma once
 
+#include "SysSpecifics.h"
 #include "Utils.h"
 #include "Vectors.h"
 
@@ -13,13 +14,6 @@
 #include <filesystem>
 #include <optional>
 #include <string>
-
-// At the time of writing, VS 2017 shipped with std::filesystem being still experimental
-#ifdef _MSC_VER
-namespace std {
-    namespace filesystem = experimental::filesystem;
-}
-#endif
 
 /*
  * The content of a ship definition file (.shp)

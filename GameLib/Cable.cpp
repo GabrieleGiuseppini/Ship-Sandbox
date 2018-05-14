@@ -7,12 +7,9 @@
 
 namespace Physics {
 
-Cable::Cable(
-    Ship * parentShip,
-    Point * point)
+Cable::Cable(ElementContainer::ElementIndex pointIndex)
     : ElectricalElement(        
-        parentShip,
-        point,
+        pointIndex,
         ElectricalElement::Type::Cable)
 {
 }

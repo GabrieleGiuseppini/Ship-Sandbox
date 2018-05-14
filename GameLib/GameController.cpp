@@ -176,7 +176,7 @@ void GameController::DrawTo(
     mGameEventDispatcher->Flush();
 }
 
-Physics::Point const * GameController::GetNearestPointAt(vec2 const & screenCoordinates) const
+ElementContainer::ElementIndex GameController::GetNearestPointAt(vec2 const & screenCoordinates) const
 {
     vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);
 

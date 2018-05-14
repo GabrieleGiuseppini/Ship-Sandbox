@@ -14,9 +14,7 @@ class Cable final : public ElectricalElement
 {
 public:
 
-    Cable(
-        Ship * parentShip,
-        Point * point);
+    Cable(ElementContainer::ElementIndex pointIndex);
 
 private:
 };

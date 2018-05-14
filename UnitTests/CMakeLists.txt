@@ -8,10 +8,8 @@ endif(MSVC)
 add_subdirectory("C:/Users/Neurodancer/source/repos/googletest" gtest)
 
 set (UNIT_TEST_SOURCES
-	ElementRepositoryTests.cpp
 	FixedSizeVectorTests.cpp
 	GameEventDispatcherTests.cpp
-	PointerContainerTests.cpp
 	ShipTests.cpp
 	TupleKeysTests.cpp
 	VectorsTests.cpp)

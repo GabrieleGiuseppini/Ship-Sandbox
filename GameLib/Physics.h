@@ -10,20 +10,25 @@ namespace Physics
     class Cable;
     class Cloud;
     class ElectricalElement;
+    class ElectricalElements;
     class Generator;
     class Lamp;
     class OceanFloor;
-	class Point;
+	class Points;
 	class Ship;
-	class Spring;
-	class Triangle;
+	class Springs;
+	class Triangles;
     class WaterSurface;
 	class World;
 }
 
-#include "ShipElement.h"
+#include "ElementContainer.h"
 
 #include "ElectricalElement.h"
+#include "Points.h"
+#include "Springs.h"
+#include "Triangles.h"
+#include "ElectricalElements.h"
 
 #include "OceanFloor.h"
 #include "WaterSurface.h"
@@ -32,7 +37,4 @@ namespace Physics
 #include "Cloud.h"
 #include "Generator.h"
 #include "Lamp.h"
-#include "Point.h"
 #include "Ship.h"
-#include "Spring.h"
-#include "Triangle.h"

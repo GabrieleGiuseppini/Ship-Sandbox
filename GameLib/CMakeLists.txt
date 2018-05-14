@@ -6,7 +6,8 @@
 set  (GAME_SOURCES
 	AABB.cpp
 	AABB.h
-	ElementRepository.h
+	Buffer.h
+	ElementContainer.h
 	FixedSizeVector.h
 	GameController.cpp
 	GameController.h
@@ -25,7 +26,6 @@ set  (GAME_SOURCES
 	Material.cpp
 	Material.h
 	MaterialDatabase.h
-	PointerContainer.h
 	ProgressCallback.h
 	RenderContext.cpp
 	RenderContext.h
@@ -39,6 +39,7 @@ set  (GAME_SOURCES
 	ShipDefinitionFile.h
 	ShipRenderContext.cpp
 	ShipRenderContext.h
+	SysSpecifics.h
 	TupleKeys.h
 	Utils.cpp
 	Utils.h	
@@ -51,6 +52,8 @@ set  (PHYSICS_SOURCES
 	Cloud.h
 	ElectricalElement.cpp
 	ElectricalElement.h
+	ElectricalElements.cpp
+	ElectricalElements.h
 	Generator.cpp
 	Generator.h
 	Lamp.cpp
@@ -58,15 +61,14 @@ set  (PHYSICS_SOURCES
 	OceanFloor.cpp
 	OceanFloor.h
 	Physics.h
-	Point.cpp
-	Point.h
+	Points.cpp
+	Points.h
 	Ship.cpp
 	Ship.h
-	ShipElement.h
-	Spring.cpp
-	Spring.h
-	Triangle.cpp
-	Triangle.h
+	Springs.cpp
+	Springs.h
+	Triangles.cpp
+	Triangles.h
 	WaterSurface.cpp
 	WaterSurface.h
 	World.cpp

@@ -7,16 +7,14 @@
 ***************************************************************************************/
 #pragma once
 
-#include "ElementRepository.h"
 #include "GameParameters.h"
 #include "MaterialDatabase.h"
 #include "Physics.h"
-#include "PointerContainer.h"
 #include "RenderContext.h"
 #include "ShipDefinition.h"
 #include "Vectors.h"
 
-#include <set>
+#include <vector>
 
 namespace Physics
 {
@@ -27,29 +25,12 @@ public:
 
     Ship(
         int id,
-        World * parentWorld);
-
-    void Initialize(
-        ElementRepository<Point> && allPoints,
-        ElementRepository<vec3f> && allPointColors,
-        ElementRepository<vec2f> && allPointTextureCoordinates,
-        ElementRepository<Spring> && allSprings,
-        ElementRepository<Triangle> && allTriangles,
-        std::vector<ElectricalElement *> && allElectricalElements,
-        uint64_t currentStepSequenceNumber)
-    {
-        mAllPoints = std::move(allPoints);
-        mAllPointColors = std::move(allPointColors);
-        mAllPointTextureCoordinates = std::move(allPointTextureCoordinates);
-        mAllSprings = std::move(allSprings);
-        mAllTriangles = std::move(allTriangles);
-        mAllElectricalElements.initialize(std::move(allElectricalElements));
-
-        mIsPointCountDirty = true;
-        mAreElementsDirty = true;
-
-        DetectConnectedComponents(currentStepSequenceNumber);
-    }
+        World * parentWorld,
+        Points && points,
+        Springs && springs,
+        Triangles && triangles,
+        ElectricalElements && electricalElements,
+        uint64_t currentStepSequenceNumber);
 
     ~Ship();
 
@@ -58,17 +39,17 @@ public:
     World const * GetParentWorld() const { return mParentWorld; }
     World * GetParentWorld() { return mParentWorld; }
 
-    auto const & GetElectricalElements() const { return mAllElectricalElements; }
-    auto & GetElectricalElements() { return mAllElectricalElements; }
+    auto const & GetPoints() const { return mPoints; }
+    auto & GetPoints() { return mPoints; }
 
-    auto const & GetPoints() const { return mAllPoints; }
-    auto & GetPoints() { return mAllPoints; }
+    auto const & GetSprings() const { return mSprings; }
+    auto & GetSprings() { return mSprings; }
 
-    auto const & GetSprings() const { return mAllSprings; }
-    auto & GetSprings() { return mAllSprings; }
+    auto const & GetTriangles() const { return mTriangles; }
+    auto & GetTriangles() { return mTriangles; }
 
-    auto const & GetTriangles() const { return mAllTriangles; }
-    auto & GetTriangles() { return mAllTriangles; }
+    auto const & GetElectricalElements() const { return mElectricalElements; }
+    auto & GetElectricalElements() { return mElectricalElements; }
 
     void DestroyAt(
         vec2 const & targetPos,
@@ -78,7 +59,7 @@ public:
         vec2 const & targetPos,
         float strength);
 
-    Point const * GetNearestPointAt(
+    ElementContainer::ElementIndex GetNearestPointIndexAt(
         vec2 const & targetPos,
         float radius) const;
 
@@ -92,18 +73,6 @@ public:
 
 public:
 
-    /*
-     * Invoked when an elements has been destroyed. Notifies the ship that the element
-     * can be removed (at the most appropriate time) from the ship's main container
-     * of element pointers, and that the pointer can be deleted.
-     *
-     * Implemented differently for the different elements.
-     */
-    template<typename TElement>
-    void RegisterDestruction(TElement * element);
-
-public:
-
     /////////////////////////////////////////////////////////////////////////
     // Dynamics
     /////////////////////////////////////////////////////////////////////////
@@ -112,7 +81,7 @@ public:
 
     void UpdateDrawForces(
         vec2f const & position,
-        float strength);
+        float forceStrength);
 
     void UpdatePointForces(GameParameters const & gameParameters);
 
@@ -138,23 +107,13 @@ private:
     World * const mParentWorld;
 
     // All the ship elements - never removed, the repositories maintain their own size forever
-    ElementRepository<Point> mAllPoints;
-    ElementRepository<vec3f> mAllPointColors;
-    ElementRepository<vec2f> mAllPointTextureCoordinates;
-    ElementRepository<Spring> mAllSprings;
-    ElementRepository<Triangle> mAllTriangles;
-
-    // Parts repository
-    PointerContainer<ElectricalElement> mAllElectricalElements;
+    Points mPoints;
+    Springs mSprings;
+    Triangles mTriangles;
+    ElectricalElements mElectricalElements;
 
     // Connected components metadata
     std::vector<std::size_t> mConnectedComponentSizes;
-
-    // Flag remembering whether the number of points has changed
-    // since the last time we delivered them to the rendering context.
-    // Does not count deleted points at this moment - deleted points remain
-    // in the buffer that we deliver to the rendering context
-    mutable bool mIsPointCountDirty;
 
     // Flag remembering whether points (elements) and/or springs (incl. ropes) and/or triangles have changed
     // since the last time we delivered them to the rendering context
@@ -183,37 +142,5 @@ private:
 
     std::optional<DrawForce> mCurrentDrawForce;
 };
-
-template<>
-inline void Ship::RegisterDestruction(Point * /* element */)
-{    
-    // Remember that we need to re-upload ship elements
-    mAreElementsDirty = true;
-
-    // We don't mark the point count as dirty, as at this moment we keep 
-    // uploading all points, including deleted ones, to the rendering engine.
-    // We are content with only updating the point *elements*
-}
-
-template<>
-inline void Ship::RegisterDestruction(Spring * /* element */)
-{
-    // Remember that we need to re-upload ship elements
-    mAreElementsDirty = true;
-}
-
-template<>
-inline void Ship::RegisterDestruction(Triangle * /* element */)
-{
-    // Remember that we need to re-upload ship elements
-    mAreElementsDirty = true;
-}
-
-template<>
-inline void Ship::RegisterDestruction(ElectricalElement * /* element */)
-{
-    // Also tell the pointer container, he'll take care of removing the element later
-    mAllElectricalElements.register_deletion();
-}
 
 }

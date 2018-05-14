@@ -47,7 +47,7 @@ public:
 
     void DestroyAt(vec2f const & screenCoordinates, float radiusMultiplier);
     void DrawTo(vec2f const & screenCoordinates, float strengthMultiplier);
-    Physics::Point const * GetNearestPointAt(vec2 const & screenCoordinates) const;
+    ElementContainer::ElementIndex GetNearestPointAt(vec2 const & screenCoordinates) const;
 
     void SetCanvasSize(int width, int height) { mRenderContext->SetCanvasSize(width, height); }
 

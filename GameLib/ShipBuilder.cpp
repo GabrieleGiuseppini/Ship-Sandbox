@@ -160,21 +160,10 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
 
     //
-    // Visit all PointInfo's and create:
-    //  - Points
-    //  - PointColors
-    //  - PointTextureCoordinates
+    // Visit all PointInfo's and create Points, i.e. the entire set of points
     //
 
-    Points points(static_cast<ElementContainer::ElementCount>(pointInfos.size()));
-    ElementRepository<vec3f> allPointColors(pointInfos.size());
-    ElementRepository<vec2f> allPointTextureCoordinates(pointInfos.size());
-
-    CreatePoints(
-        pointInfos,
-        points,
-        allPointColors,
-        allPointTextureCoordinates);
+    Points points = CreatePoints(pointInfos);
 
 
     //
@@ -253,8 +242,6 @@ std::unique_ptr<Ship> ShipBuilder::Create(
         shipId, 
         parentWorld,
         std::move(points),
-        std::move(allPointColors),
-        std::move(allPointTextureCoordinates),
         std::move(springs),
         std::move(triangles),
         std::move(electricalElements),
@@ -372,14 +359,9 @@ void ShipBuilder::CreateRopeSegments(
     }
 }
 
-void ShipBuilder::CreatePoints(
-    std::vector<PointInfo> const & pointInfos,
-    Points & points,
-    ElementRepository<vec3f> & pointColors,
-    ElementRepository<vec2f> & pointTextureCoordinates)
+Points ShipBuilder::CreatePoints(std::vector<PointInfo> const & pointInfos)
 {
-    assert(pointColors.max_size() == pointInfos.size());
-    assert(pointTextureCoordinates.max_size() == pointInfos.size());
+    Physics::Points points(static_cast<ElementContainer::ElementIndex>(pointInfos.size()));
 
     for (size_t p = 0; p < pointInfos.size(); ++p)
     {
@@ -396,21 +378,12 @@ void ShipBuilder::CreatePoints(
         points.Add(
             pointInfo.Position,
             mtl,
-            buoyancy);
-
-        //
-        // Create point color
-        //
-
-        pointColors.emplace_back(mtl->RenderColour);
-
-
-        //
-        // Create point texture coordinates
-        //
-
-        pointTextureCoordinates.emplace_back(pointInfo.TextureCoordinates);
+            buoyancy,
+            mtl->RenderColour,
+            pointInfo.TextureCoordinates);
     }
+
+    return points;
 }
 
 void ShipBuilder::CreateShipElementInfos(
@@ -431,6 +404,7 @@ void ShipBuilder::CreateShipElementInfos(
     // Initialize count of leaking points
     leakingPointsCount = 0;
 
+    // This is our local circular order
     static const int Directions[8][2] = {
         {  1,  0 },  // E
         {  1, -1 },  // SE

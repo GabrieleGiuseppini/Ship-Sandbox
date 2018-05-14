@@ -62,6 +62,10 @@ public:
         // Connected component
         , mConnectedComponentIdBuffer(elementCount)
         , mCurrentConnectedComponentDetectionStepSequenceNumberBuffer(elementCount)
+        // Immutable render attributes
+        , mColorBuffer(elementCount)
+        , mTextureCoordinatesBuffer(elementCount)
+        , mAreImmutableRenderAttributesUploaded(false)
     {
     }
 
@@ -70,7 +74,9 @@ public:
     void Add(
         vec2 const & position,
         Material const * material,
-        float buoyancy);
+        float buoyancy,
+        vec3f const & color,
+        vec2f const & textureCoordinates);
 
     void Destroy(
         ElementIndex pointElementIndex,
@@ -82,7 +88,7 @@ public:
         ElementIndex pointElementIndex,
         Triangles & triangles);
 
-    void UploadMutableGraphicalAttributes(
+    void Upload(
         int shipId,
         RenderContext & renderContext) const;
 
@@ -434,6 +440,17 @@ private:
 
     Buffer<uint32_t> mConnectedComponentIdBuffer; // Connected component IDs start from 1
     Buffer<uint64_t> mCurrentConnectedComponentDetectionStepSequenceNumberBuffer;
+
+    //
+    // Immutable render attributes
+    //
+
+    Buffer<vec3f> mColorBuffer;
+    Buffer<vec2f> mTextureCoordinatesBuffer;
+
+    // Flag remembering whether or not we've already uploaded
+    // the immutable render attributes
+    bool mutable mAreImmutableRenderAttributesUploaded;
 };
 
 }

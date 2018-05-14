@@ -7,7 +7,6 @@
 ***************************************************************************************/
 #pragma once
 
-#include "ElementRepository.h"
 #include "GameParameters.h"
 #include "MaterialDatabase.h"
 #include "Physics.h"
@@ -15,7 +14,7 @@
 #include "ShipDefinition.h"
 #include "Vectors.h"
 
-#include <set>
+#include <vector>
 
 namespace Physics
 {
@@ -28,8 +27,6 @@ public:
         int id,
         World * parentWorld,
         Points && points,
-        ElementRepository<vec3f> && allPointColors,
-        ElementRepository<vec2f> && allPointTextureCoordinates,
         Springs && springs,
         Triangles && triangles,
         ElectricalElements && electricalElements,
@@ -111,20 +108,12 @@ private:
 
     // All the ship elements - never removed, the repositories maintain their own size forever
     Points mPoints;
-    ElementRepository<vec3f> mAllPointColors;
-    ElementRepository<vec2f> mAllPointTextureCoordinates;
     Springs mSprings;
     Triangles mTriangles;
     ElectricalElements mElectricalElements;
 
     // Connected components metadata
     std::vector<std::size_t> mConnectedComponentSizes;
-
-    // Flag remembering whether the number of points has changed
-    // since the last time we delivered them to the rendering context.
-    // Does not count deleted points at this moment - deleted points remain
-    // in the buffer that we deliver to the rendering context
-    mutable bool mIsPointCountDirty;
 
     // Flag remembering whether points (elements) and/or springs (incl. ropes) and/or triangles have changed
     // since the last time we delivered them to the rendering context

@@ -5,6 +5,7 @@
 ***************************************************************************************/
 #pragma once
 
+#include "GameMath.h"
 #include "SysSpecifics.h"
 
 #include <cassert>
@@ -26,10 +27,7 @@ public:
         : mSize(size)
         , mCurrentSize(0)
     {
-        size_t elementSize = sizeof(TElement);
-        int elementSizePower2 = 2;
-        while (elementSize >>= 1) elementSizePower2 <<= 1;
-        mBuffer = static_cast<TElement *>(aligned_alloc(elementSizePower2, size * sizeof(TElement)));
+        mBuffer = static_cast<TElement *>(aligned_alloc(CeilPowerOfTwo(sizeof(TElement)), size * sizeof(TElement)));
         assert(nullptr != mBuffer);
     }
 

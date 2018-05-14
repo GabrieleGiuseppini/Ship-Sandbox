@@ -498,7 +498,7 @@ void MainFrame::OnKeyDown(wxKeyEvent & event)
         // Down
         mGameController->Pan(vec2f(0.0f, 20.0f));
     }
-    else if (event.GetKeyCode() == static_cast<int>('?'))
+    else if (event.GetKeyCode() == static_cast<int>('Q'))
     {
         //
         // Get point stats
@@ -509,19 +509,17 @@ void MainFrame::OnKeyDown(wxKeyEvent & event)
         vec2f screenCoordinates(mMouseInfo.x, mMouseInfo.y);
         vec2f worldCoordinates = mGameController->ScreenToWorld(screenCoordinates);
 
-        /* TODO: fix
-        Physics::Point const * point = mGameController->GetNearestPointAt(screenCoordinates);
-        if (nullptr != point)
+        auto pointIndex = mGameController->GetNearestPointAt(screenCoordinates);
+        if (ElementContainer::NoneElementIndex != pointIndex)
         {
             // TODO: write directly onto window
-            LogMessage("@ ", worldCoordinates.toString(), ": point @ ", point->GetPosition().toString(), "; Light=", point->GetLight(), "; ConnectedComponentId=", point->GetConnectedComponentId());
+            LogMessage("@ ", worldCoordinates.toString(), ": point ", pointIndex);
         }
         else
         {
             // TODO: write directly onto window
             LogMessage("@ ", worldCoordinates.toString(), ": no points");
         }
-        */
     }
 	
 	event.Skip();

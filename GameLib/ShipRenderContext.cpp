@@ -448,69 +448,53 @@ ShipRenderContext::~ShipRenderContext()
 //////////////////////////////////////////////////////////////////////////////////
 
 void ShipRenderContext::UploadPointImmutableGraphicalAttributes(
-    vec3f const * colors,
-    vec2f const * textureCoordinates,
-    size_t pointCount)
+    size_t count,
+    vec3f const * restrict color,
+    vec2f const * restrict textureCoordinates)
 {
-    //
-    // Upload to GPU right away
-    //
-
-    // Bind VBO
+    // Upload colors
     glBindBuffer(GL_ARRAY_BUFFER, *mPointColorVBO);
-
-    // Upload data
-    glBufferData(GL_ARRAY_BUFFER, pointCount * sizeof(vec3f), colors, GL_STATIC_DRAW);
-
-    // Describe color
+    glBufferData(GL_ARRAY_BUFFER, count * sizeof(vec3f), color, GL_STATIC_DRAW);
     glVertexAttribPointer(InputColorPosition, 3, GL_FLOAT, GL_FALSE, sizeof(vec3f), (void*)(0));
     glEnableVertexAttribArray(InputColorPosition);
+
+    if (!!mElementTexture)
+    {
+        // Upload texture coordinates
+        glBindBuffer(GL_ARRAY_BUFFER, *mPointElementTextureCoordinatesVBO);
+        glBufferData(GL_ARRAY_BUFFER, count * sizeof(vec2f), textureCoordinates, GL_STATIC_DRAW);
+        glVertexAttribPointer(InputTextureCoordinatesPosition, 2, GL_FLOAT, GL_FALSE, sizeof(vec2f), (void*)(0));
+        glEnableVertexAttribArray(InputTextureCoordinatesPosition);
+    }    
 
     // Unbind VBO
     glBindBuffer(GL_ARRAY_BUFFER, 0u);
 
-
-    if (!!mElementTexture)
-    {
-        // Bind VBO
-        glBindBuffer(GL_ARRAY_BUFFER, *mPointElementTextureCoordinatesVBO);
-
-        // Upload data
-        glBufferData(GL_ARRAY_BUFFER, pointCount * sizeof(vec2f), textureCoordinates, GL_STATIC_DRAW);
-
-        // Describe texture coordinates
-        glVertexAttribPointer(InputTextureCoordinatesPosition, 2, GL_FLOAT, GL_FALSE, sizeof(vec2f), (void*)(0));
-        glEnableVertexAttribArray(InputTextureCoordinatesPosition);
-
-        // Unbind VBO
-        glBindBuffer(GL_ARRAY_BUFFER, 0u);
-    }    
-
     // Store size (for later assert)
-    mPointCount = pointCount;
+    mPointCount = count;
 }
 
 void ShipRenderContext::UploadPoints(
     size_t count,
-    float const * restrict position,
+    vec2f const * restrict position,
     float const * restrict light,
     float const * restrict water)
 {
     assert(count == mPointCount);
 
-    // Upload position
+    // Upload positions
     glBindBuffer(GL_ARRAY_BUFFER, *mPointPositionVBO);
-    glBufferData(GL_ARRAY_BUFFER, count * 2 * sizeof(float), position, GL_STREAM_DRAW);
-    glVertexAttribPointer(InputPosPosition, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(0));
+    glBufferData(GL_ARRAY_BUFFER, count * sizeof(vec2f), position, GL_STREAM_DRAW);
+    glVertexAttribPointer(InputPosPosition, 2, GL_FLOAT, GL_FALSE, sizeof(vec2f), (void*)(0));
     glEnableVertexAttribArray(InputPosPosition);
 
-    // Upload light
+    // Upload lights
     glBindBuffer(GL_ARRAY_BUFFER, *mPointLightVBO);
     glBufferData(GL_ARRAY_BUFFER, count * sizeof(float), light, GL_STREAM_DRAW);
     glVertexAttribPointer(InputLightPosition, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)(0));
     glEnableVertexAttribArray(InputLightPosition);
 
-    // Upload water
+    // Upload waters
     glBindBuffer(GL_ARRAY_BUFFER, *mPointWaterVBO);
     glBufferData(GL_ARRAY_BUFFER, count * sizeof(float), water, GL_STREAM_DRAW);
     glVertexAttribPointer(InputWaterPosition, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)(0));

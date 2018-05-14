@@ -12,27 +12,6 @@
 #include <algorithm>
 #include <cassert>
 
-namespace /*anonymous*/ {
-
-    void swapf(float & x, float & y)
-    {
-        float temp = x;
-        x = y;
-        y = temp;
-    }
-
-    float medianOf3(float a, float b, float c)
-    {
-        if (a < b)
-            swapf(a, b);
-        if (b < c)
-            swapf(b, c);
-        if (a < b)
-            swapf(a, b);
-        return b;
-    }
-};
-
 namespace Physics {
 
 // W     W    OOO    RRRR     L        DDDD
@@ -117,21 +96,19 @@ ElementContainer::ElementIndex World::GetNearestPointAt(
     float radius) const
 {
     ElementContainer::ElementIndex bestPointIndex = ElementContainer::NoneElementIndex;
-    float bestDistance = std::numeric_limits<float>::max();
+    float bestSquareDistance = std::numeric_limits<float>::max();
 
     for (auto const & ship : mAllShips)
     {
         auto shipBestPointIndex = ship->GetNearestPointIndexAt(targetPos, radius);
         if (ElementContainer::NoneElementIndex != shipBestPointIndex)
         {
-            /* TODO
-            float distance = (shipBestPoint->GetPosition() - targetPos).length();
-            if (distance < bestDistance)
+            float squareDistance = (ship->GetPoints().GetPosition(shipBestPointIndex) - targetPos).squareLength();
+            if (squareDistance < bestSquareDistance)
             {
-                bestPoint = shipBestPoint;
-                bestDistance = distance;
+                bestPointIndex = shipBestPointIndex;
+                bestSquareDistance = squareDistance;
             }
-            */
         }
     }
 

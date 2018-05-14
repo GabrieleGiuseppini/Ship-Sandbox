@@ -108,11 +108,8 @@ private:
         std::vector<PointInfo> & pointInfos,
         std::vector<SpringInfo> & springInfos);
 
-    static void CreatePoints(
-        std::vector<PointInfo> const & pointInfos,
-        Physics::Points & points,
-        ElementRepository<vec3f> & pointColors,
-        ElementRepository<vec2f> & pointTextureCoordinates);
+    static Physics::Points CreatePoints(
+        std::vector<PointInfo> const & pointInfos);
 
     static void CreateShipElementInfos(
         std::unique_ptr<std::unique_ptr<std::optional<ElementContainer::ElementIndex>[]>[]> const & pointIndexMatrix,

@@ -12,7 +12,9 @@ namespace Physics {
 void Points::Add(
     vec2 const & position,
     Material const * material,
-    float buoyancy)
+    float buoyancy,
+    vec3f const & color,
+    vec2f const & textureCoordinates)
 {
     mIsDeletedBuffer.emplace_back(false);
 
@@ -34,6 +36,9 @@ void Points::Add(
 
     mConnectedComponentIdBuffer.emplace_back(0u);
     mCurrentConnectedComponentDetectionStepSequenceNumberBuffer.emplace_back(0u);
+
+    mColorBuffer.emplace_back(color);
+    mTextureCoordinatesBuffer.emplace_back(textureCoordinates);
 }
 
 void Points::Destroy(
@@ -114,14 +119,27 @@ void Points::Breach(
     pointNetwork.ConnectedTriangles.clear();
 }
 
-void Points::UploadMutableGraphicalAttributes(
+void Points::Upload(
     int shipId,
     RenderContext & renderContext) const
 {
+    // Upload immutable attributes, if we haven't uploaded them yet
+    if (!mAreImmutableRenderAttributesUploaded)
+    { 
+        renderContext.UploadShipPointImmutableGraphicalAttributes(
+            shipId,
+            mElementCount,
+            mColorBuffer.data(),
+            mTextureCoordinatesBuffer.data());
+
+        mAreImmutableRenderAttributesUploaded = true;
+    }
+
+    // Upload mutable attributes
     renderContext.UploadShipPoints(
         shipId,  
         mElementCount,
-        reinterpret_cast<float const *>(mPositionBuffer.data()),
+        mPositionBuffer.data(),
         mLightBuffer.data(),
         mWaterBuffer.data());
 }

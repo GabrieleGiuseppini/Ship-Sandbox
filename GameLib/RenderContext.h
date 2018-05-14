@@ -330,22 +330,22 @@ public:
 
     void UploadShipPointImmutableGraphicalAttributes(
         int shipId,
-        vec3f const * colors,
-        vec2f const * textureCoordinates,
-        size_t elementCount)
+        size_t count,
+        vec3f const * restrict color,
+        vec2f const * restrict textureCoordinates)
     {
         assert(shipId < mShips.size());
 
         mShips[shipId]->UploadPointImmutableGraphicalAttributes(
-            colors,
-            textureCoordinates,
-            elementCount);
+            count,
+            color,
+            textureCoordinates);
     }
 
     void UploadShipPoints(
         int shipId,
         size_t count,
-        float const * restrict position,
+        vec2f const * restrict position,
         float const * restrict light,
         float const * restrict water)
     {

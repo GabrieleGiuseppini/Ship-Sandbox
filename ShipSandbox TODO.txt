@@ -1,6 +1,32 @@
 =================================================
 Current perf
 =================================================
+- fps: 26.6/26.8/26.9/27.0 (Samsung: TBD (Krafting)) (Mattia's: TBD (Krafting))
+- GameController::DoStep: 33.21%
+	- Ship::Update: 32.06% (Incl) 0.00% (Excl)
+		- UpdateDynamics: 25.46%
+			- UpdateSpringForces: 18.32%
+			- UpdatePointForces: 3.88%
+			- HandleCollisionsWithSeafloor: 2.30%
+			- Integrate: 0.96%
+		- GravitateWater: 4.54%
+		- BalancePressure: 1.20%
+		- UpdateStrains: 0.83%
+		- LeakWater: 0.02%
+	- DiffuseLight: 1.00%
+	- WaterSurface::Update: 0.12%
+		- sinf: 0.08%
+- MainFrame::RenderGame: 58.78%
+	- Ship::Render: 52.04% (Incl) 0.00% (Excl)
+		- ShipRenderContext::RenderSprings: 30.03%
+		- ShipRenderContext::RenderTriangles: 21.41%
+		- ShipRenderContext::RenderRopes: 0.44%
+	- RenderContext::RenderCloudsEnd: 2.87%
+- EventTickerPanel::PaintNow: 1.99%
+	- DrawText: 1.12%
+	- wxClientDC::cctor: 0.36%
+=================================================
+Prev perf (before point et al destructuring)
 =================================================
 - fps: 17.8/18.1 (Samsung: TBD (Krafting)) (Mattia's: TBD (Krafting))
 - GameController::DoStep: 56.52%
@@ -21,170 +47,13 @@ Current perf
 		- ShipRenderContext::RenderTriangles: 13.24%
 		- ShipRenderContext::RenderRopes: 0.30%
 	- RenderContext::RenderCloudsEnd: 1.69%
-
-=================================================
-Prev perf (before Optimizations & iterations increase)
-=================================================
-- fps: 17.3/17.7 (Samsung: 18.7 (Krafting)) (Mattia's: 13.8 (Krafting))
-- GameController::DoStep: 41.92%
-	- Ship::Update: 41.06%
-		- UpdateDynamics: 26.94%
-			- UpdateSpringForces: 15.02%
-			- UpdatePointForces: 4.77%
-			- Integrate: 4.43%
-			- HandleCollisionsWithSeafloor: 2.72%
-		- BalancePressure: 6.34%
-		- GravitateWater: 6.03%
-		- LeakWater: 0.41%
-	- DiffuseLight: 0.77%
-	- WaterSurface::Update: 0.07%
-- MainFrame::RenderGame: 51.51%
-	- Ship::Render: 47.26% (Incl) 0.49% (Excl)
-		- ShipRenderContext::RenderTriangles: 27.23%
-		- ShipRenderContext::RenderSprings: 19.15%
-		- ShipRenderContext::RenderRopes: 0.33%
 =================================================
 
-- Optimizations:
-	+ FPS: 19.0/19.4/19.7/19.9
-	= Point & Spring Destructuring:
-		+ Main goal: improve cache locality
-		+ Secondary goal: make vectorization-friendly
-		= Replace Point, Spring, Triangle with Points, Springs, Triangles
-			+ Base is ElementContainer
-				+ Defines aliases (ElementCount, ElementIndex) - uint32
-				+ ElementCount GetCount() const
-					- Number of elements
-					- passed at cctor
-			+ They contain N buffers:
-				+ Points: Position, Velocity, Force, MassFactor, Color, Water, IsDeleted ...
-					+ All scalars of a point that are only used for both x and y (e.g. MassFactor) are stored 
-					 (and updated, if any) twice, as vec2f (only MassFactor?)
-					+ All scalars of a point that are used as scalars (e.g. Buoyancy) are stored once
-					+ Test first to see if N buffers make a difference vs 1 larger buffer: 
-						+ 1: Do Position, Velocity, Force, and MassFactors first in single Newtonz buffer
-							+ Get baseline 1:
-								- DoStep: 39.99%
-									- Ship::Update: 39.05%
-										- UpdateDynamics: 27.42%
-											- SpringForces: 20.18%
-											- PointForces: 3.77%
-											- CollisionsWithSeaFloor: 2.19%
-											- Integrate: 1.27%
-										- GravitateWater: 5.70%
-										- BalancePressure: 4.58%
-										- UpdateStrain: 1.03%
-								- Render: 51.69%
-							+ FPS=24.0/24.2/24.4
-						+ 2: Do separate Position, Velocity, Force, and MassFactors 
-							+ Get baseline 2:
-								- DoStep: 39.01%
-									- Ship::Update: 38.01%
-										- UpdateDynamics: 27.44%
-											- SpringForces: 19.97%
-											- PointForces: 3.65%
-											- CollisionsWithSeaFloor: 2.24%
-											- Integrate: 1.57%
-										- GravitateWater: 4.87%
-										- BalancePressure: 4.51%
-										- UpdateStrain: 0.90%
-								- Render: 52.69%
-							+ FPS=24.1/24.3/24.7/25.0
-							+ Make buffer __restrict
-							+ FPS=24.8/24.9/25.1
-					+ If makes sense to explode:
-						+ Also explode ConnectedComponent
-				+ Phase 2: Springs: Points, dynamics coefficients, water coefficients, ...					
-				+ Phase 2: Triangles: Points, Network
-				+ Phase 2: Change all ElementContainer::ElementIndex into ElementIndex
-				+ Structure of buffers:
-					+ For SSE2, need to be simple floats
-					+ For handling, need to be structured
-				+ Buffers are class Buffer
-					+ Need to be mem-aligned
-					+ cctor(size)
-					+ data()/size()/emplace_back()
-					+ uq_ptr
-			+ They expose buffer getters for each buffer (as the structured type, e.g. vec2f *, or PointNetwork *, or float * for lonely scalars)
-				+ e.g. vec2f* GetPositionBuffer()
-				+ When needed also exposed as floats as well (e.g. Position, for Integrate())
-					+ e.g. float* GetPositionBufferAsFloat()
-					+ size math left to caller
-			+ When needed, they expose getters and generally operations on single elements, via 32-bit index argument (aliased as ElementIndex)
-				+ e.g. void Destroy(ElementIndex)
-				+ e.g. float GetMass(ElementIndex)
-			+ Destroy(ElementIndex) takes care of telling ship that element count is dirty
-				+ Phase 3: set directly in Ship at initiation of Destroy chain, whenever we know we destroy something
-					+ Do at Spring::UpdateStrain: returns bool, true if destroyed
-					+ Do at tool's Destroy
-					+ Then get rid of two-phase ship cctor - plain cctor with moved ElementRepo's
-						+ So can also remove move assignment at Points
-			+ Pointers to points are replaced by 32-bit indices
-				+ Funcs that need to follow pointers (e.g. Destroy() and SpringDynamics()) also must take whole containers 
-				+ Phase 2: also pointers to Springs & Triangles
-			+ ShipBuilder creates Points & moves into ship
-				+ Points' ConnectedXYZ are updated at ShipBuilder time
-					+ Remove code from Spring and Triangle and ElectricalElement-Cable-etc. cctors
-			+ Do Ship
-				+ Loop over indices, invoking Points::GetWhatever(index)
-			+ End of Phase 1: FPS=22.0/22.3/22.6
-			+ Phase 1.5: check assembly for:
-				+ 1: loop over indices, invoking Points::GetWhatever(index)
-				+ 2: loop over indices, taking buffers first and then dereferencing buffer with index
-				+ RESULT: IDENTICAL
-				+ Decide whether to keep bunch of GetWhatever(index) (both R and W) vs buffers
-				+ Check also disassembly of index iterator
-			+ End of Phase 1.5: FPS=23.2/23.3/23.4
-			+ To check:
-				+ UpdateDrawForces: see assembly difference for displacement.length() optimization
-					+ NO, actually compiler autonomously saves length for later, and explicit
-					  code looks a bit different
-				+ UpdateSpringForces(): see assembly to check whether point.Force's are updated twice
-					+ YES
-					+ Update force once with sum of forces
-				+ HandleCollisionsWithSeaFloor(): see assembly to check for twice GetPosition()
-					+ YES, read once into xmm4 and re-used later
-			+ End of checks after Phase 1.5: FPS=24.0/24.2/24.4
-			= Containers expose own Upload(RenderContext &)
-				+ Phase 3: direct upload of buffers into GPU via RenderContext
-					+ Nuke ShipRenderContext::mPointBuffer & friends
-				- Phase 3: move texture coordinates and colors into Points, which uploads
-				  at Upload() via own mAreImmutablePropertiesUploaded state
-					- Rename all UploadXYZ() to Upload()
-				  - Nuke Ship::mIsPointCountDirty
-				  - Nuke ElementRepository, as at this moment no one should be using it anymore
-			+ Phase 3: Nuke PointerContainer
-			+ Phase 3: Nuke ShipElement, if it's now only implemented by ElectricalElement
-				+ See if managed to not need to tell Ship as well, see above
-			- Phase 3:
-				- Fix power-of-2 calculation at Buffer::cctor()
-				- Fix World::GetNearestPointIndexAt, by making use of Ship::GetPointPosition(idx)
-				- Also fix its use at MainFrame, by making use of Ship::GetStuff()
-				- Fix all warnings
-		+ Phase 2: Integrate():
-			+ After NewtonzBuffer exploded
-			+ Test 1: use Points.GetWhatever(idx)
-			+ FPS=24.7/24.8/25.0
-			+ Test 2: use __restrict pointers
-				+ Just simple 1-Point-Component loop, compiler makes times four
-				+ Pointers are locally declared as __restrict, and adjusts count (i.e. times 2) and uses
-				  indices in pointers
-				+ Verify assembly
-			+ FPS=24.9/25.1/25.2
-		+ Phase 1:
-			+ Beginning FPS=19.0/19.4/19.7/19.9
-			+ Ending FPS=22.0/22.3/22.6
-		+ Phase 1.5:
-			+ Beginning FPS=22.0/22.3/22.6
-			+ Ending FPS=24.0/24.2/24.4
-		+ Phase 2:
-			+ Beginning FPS=24.0/24.2/24.4
-			+ After exploded Newtonz FPS=24.8/24.9/25.1
-			+ Ending FPS=26.3/26.5
-		= Phase 3:
-			+ Beginning FPS=26.3/26.5
-			+ After cleanup FPS=27.0/27.3/27.4
-			- Ending FPS=
+- Optimizations:	
+	- EventTickerPanel::PaintNow: 1.99%
+		- DrawText: 1.12%
+		- wxClientDC::cctor: 0.36%
+
 	- UpdatePointForces:
 		- Precalculate things that do not depend on position nor velocity
 			- Stored either in buffers (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
@@ -243,7 +112,7 @@ Prev perf (before Optimizations & iterations increase)
 		- Point::TogglePin():
 			- If pinning: set MassFactor to zero, and set velocity to zero
 			- If unpinning: recalc MassFactor (using same helper used at cctor)
-		- ShipRenderContext: draw pinned points (via new Render::Upload, done by Ship in same loop as UploadShipPoint) 
+		- ShipRenderContext: draw pinned points (via new Render::Upload, done by Points::Upload) 
 		  using color ? and texture (centered) with bull's eye
 			- Draw at very end of Render(), after stressed springs
 		- Tool just toggles:
@@ -322,7 +191,11 @@ Prev perf (before Optimizations & iterations increase)
 
 - Sounds:
 	+ Reset sound controller at ResetAndLoadShip()
-	- Water rushing in
+	- Water rushing-in
+		- Continuously-playing sound
+		- Volume time-interpolated off total quantity of water that entered ships during step
+			- Communicated via new event
+			- Volume = -1/(Qw+1) + 1
 
 - Histograms:
 	- class Histogram
@@ -638,8 +511,144 @@ IF WX:
 	+ ShipRendering: upload triangles, ropes, springs only when they change
 		+ Have VBOs per connected component
 	+ FPS: 19.0/19.4/19.7/19.9
-	+ Redo full baseline
-	+ Branch
+	+ Point & Spring Destructuring:
+		+ Starting FPS: 19.0/19.4/19.7/19.9
+		+ Main goal: improve cache locality
+		+ Secondary goal: make vectorization-friendly
+		+ Replace Point, Spring, Triangle with Points, Springs, Triangles
+			+ Base is ElementContainer
+				+ Defines aliases (ElementCount, ElementIndex) - uint32
+				+ ElementCount GetCount() const
+					- Number of elements
+					- passed at cctor
+			+ They contain N buffers:
+				+ Points: Position, Velocity, Force, MassFactor, Color, Water, IsDeleted ...
+					+ All scalars of a point that are only used for both x and y (e.g. MassFactor) are stored 
+					 (and updated, if any) twice, as vec2f (only MassFactor?)
+					+ All scalars of a point that are used as scalars (e.g. Buoyancy) are stored once
+					+ Test first to see if N buffers make a difference vs 1 larger buffer: 
+						+ 1: Do Position, Velocity, Force, and MassFactors first in single Newtonz buffer
+							+ Get baseline 1:
+								- DoStep: 39.99%
+									- Ship::Update: 39.05%
+										- UpdateDynamics: 27.42%
+											- SpringForces: 20.18%
+											- PointForces: 3.77%
+											- CollisionsWithSeaFloor: 2.19%
+											- Integrate: 1.27%
+										- GravitateWater: 5.70%
+										- BalancePressure: 4.58%
+										- UpdateStrain: 1.03%
+								- Render: 51.69%
+							+ FPS=24.0/24.2/24.4
+						+ 2: Do separate Position, Velocity, Force, and MassFactors 
+							+ Get baseline 2:
+								- DoStep: 39.01%
+									- Ship::Update: 38.01%
+										- UpdateDynamics: 27.44%
+											- SpringForces: 19.97%
+											- PointForces: 3.65%
+											- CollisionsWithSeaFloor: 2.24%
+											- Integrate: 1.57%
+										- GravitateWater: 4.87%
+										- BalancePressure: 4.51%
+										- UpdateStrain: 0.90%
+								- Render: 52.69%
+							+ FPS=24.1/24.3/24.7/25.0
+							+ Make buffer __restrict
+							+ FPS=24.8/24.9/25.1
+					+ If makes sense to explode:
+						+ Also explode ConnectedComponent
+				+ Phase 2: Springs: Points, dynamics coefficients, water coefficients, ...					
+				+ Phase 2: Triangles: Points, Network
+				+ Phase 2: Change all ElementContainer::ElementIndex into ElementIndex
+				+ Structure of buffers:
+					+ For SSE2, need to be simple floats
+					+ For handling, need to be structured
+				+ Buffers are class Buffer
+					+ Need to be mem-aligned
+					+ cctor(size)
+					+ data()/size()/emplace_back()
+					+ uq_ptr
+			+ They expose buffer getters for each buffer (as the structured type, e.g. vec2f *, or PointNetwork *, or float * for lonely scalars)
+				+ e.g. vec2f* GetPositionBuffer()
+				+ When needed also exposed as floats as well (e.g. Position, for Integrate())
+					+ e.g. float* GetPositionBufferAsFloat()
+					+ size math left to caller
+			+ When needed, they expose getters and generally operations on single elements, via 32-bit index argument (aliased as ElementIndex)
+				+ e.g. void Destroy(ElementIndex)
+				+ e.g. float GetMass(ElementIndex)
+			+ Destroy(ElementIndex) takes care of telling ship that element count is dirty
+				+ Phase 3: set directly in Ship at initiation of Destroy chain, whenever we know we destroy something
+					+ Do at Spring::UpdateStrain: returns bool, true if destroyed
+					+ Do at tool's Destroy
+					+ Then get rid of two-phase ship cctor - plain cctor with moved ElementRepo's
+						+ So can also remove move assignment at Points
+			+ Pointers to points are replaced by 32-bit indices
+				+ Funcs that need to follow pointers (e.g. Destroy() and SpringDynamics()) also must take whole containers 
+				+ Phase 2: also pointers to Springs & Triangles
+			+ ShipBuilder creates Points & moves into ship
+				+ Points' ConnectedXYZ are updated at ShipBuilder time
+					+ Remove code from Spring and Triangle and ElectricalElement-Cable-etc. cctors
+			+ Do Ship
+				+ Loop over indices, invoking Points::GetWhatever(index)
+			+ End of Phase 1: FPS=22.0/22.3/22.6
+			+ Phase 1.5: check assembly for:
+				+ 1: loop over indices, invoking Points::GetWhatever(index)
+				+ 2: loop over indices, taking buffers first and then dereferencing buffer with index
+				+ RESULT: IDENTICAL
+				+ Decide whether to keep bunch of GetWhatever(index) (both R and W) vs buffers
+				+ Check also disassembly of index iterator
+			+ End of Phase 1.5: FPS=23.2/23.3/23.4
+			+ To check:
+				+ UpdateDrawForces: see assembly difference for displacement.length() optimization
+					+ NO, actually compiler autonomously saves length for later, and explicit
+					  code looks a bit different
+				+ UpdateSpringForces(): see assembly to check whether point.Force's are updated twice
+					+ YES
+					+ Update force once with sum of forces
+				+ HandleCollisionsWithSeaFloor(): see assembly to check for twice GetPosition()
+					+ YES, read once into xmm4 and re-used later
+			+ End of checks after Phase 1.5: FPS=24.0/24.2/24.4
+			+ Containers expose own Upload(RenderContext &)
+				+ Phase 3: direct upload of buffers into GPU via RenderContext
+					+ Nuke ShipRenderContext::mPointBuffer & friends
+				+ Phase 3: move texture coordinates and colors into Points, which uploads
+				  at Upload() via own mAreImmutablePropertiesUploaded state
+					+ Nuke Ship::mIsPointCountDirty
+					+ Nuke ElementRepository, as at this moment no one should be using it anymore
+			+ Phase 3: Nuke PointerContainer
+			+ Phase 3: Nuke ShipElement, if it's now only implemented by ElectricalElement
+				+ See if managed to not need to tell Ship as well, see above
+			+ Phase 3:
+				+ Fix power-of-2 calculation at Buffer::cctor()
+				+ Fix World::GetNearestPointIndexAt, by making use of Ship::GetPointPosition(idx)
+					+ See square root optimization, here and @ Destroy()
+				+ Also fix its use at MainFrame, by making use of Ship::GetStuff()
+				+ Fix all warnings
+		+ Phase 2: Integrate():
+			+ After NewtonzBuffer exploded
+			+ Test 1: use Points.GetWhatever(idx)
+			+ FPS=24.7/24.8/25.0
+			+ Test 2: use __restrict pointers
+				+ Just simple 1-Point-Component loop, compiler makes times four
+				+ Pointers are locally declared as __restrict, and adjusts count (i.e. times 2) and uses
+				  indices in pointers
+				+ Verify assembly
+			+ FPS=24.9/25.1/25.2
+		+ Phase 1:
+			+ Beginning FPS=19.0/19.4/19.7/19.9
+			+ Ending FPS=22.0/22.3/22.6
+		+ Phase 1.5:
+			+ Beginning FPS=22.0/22.3/22.6
+			+ Ending FPS=24.0/24.2/24.4
+		+ Phase 2:
+			+ Beginning FPS=24.0/24.2/24.4
+			+ After exploded Newtonz FPS=24.8/24.9/25.1
+			+ Ending FPS=26.3/26.5
+		+ Phase 3:
+			+ Beginning FPS=26.3/26.5
+			+ Ending FPS=26.6/26.8/26.9/27.0
 
 
 + Fix 4 BPP images

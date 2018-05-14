@@ -32,8 +32,6 @@ Ship::Ship(
     int id,
     World * parentWorld,
     Points && points,
-    ElementRepository<vec3f> && allPointColors,
-    ElementRepository<vec2f> && allPointTextureCoordinates,
     Springs && springs,
     Triangles && triangles,
     ElectricalElements && electricalElements,
@@ -41,13 +39,10 @@ Ship::Ship(
     : mId(id)
     , mParentWorld(parentWorld)    
     , mPoints(std::move(points))
-    , mAllPointColors(std::move(allPointColors))
-    , mAllPointTextureCoordinates(std::move(allPointTextureCoordinates))
     , mSprings(std::move(springs))
     , mTriangles(std::move(triangles))
     , mElectricalElements(std::move(electricalElements))
     , mConnectedComponentSizes()
-    , mIsPointCountDirty(true)
     , mAreElementsDirty(true)
     , mIsSinking(false)
     , mTotalWater(0.0)
@@ -64,12 +59,14 @@ void Ship::DestroyAt(
     vec2 const & targetPos, 
     float radius)
 {
+    float const squareRadius = radius * radius;
+
     // Destroy all points within the radius
     for (auto pointIndex : mPoints)
     {
         if (!mPoints.IsDeleted(pointIndex))
         {
-            if ((mPoints.GetPosition(pointIndex) - targetPos).length() < radius)
+            if ((mPoints.GetPosition(pointIndex) - targetPos).squareLength() < squareRadius)
             {
                 //
                 // This point must be deleted
@@ -108,18 +105,20 @@ ElementContainer::ElementIndex Ship::GetNearestPointIndexAt(
     vec2 const & targetPos, 
     float radius) const
 {
+    float const squareRadius = radius * radius;
+
     ElementContainer::ElementIndex bestPointIndex = ElementContainer::NoneElementIndex;
-    float bestDistance = std::numeric_limits<float>::max();
+    float bestSquareDistance = std::numeric_limits<float>::max();
 
     for (auto pointIndex : mPoints)
     {
         if (!mPoints.IsDeleted(pointIndex))
         {
-            float distance = (mPoints.GetPosition(pointIndex) - targetPos).length();
-            if (distance < radius && distance < bestDistance)
+            float squareDistance = (mPoints.GetPosition(pointIndex) - targetPos).squareLength();
+            if (squareDistance < squareRadius && squareDistance < bestSquareDistance)
             {
                 bestPointIndex = pointIndex;
-                bestDistance = distance;
+                bestSquareDistance = squareDistance;
             }
         }
     }
@@ -195,27 +194,11 @@ void Ship::Render(
     GameParameters const & /*gameParameters*/,
     RenderContext & renderContext) const
 {
-    if (mIsPointCountDirty)
-    {
-        //
-        // Upload point colors and texture coordinates
-        //
-
-        renderContext.UploadShipPointImmutableGraphicalAttributes(
-            mId,
-            mAllPointColors.data(), 
-            mAllPointTextureCoordinates.data(),
-            mAllPointColors.size());
-
-        mIsPointCountDirty = false;
-    }
-
-
     //
-    // Upload points's mutable graphical attributes
+    // Upload points's mutable attributes
     //
 
-    mPoints.UploadMutableGraphicalAttributes(
+    mPoints.Upload(
         mId,
         renderContext);
 

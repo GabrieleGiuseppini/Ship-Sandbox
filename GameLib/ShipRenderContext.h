@@ -35,13 +35,13 @@ public:
     //
 
     void UploadPointImmutableGraphicalAttributes(
-        vec3f const * colors, 
-        vec2f const * textureCoordinates,
-        size_t pointCount);
+        size_t count,
+        vec3f const * restrict color,
+        vec2f const * restrict textureCoordinates);
 
     void UploadPoints(
         size_t count,
-        float const * restrict position,
+        vec2f const * restrict position,
         float const * restrict light,
         float const * restrict water);
 

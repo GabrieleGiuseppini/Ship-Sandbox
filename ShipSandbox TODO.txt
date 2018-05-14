@@ -1,30 +1,28 @@
 =================================================
 Current perf
 =================================================
-- fps: 26.6/26.8/26.9/27.0 (Samsung: TBD (Krafting)) (Mattia's: TBD (Krafting))
-- GameController::DoStep: 33.21%
-	- Ship::Update: 32.06% (Incl) 0.00% (Excl)
-		- UpdateDynamics: 25.46%
-			- UpdateSpringForces: 18.32%
-			- UpdatePointForces: 3.88%
-			- HandleCollisionsWithSeafloor: 2.30%
-			- Integrate: 0.96%
-		- GravitateWater: 4.54%
-		- BalancePressure: 1.20%
-		- UpdateStrains: 0.83%
+- fps: 27.1 (Samsung: TBD (Krafting)) (Mattia's: TBD (Krafting))
+- GameController::DoStep: 33.80%
+	- Ship::Update: 32.75% (Incl) 0.00% (Excl)
+		- UpdateDynamics: 25.79%
+			- UpdateSpringForces: 18.47%
+			- UpdatePointForces: 4.00%
+			- HandleCollisionsWithSeafloor: 2.35%
+			- Integrate: 0.97%
+		- GravitateWater: 4.89%
+		- BalancePressure: 1.23%
+		- UpdateStrains: 0.82%
 		- LeakWater: 0.02%
-	- DiffuseLight: 1.00%
-	- WaterSurface::Update: 0.12%
-		- sinf: 0.08%
-- MainFrame::RenderGame: 58.78%
-	- Ship::Render: 52.04% (Incl) 0.00% (Excl)
-		- ShipRenderContext::RenderSprings: 30.03%
-		- ShipRenderContext::RenderTriangles: 21.41%
-		- ShipRenderContext::RenderRopes: 0.44%
-	- RenderContext::RenderCloudsEnd: 2.87%
-- EventTickerPanel::PaintNow: 1.99%
-	- DrawText: 1.12%
-	- wxClientDC::cctor: 0.36%
+	- DiffuseLight: 0.89%
+	- WaterSurface::Update: 0.14%
+		- sinf: 0.10%
+- MainFrame::RenderGame: 59.44%
+	- Ship::Render: 52.65% (Incl) 0.00% (Excl)
+		- ShipRenderContext::RenderSprings: 30.39%
+		- ShipRenderContext::RenderTriangles: 21.66%
+		- ShipRenderContext::RenderRopes: 0.42%
+		- Points::Upload: 0.14%
+	- RenderContext::RenderCloudsEnd: 2.85%
 =================================================
 Prev perf (before point et al destructuring)
 =================================================
@@ -50,10 +48,6 @@ Prev perf (before point et al destructuring)
 =================================================
 
 - Optimizations:	
-	- EventTickerPanel::PaintNow: 1.99%
-		- DrawText: 1.12%
-		- wxClientDC::cctor: 0.36%
-
 	- UpdatePointForces:
 		- Precalculate things that do not depend on position nor velocity
 			- Stored either in buffers (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
@@ -1314,6 +1308,7 @@ IF WX:
 		+ fast_inv_sqrt: 15.2/15.3/15.3
 		+ 1/sqrt: 15.3/15.3/15.3
 		+ Nuke'em if ok
+	+ EventTickerPanel is stealing 1.99% even when not shown
 
 + Render optimization: only upload spring elements, triangle elements when they're dirty (deletion occurred)
 	+ Get perf analysis first:

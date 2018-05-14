@@ -46,6 +46,8 @@ After cleaning up the code a bit and making it CMake- and VS2017-friendly, the i
 Here's a list of the major changes I've been doing:
 - Reverted Luke's code to use wxWidgets, as GLFW was too bare-bones for my liking (can't really make dialogs and common UI controls)
 - Upgraded to C++17
+- Completely rewritten data structures to maximize data locality
+- Rewritten the physics layer as force-based rather than position-based
 - Restructured interactions between the UI and the game, splitting settings between physics-related settings and render-related settings
 - Rearchitected lifetime management of elements - originally elements were removed from vectors while these are being iterated, and the entire "points-to" graph was a tad too complex 
 - Completely re-written the OpenGL interactions, targeting 2.0 "core profile" (i.e. no compatibility API) with custom shaders and adding texture mapping
@@ -59,9 +61,8 @@ Here's a list of the major changes I've been doing:
 	- Textures are mipmapped with box filtering
 - Added more realistic ropes, synthesised between two endpoints
 - Removed original parallelism of spring relaxation, as it was inherently wrong (there were race conditions in updating points caught in the boundary between parallel batches)
-- Made the data a bit more cache-friendly
 
-After these changes, the fps rate on my laptop increased from 7fps to 16fps.
+After these changes, the fps rate on my laptop increased from 7fps to 27fps!
 
 The game looks like this now:
 <img src="https://i.imgur.com/c8fTsgY.png">
@@ -69,8 +70,6 @@ The game looks like this now:
 
 
 ..and here's a rought list of the major remaining changes I want to do:
-- Rewrite the physics as force-based rather than position-based
-- Rewrite data structures to maximize cache-friendliness
 - Rewrite algorithms to favor vectorized code
 - Add directional water drag forces, to simulate underwater gliding 
 	- Requires maintaining convex hull and ship perimeter normals

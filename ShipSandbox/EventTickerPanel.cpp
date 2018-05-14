@@ -67,7 +67,11 @@ void EventTickerPanel::Update()
         }
     }
 
-    PaintNow();
+    // Rendering costs ~2%, hence let's do it only when needed!
+    if (this->IsShown())
+    {
+        Refresh();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -171,20 +175,6 @@ void EventTickerPanel::AppendFutureTickerText(std::string const & text)
     }
 
     mFutureTickerText.append(text);
-}
-
-void EventTickerPanel::PaintNow()
-{
-    wxClientDC dc(this);
-
-    if (!mBufferedDCBitmap || mBufferedDCBitmap->GetSize() != this->GetSize())
-    {
-        mBufferedDCBitmap = std::make_unique<wxBitmap>(this->GetSize());
-    }
-
-    wxBufferedDC bufDc(&dc, *mBufferedDCBitmap);
-
-    Render(bufDc);
 }
 
 void EventTickerPanel::Render(wxDC & dc)

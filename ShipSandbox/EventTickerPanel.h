@@ -55,7 +55,6 @@ private:
     void OnEraseBackground(wxPaintEvent & event);
 
     void AppendFutureTickerText(std::string const & text);
-    void PaintNow();
     void Render(wxDC& dc);
 
 private:

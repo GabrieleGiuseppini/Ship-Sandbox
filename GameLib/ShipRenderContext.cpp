@@ -33,14 +33,17 @@ ShipRenderContext::ShipRenderContext(
     , mElementTextureShaderAmbientLightIntensityParameter(0)
     , mElementStressedSpringShaderProgram(0)
     , mElementStressedSpringShaderOrthoMatrixParameter(0)
+    , mElementPinnedPointShaderProgram(0)
+    , mElementPinnedPointShaderOrthoMatrixParameter(0)
+    , mElementPinnedPointShaderAmbientLightIntensityParameter(0)
     , mConnectedComponents()
+    , mPinnedPointElementBuffer()
+    , mPinnedPointVBO()
+    // Texture
     , mElementTexture()
     , mElementStressedSpringTexture()
     , mElementPinnedPointTexture(pinnedPointTexture)
     , mElementPinnedPointTextureSize(pinnedPointTextureSize)
-    , mElementPinnedPointShaderProgram(0)
-    , mElementPinnedPointShaderOrthoMatrixParameter(0)
-    , mElementPinnedPointShaderAmbientLightIntensityParameter(0)
     // Lamps
     , mLampBuffers()
 {
@@ -127,10 +130,10 @@ ShipRenderContext::ShipRenderContext(
     GameOpenGL::CompileShader(elementColorFragmentShaderSource, GL_FRAGMENT_SHADER, mElementColorShaderProgram);
 
     // Bind attribute locations
-    glBindAttribLocation(*mElementColorShaderProgram, InputPointPosPosition, "inputPos");
-    glBindAttribLocation(*mElementColorShaderProgram, InputPointLightPosition, "inputLight");
-    glBindAttribLocation(*mElementColorShaderProgram, InputPointWaterPosition, "inputWater");
-    glBindAttribLocation(*mElementColorShaderProgram, InputPointColorPosition, "inputCol");
+    glBindAttribLocation(*mElementColorShaderProgram, PointPosVertexAttribute, "inputPos");
+    glBindAttribLocation(*mElementColorShaderProgram, PointLightVertexAttribute, "inputLight");
+    glBindAttribLocation(*mElementColorShaderProgram, PointWaterVertexAttribute, "inputWater");
+    glBindAttribLocation(*mElementColorShaderProgram, PointColorVertexAttribute, "inputCol");
 
     // Link
     GameOpenGL::LinkShaderProgram(mElementColorShaderProgram, "Ship Color Elements");
@@ -192,8 +195,8 @@ ShipRenderContext::ShipRenderContext(
     GameOpenGL::CompileShader(elementRopeFragmentShaderSource, GL_FRAGMENT_SHADER, mElementRopeShaderProgram);
 
     // Bind attribute locations
-    glBindAttribLocation(*mElementRopeShaderProgram, InputPointPosPosition, "inputPos");
-    glBindAttribLocation(*mElementRopeShaderProgram, InputPointLightPosition, "inputLight");
+    glBindAttribLocation(*mElementRopeShaderProgram, PointPosVertexAttribute, "inputPos");
+    glBindAttribLocation(*mElementRopeShaderProgram, PointLightVertexAttribute, "inputLight");
 
     // Link
     GameOpenGL::LinkShaderProgram(mElementRopeShaderProgram, "Ship Rope Elements");
@@ -286,10 +289,10 @@ ShipRenderContext::ShipRenderContext(
     GameOpenGL::CompileShader(elementTextureFragmentShaderSource, GL_FRAGMENT_SHADER, mElementTextureShaderProgram);
 
     // Bind attribute locations
-    glBindAttribLocation(*mElementTextureShaderProgram, InputPointPosPosition, "inputPos");
-    glBindAttribLocation(*mElementTextureShaderProgram, InputPointLightPosition, "inputLight");
-    glBindAttribLocation(*mElementTextureShaderProgram, InputPointWaterPosition, "inputWater");
-    glBindAttribLocation(*mElementTextureShaderProgram, InputPointTextureCoordinatesPosition, "inputTextureCoords");
+    glBindAttribLocation(*mElementTextureShaderProgram, PointPosVertexAttribute, "inputPos");
+    glBindAttribLocation(*mElementTextureShaderProgram, PointLightVertexAttribute, "inputLight");
+    glBindAttribLocation(*mElementTextureShaderProgram, PointWaterVertexAttribute, "inputWater");
+    glBindAttribLocation(*mElementTextureShaderProgram, PointTextureCoordinatesVertexAttribute, "inputTextureCoords");
 
     // Link
     GameOpenGL::LinkShaderProgram(mElementTextureShaderProgram, "Ship Texture Elements");
@@ -470,7 +473,7 @@ ShipRenderContext::ShipRenderContext(
 
         void main()
         {
-            vertexTextureCoords = inputPos; 
+            vertexTextureCoords = inputTextureCoords; 
             gl_Position = paramOrthoMatrix * vec4(inputPos.xy, -1.0, 1.0);
         }
     )";
@@ -497,8 +500,8 @@ ShipRenderContext::ShipRenderContext(
     GameOpenGL::CompileShader(elementPinnedPointFragmentShaderSource, GL_FRAGMENT_SHADER, mElementPinnedPointShaderProgram);
 
     // Bind attribute locations
-    glBindAttribLocation(*mElementPinnedPointShaderProgram, InputPinnedPointPosPosition, "inputPos");
-    glBindAttribLocation(*mElementPinnedPointShaderProgram, InputPinnedPointTextureCoordinatesPosition, "inputTextureCoords");
+    glBindAttribLocation(*mElementPinnedPointShaderProgram, PinnedPointPosVertexAttribute, "inputPos");
+    glBindAttribLocation(*mElementPinnedPointShaderProgram, PinnedPointTextureCoordinatesVertexAttribute, "inputTextureCoords");
 
     // Link
     GameOpenGL::LinkShaderProgram(mElementPinnedPointShaderProgram, "Pinned Point");
@@ -506,6 +509,23 @@ ShipRenderContext::ShipRenderContext(
     // Get uniform locations
     mElementPinnedPointShaderOrthoMatrixParameter = GameOpenGL::GetParameterLocation(mElementPinnedPointShaderProgram, "paramOrthoMatrix");
     mElementPinnedPointShaderAmbientLightIntensityParameter = GameOpenGL::GetParameterLocation(mElementPinnedPointShaderProgram, "paramAmbientLightIntensity");
+
+    // Create VBO
+    GLuint pinnedPointVBO;
+    glGenBuffers(1, &pinnedPointVBO);
+    mPinnedPointVBO = pinnedPointVBO;
+
+    // Bind VBO
+    glBindBuffer(GL_ARRAY_BUFFER, *mPinnedPointVBO);
+
+    // Describe buffer
+    glVertexAttribPointer(PinnedPointPosVertexAttribute, 2, GL_FLOAT, GL_FALSE, (2 + 2) * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(PinnedPointPosVertexAttribute);
+    glVertexAttribPointer(PinnedPointTextureCoordinatesVertexAttribute, 2, GL_FLOAT, GL_FALSE, (2 + 2) * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(PinnedPointTextureCoordinatesVertexAttribute);
+
+    // Unbind VBO
+    glBindBuffer(GL_ARRAY_BUFFER, 0u);
 }
 
 ShipRenderContext::~ShipRenderContext()
@@ -522,16 +542,16 @@ void ShipRenderContext::UploadPointImmutableGraphicalAttributes(
     // Upload colors
     glBindBuffer(GL_ARRAY_BUFFER, *mPointColorVBO);
     glBufferData(GL_ARRAY_BUFFER, count * sizeof(vec3f), color, GL_STATIC_DRAW);
-    glVertexAttribPointer(InputPointColorPosition, 3, GL_FLOAT, GL_FALSE, sizeof(vec3f), (void*)(0));
-    glEnableVertexAttribArray(InputPointColorPosition);
+    glVertexAttribPointer(PointColorVertexAttribute, 3, GL_FLOAT, GL_FALSE, sizeof(vec3f), (void*)(0));
+    glEnableVertexAttribArray(PointColorVertexAttribute);
 
     if (!!mElementTexture)
     {
         // Upload texture coordinates
         glBindBuffer(GL_ARRAY_BUFFER, *mPointElementTextureCoordinatesVBO);
         glBufferData(GL_ARRAY_BUFFER, count * sizeof(vec2f), textureCoordinates, GL_STATIC_DRAW);
-        glVertexAttribPointer(InputPointTextureCoordinatesPosition, 2, GL_FLOAT, GL_FALSE, sizeof(vec2f), (void*)(0));
-        glEnableVertexAttribArray(InputPointTextureCoordinatesPosition);
+        glVertexAttribPointer(PointTextureCoordinatesVertexAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(vec2f), (void*)(0));
+        glEnableVertexAttribArray(PointTextureCoordinatesVertexAttribute);
     }    
 
     // Unbind VBO
@@ -552,20 +572,20 @@ void ShipRenderContext::UploadPoints(
     // Upload positions
     glBindBuffer(GL_ARRAY_BUFFER, *mPointPositionVBO);
     glBufferData(GL_ARRAY_BUFFER, count * sizeof(vec2f), position, GL_STREAM_DRAW);
-    glVertexAttribPointer(InputPointPosPosition, 2, GL_FLOAT, GL_FALSE, sizeof(vec2f), (void*)(0));
-    glEnableVertexAttribArray(InputPointPosPosition);
+    glVertexAttribPointer(PointPosVertexAttribute, 2, GL_FLOAT, GL_FALSE, sizeof(vec2f), (void*)(0));
+    glEnableVertexAttribArray(PointPosVertexAttribute);
 
     // Upload lights
     glBindBuffer(GL_ARRAY_BUFFER, *mPointLightVBO);
     glBufferData(GL_ARRAY_BUFFER, count * sizeof(float), light, GL_STREAM_DRAW);
-    glVertexAttribPointer(InputPointLightPosition, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)(0));
-    glEnableVertexAttribArray(InputPointLightPosition);
+    glVertexAttribPointer(PointLightVertexAttribute, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)(0));
+    glEnableVertexAttribArray(PointLightVertexAttribute);
 
     // Upload waters
     glBindBuffer(GL_ARRAY_BUFFER, *mPointWaterVBO);
     glBufferData(GL_ARRAY_BUFFER, count * sizeof(float), water, GL_STREAM_DRAW);
-    glVertexAttribPointer(InputPointWaterPosition, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)(0));
-    glEnableVertexAttribArray(InputPointWaterPosition);
+    glVertexAttribPointer(PointWaterVertexAttribute, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)(0));
+    glEnableVertexAttribArray(PointWaterVertexAttribute);
 
     // Unbind VBO
     glBindBuffer(GL_ARRAY_BUFFER, 0u);
@@ -693,23 +713,12 @@ void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & con
         // Prepare pinned point elements
         //
 
-        size_t maxConnectedComponentPinnedPoints = connectedComponentsMaxSizes[c];
-        if (mConnectedComponents[c].pinnedPointElementMaxCount != maxConnectedComponentPinnedPoints)
-        {
-            // A change in the max size of this connected component
-            mConnectedComponents[c].pinnedPointElementBuffer.reset();
-            mConnectedComponents[c].pinnedPointElementBuffer.reset(new PinnedPointElement[maxConnectedComponentPinnedPoints]);
-            mConnectedComponents[c].pinnedPointElementMaxCount = maxConnectedComponentPinnedPoints;
-        }
-
+        mConnectedComponents[c].pinnedPointElementOffset = 0;
         mConnectedComponents[c].pinnedPointElementCount = 0;
-
-        if (!mConnectedComponents[c].pinnedPointElementVBO)
-        {
-            glGenBuffers(1, &elementVBO);
-            mConnectedComponents[c].pinnedPointElementVBO = elementVBO;
-        }
     }
+
+    // Clear pinned point buffer, as it'll be re-uploaded soon
+    mPinnedPointElementBuffer.clear();
 }
 
 void ShipRenderContext::UploadElementsEnd()
@@ -762,11 +771,15 @@ void ShipRenderContext::UploadElementStressedSpringsEnd()
 
 void ShipRenderContext::UploadElementPinnedPointsStart()
 {
-    for (size_t c = 0; c < mConnectedComponents.size(); ++c)
+    // Clear per-connected component metadata
+    for (auto c = 0; c < mConnectedComponents.size(); ++c)
     {
-        // Zero-out count of stressed springs
+        mConnectedComponents[c].pinnedPointElementOffset = 0;
         mConnectedComponents[c].pinnedPointElementCount = 0;
     }
+
+    // Clear pinned point buffer
+    mPinnedPointElementBuffer.clear();
 }
 
 void ShipRenderContext::UploadElementPinnedPointsEnd()
@@ -775,11 +788,8 @@ void ShipRenderContext::UploadElementPinnedPointsEnd()
     // Upload pinned points
     //
 
-    for (size_t c = 0; c < mConnectedComponents.size(); ++c)
-    {     
-        glBindBuffer(GL_ARRAY_BUFFER, *(mConnectedComponents[c].pinnedPointElementVBO));
-        glBufferData(GL_ARRAY_BUFFER, mConnectedComponents[c].pinnedPointElementCount * sizeof(PinnedPointElement), mConnectedComponents[c].pinnedPointElementBuffer.get(), GL_STATIC_DRAW);
-    }
+    glBindBuffer(GL_ARRAY_BUFFER, *mPinnedPointVBO);
+    glBufferData(GL_ARRAY_BUFFER, mPinnedPointElementBuffer.size() * sizeof(PinnedPointElement), mPinnedPointElementBuffer.data(), GL_STATIC_DRAW);
 }
 
 void ShipRenderContext::UploadLampsStart(size_t connectedComponents)
@@ -1104,18 +1114,12 @@ void ShipRenderContext::RenderPinnedPointElements(
     glBindTexture(GL_TEXTURE_2D, mElementPinnedPointTexture);
 
     // Bind VBO
-    glBindBuffer(GL_ARRAY_BUFFER, *connectedComponent.pinnedPointElementVBO);
-
-    // Describe buffers
-    glVertexAttribPointer(InputPinnedPointPosPosition, 2, GL_FLOAT, GL_FALSE, (2 + 2) * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(InputPinnedPointPosPosition);
-    glVertexAttribPointer(InputPinnedPointTextureCoordinatesPosition, 2, GL_FLOAT, GL_FALSE, (2 + 2) * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(InputPinnedPointTextureCoordinatesPosition);
+    glBindBuffer(GL_ARRAY_BUFFER, *mPinnedPointVBO);
 
     // Draw
     for (size_t c = 0; c < connectedComponent.pinnedPointElementCount; ++c)
     {
-        glDrawArrays(GL_TRIANGLE_STRIP, static_cast<GLint>(4 * c), 4);
+        glDrawArrays(GL_TRIANGLE_STRIP, static_cast<GLint>(4 * (connectedComponent.pinnedPointElementOffset + c)), 4);
     }
 
     // Unbind texture

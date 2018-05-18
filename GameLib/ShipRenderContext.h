@@ -162,40 +162,49 @@ public:
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
         assert(connectedComponentIndex < mConnectedComponents.size());
-        assert(mConnectedComponents[connectedComponentIndex].pinnedPointElementCount + 1u <= mConnectedComponents[connectedComponentIndex].pinnedPointElementMaxCount);
 
-        PinnedPointElement * const pinnedPointElement = &(mConnectedComponents[connectedComponentIndex].pinnedPointElementBuffer[mConnectedComponents[connectedComponentIndex].pinnedPointElementCount]);
+        PinnedPointElement & pinnedPointElement = mPinnedPointElementBuffer.emplace_back();
 
         // World size that the texture should be scaled to
-        static constexpr float textureTileW = 4.0f;
-        static constexpr float textureTileH = 4.0f;
+        static constexpr float textureTileW = 6.0f;
+        static constexpr float textureTileH = 6.0f;
         
         float leftX = pinnedPointX - textureTileW / 2.0f;
         float rightX = pinnedPointX + textureTileW / 2.0f;
         float topY = pinnedPointY - textureTileH / 2.0f;
         float bottomY = pinnedPointY + textureTileH / 2.0f;
 
-        pinnedPointElement->xTopLeft = leftX;
-        pinnedPointElement->yTopLeft = topY;
-        pinnedPointElement->textureXTopLeft = 0.0f;
-        pinnedPointElement->textureYTopLeft = 0.0f;
+        pinnedPointElement.xTopLeft = leftX;
+        pinnedPointElement.yTopLeft = topY;
+        pinnedPointElement.textureXTopLeft = 0.0f;
+        pinnedPointElement.textureYTopLeft = 0.0f;
 
-        pinnedPointElement->xBottomLeft = leftX;
-        pinnedPointElement->yBottomLeft = bottomY;
-        pinnedPointElement->textureXBottomLeft = 0.0f;
-        pinnedPointElement->textureYBottomLeft = 1.0f;
+        pinnedPointElement.xBottomLeft = leftX;
+        pinnedPointElement.yBottomLeft = bottomY;
+        pinnedPointElement.textureXBottomLeft = 0.0f;
+        pinnedPointElement.textureYBottomLeft = 1.0f;
 
-        pinnedPointElement->xTopRight = rightX;
-        pinnedPointElement->yTopRight = topY;
-        pinnedPointElement->textureXTopRight = 1.0f;
-        pinnedPointElement->textureYTopRight = 0.0f;
+        pinnedPointElement.xTopRight = rightX;
+        pinnedPointElement.yTopRight = topY;
+        pinnedPointElement.textureXTopRight = 1.0f;
+        pinnedPointElement.textureYTopRight = 0.0f;
 
-        pinnedPointElement->xBottomRight = rightX;
-        pinnedPointElement->yBottomRight = bottomY;
-        pinnedPointElement->textureXBottomRight = 1.0f;
-        pinnedPointElement->textureYBottomRight = 1.0f;
+        pinnedPointElement.xBottomRight = rightX;
+        pinnedPointElement.yBottomRight = bottomY;
+        pinnedPointElement.textureXBottomRight = 1.0f;
+        pinnedPointElement.textureYBottomRight = 1.0f;
+        
+
+        //
+        // Adjust connected components
+        //
 
         ++(mConnectedComponents[connectedComponentIndex].pinnedPointElementCount);
+
+        for (auto c = connectedComponentIndex + 1; c < mConnectedComponents.size(); ++c)
+        {
+            ++(mConnectedComponents[c].pinnedPointElementOffset);
+        }        
     }
 
     void UploadElementPinnedPointsEnd();
@@ -276,6 +285,17 @@ private:
 
 private:
 
+    // Vertex attribute indices
+    static constexpr GLuint PointPosVertexAttribute = 0;
+    static constexpr GLuint PointLightVertexAttribute = 1;
+    static constexpr GLuint PointWaterVertexAttribute = 2;
+    static constexpr GLuint PointColorVertexAttribute = 3;
+    static constexpr GLuint PointTextureCoordinatesVertexAttribute = 4;
+    static constexpr GLuint PinnedPointPosVertexAttribute = 5;
+    static constexpr GLuint PinnedPointTextureCoordinatesVertexAttribute = 6;
+
+private:
+
     //
     // Points
     //
@@ -288,15 +308,6 @@ private:
     GameOpenGLVBO mPointColorVBO;
     GameOpenGLVBO mPointElementTextureCoordinatesVBO;
     
-    static constexpr GLuint InputPointPosPosition = 0;
-    static constexpr GLuint InputPointLightPosition = 1;
-    static constexpr GLuint InputPointWaterPosition = 2;
-    static constexpr GLuint InputPointColorPosition = 3;
-    static constexpr GLuint InputPointTextureCoordinatesPosition = 4;
-    static constexpr GLuint InputPinnedPointPosPosition = 5;
-    static constexpr GLuint InputPinnedPointTextureCoordinatesPosition = 6;
-
-
     //
     // Elements (points, springs, ropes, triangles, stressed springs, pinned points)
     //
@@ -385,9 +396,10 @@ private:
     };
 #pragma pack(pop)
 
-    /*
-     * All the data that belongs to a single connected component.
-     */
+    //
+    // All the data that belongs to a single connected component.
+    //
+
     struct ConnectedComponentData
     {
         size_t pointElementCount;
@@ -415,10 +427,8 @@ private:
         std::unique_ptr<StressedSpringElement[]> stressedSpringElementBuffer;
         GameOpenGLVBO stressedSpringElementVBO;
 
+        size_t pinnedPointElementOffset;
         size_t pinnedPointElementCount;
-        size_t pinnedPointElementMaxCount;
-        std::unique_ptr<PinnedPointElement[]> pinnedPointElementBuffer;
-        GameOpenGLVBO pinnedPointElementVBO;
         
         ConnectedComponentData()
             : pointElementCount(0)
@@ -441,14 +451,23 @@ private:
             , stressedSpringElementMaxCount(0)
             , stressedSpringElementBuffer()
             , stressedSpringElementVBO()
+            , pinnedPointElementOffset(0)
             , pinnedPointElementCount(0)
-            , pinnedPointElementMaxCount(0)
-            , pinnedPointElementBuffer()
-            , pinnedPointElementVBO()
         {}
     };
 
     std::vector<ConnectedComponentData> mConnectedComponents;
+
+    //
+    // Pinned point data, stored globally once across all connected components.
+    //
+
+    std::vector<PinnedPointElement> mPinnedPointElementBuffer;
+    GameOpenGLVBO mPinnedPointVBO;
+
+    //
+    // Textures
+    //
 
     GameOpenGLTexture mElementTexture;
     GameOpenGLTexture mElementStressedSpringTexture;

@@ -413,6 +413,9 @@ RenderContext::RenderContext(
     // Pinned points
     //
 
+    // Store texture size
+    mPinnedPointTextureSize = pinnedPointTextureData.Size;
+
     // Create texture name
     glGenTextures(1, &tmpGLuint);
     mPinnedPointTexture = tmpGLuint;
@@ -420,24 +423,16 @@ RenderContext::RenderContext(
     // Bind texture
     glBindTexture(GL_TEXTURE_2D, *mPinnedPointTexture);
 
+    // Upload texture
+    GameOpenGL::UploadMipmappedTexture(std::move(pinnedPointTextureData));
+
     // Set repeat mode
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     // Set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    // Upload texture data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pinnedPointTextureData.Size.Width, pinnedPointTextureData.Size.Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pinnedPointTextureData.Data.get());
-    glError = glGetError();
-    if (GL_NO_ERROR != glError)
-    {
-        throw GameException("Error uploading pinned point texture onto GPU: " + std::to_string(glError));
-    }
-
-    // Store size
-    mPinnedPointTextureSize = pinnedPointTextureData.Size;
 
     // Unbind texture
     glBindTexture(GL_TEXTURE_2D, 0);

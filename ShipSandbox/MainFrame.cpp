@@ -294,7 +294,7 @@ MainFrame::MainFrame(wxApp * mainApp)
     mGrabCursors = MakeCursors("drag_cursor", 15, 15);
     mSmashCursors = MakeCursors("smash_cursor", 1, 16);
     mMoveCursor = MakeCursor("move_cursor", 15, 15);
-    mPinCursor = MakeCursor("pin_up_cursor", 1, 31);
+    mPinCursor = MakeCursor("pin_up_cursor", 4, 27);
 
     SwitchCursor();
 

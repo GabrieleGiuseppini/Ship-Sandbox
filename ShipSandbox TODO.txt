@@ -141,7 +141,8 @@ Prev perf (before point et al destructuring)
 			+ Returns true if points belongs to ship, so to stop search by World
 			+ Cursor is a pin
 		- ShipRenderContext::UploadPinnedPoint(): do pinned point insertion at end of own connected component
-		- Texture: lighter
+		+ Texture: lighter
+		- Fix crash when reloading after paused stressed ship
 		- Spring deletion at stress: also unpin point if one endpoint is a pinned point?
 		- SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
 	- Frontier:

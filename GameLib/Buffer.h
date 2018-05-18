@@ -87,7 +87,13 @@ public:
 
     inline TElement const & operator[](size_t index) const noexcept
     {
-        assert(index < mCurrentSize);
+#ifndef NDEBUG
+        // This allows us to set breakpoints
+        if (index >= mCurrentSize)
+        {
+            assert(index < mCurrentSize);
+        }
+#endif
 
         return mBuffer[index];
     }

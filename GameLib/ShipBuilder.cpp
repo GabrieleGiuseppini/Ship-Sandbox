@@ -587,7 +587,12 @@ Physics::Triangles ShipBuilder::CreateTriangles(
     Physics::Points & points,
     Physics::Springs & springs)
 {
-    Physics::Triangles triangles(static_cast<ElementContainer::ElementIndex>(triangleInfos.size()));
+    //
+    // First pass: filter out triangles and keep indices of those that need to be created
+    //
+
+    std::vector<ElementContainer::ElementIndex> triangleIndices;
+    triangleIndices.reserve(triangleInfos.size());
 
     for (ElementContainer::ElementIndex t = 0; t < triangleInfos.size(); ++t)
     {
@@ -604,16 +609,30 @@ Physics::Triangles ShipBuilder::CreateTriangles(
             }
         }
 
+        // Remember to create this triangle
+        triangleIndices.push_back(t);
+    }
+
+    //
+    // Second pass: create actual triangles
+    //
+
+    Physics::Triangles triangles(static_cast<ElementContainer::ElementIndex>(triangleIndices.size()));
+
+    for (ElementContainer::ElementIndex t = 0; t < triangleIndices.size(); ++t)
+    {
+        auto triangleIndex = triangleIndices[t];
+
         // Create triangle
         triangles.Add(
-            triangleInfos[t].PointAIndex,
-            triangleInfos[t].PointBIndex,
-            triangleInfos[t].PointCIndex);
+            triangleInfos[triangleIndex].PointAIndex,
+            triangleInfos[triangleIndex].PointBIndex,
+            triangleInfos[triangleIndex].PointCIndex);
 
         // Add triangle to its endpoints
-        points.AddConnectedTriangle(triangleInfos[t].PointAIndex, t);
-        points.AddConnectedTriangle(triangleInfos[t].PointBIndex, t);
-        points.AddConnectedTriangle(triangleInfos[t].PointCIndex, t);
+        points.AddConnectedTriangle(triangleInfos[triangleIndex].PointAIndex, t);
+        points.AddConnectedTriangle(triangleInfos[triangleIndex].PointBIndex, t);
+        points.AddConnectedTriangle(triangleInfos[triangleIndex].PointCIndex, t);
     }
 
     return triangles;

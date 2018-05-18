@@ -44,6 +44,8 @@ RenderContext::RenderContext(
     // Ships
     , mShips()
     , mRopeColour(ropeColour)
+    , mPinnedPointTextureSize(0, 0)
+    , mPinnedPointTexture()
     // Multi-purpose shaders
     , mMatteNdcShaderProgram()
     , mMatteNdcShaderColorParameter(0)
@@ -85,19 +87,23 @@ RenderContext::RenderContext(
         [&progressCallback](float progress, std::string const &)
         {
             if (progressCallback)
-                progressCallback(progress / 3.0f, "Loading textures...");
+                progressCallback(progress / 4.0f, "Loading textures...");
         });
 
     if (progressCallback)
-        progressCallback(0.666f, "Loading textures...");
+        progressCallback(0.5f, "Loading textures...");
 
     auto landTextureData = resourceLoader.LoadTextureRgba(std::string("sand_1.jpg"));
 
     if (progressCallback)
-        progressCallback(1.0f, "Loading textures...");
+        progressCallback(0.75, "Loading textures...");
 
     auto waterTextureData = resourceLoader.LoadTextureRgba(std::string("water_1.jpg"));
 
+    if (progressCallback)
+        progressCallback(1.0, "Loading textures...");
+
+    auto pinnedPointTextureData = resourceLoader.LoadTextureRgba(std::string("pin_down_1.png"));
 
 
     //
@@ -291,7 +297,7 @@ RenderContext::RenderContext(
     GLenum glError = glGetError();
     if (GL_NO_ERROR != glError)
     {
-        throw GameException("Error uploading ship texture onto GPU: " + std::to_string(glError));
+        throw GameException("Error uploading land texture onto GPU: " + std::to_string(glError));
     }
 
     // Unbind texture
@@ -398,6 +404,40 @@ RenderContext::RenderContext(
     {
         throw GameException("Error uploading water texture onto GPU");
     }
+
+    // Unbind texture
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+
+    //
+    // Pinned points
+    //
+
+    // Create texture name
+    glGenTextures(1, &tmpGLuint);
+    mPinnedPointTexture = tmpGLuint;
+
+    // Bind texture
+    glBindTexture(GL_TEXTURE_2D, *mPinnedPointTexture);
+
+    // Set repeat mode
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    // Set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Upload texture data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pinnedPointTextureData.Size.Width, pinnedPointTextureData.Size.Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pinnedPointTextureData.Data.get());
+    glError = glGetError();
+    if (GL_NO_ERROR != glError)
+    {
+        throw GameException("Error uploading pinned point texture onto GPU: " + std::to_string(glError));
+    }
+
+    // Store size
+    mPinnedPointTextureSize = pinnedPointTextureData.Size;
 
     // Unbind texture
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -542,7 +582,12 @@ void RenderContext::AddShip(
     assert(shipId == mShips.size());
 
     // Add the ship    
-    mShips.emplace_back(new ShipRenderContext(std::move(texture), mRopeColour));
+    mShips.emplace_back(
+        new ShipRenderContext(
+            std::move(texture), 
+            mRopeColour,
+            *mPinnedPointTexture,
+            mPinnedPointTextureSize));
 }
 
 //////////////////////////////////////////////////////////////////////////////////

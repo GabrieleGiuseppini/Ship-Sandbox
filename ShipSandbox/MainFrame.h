@@ -76,6 +76,7 @@ private:
     std::vector<std::unique_ptr<wxCursor>> mGrabCursors;
     std::vector<std::unique_ptr<wxCursor>> mSmashCursors;
     std::unique_ptr<wxCursor> mMoveCursor;
+    std::unique_ptr<wxCursor> mPinCursor;
 
 
 	//
@@ -121,6 +122,7 @@ private:
 	void OnReloadLastShipMenuItemSelected(wxCommandEvent& event);
 	void OnSmashMenuItemSelected(wxCommandEvent& event);
 	void OnGrabMenuItemSelected(wxCommandEvent& event);
+    void OnPinMenuItemSelected(wxCommandEvent& event);
 	void OnOpenSettingsWindowMenuItemSelected(wxCommandEvent& event);
     void OnOpenLogWindowMenuItemSelected(wxCommandEvent& event);
     void OnShowEventTickerMenuItemSelected(wxCommandEvent& event);
@@ -151,7 +153,7 @@ private:
     void SwitchCursor();
     void SetCursorStrength(float strength, float minStrength, float maxStrength);
     void SetFrameTitle();
-	void UpdateTool();
+	void UpdateContinuousTool();
     bool IsPaused();
     void DoGameStep();
 	void RenderGame();
@@ -182,7 +184,8 @@ private:
 	enum class ToolType
 	{
 		Smash,
-		Grab
+		Grab,
+        Pin
 	};
 
 	ToolType mCurrentToolType;
@@ -191,7 +194,7 @@ private:
     // This struct contains the information we need to grow the strength of the
     // tool while the user keeps the left mouse button pressed.
     // The strength only grows when the mouse is still, and stays constant while it's moved.
-    struct ToolState
+    struct ContinuousToolState
     {
         // Previous mouse position and time when we looked at it
         int PreviousMouseX; 
@@ -201,7 +204,7 @@ private:
         // The total accumulated press time - the proxy for the strength of the tool
         std::chrono::microseconds CumulatedTime;
 
-        ToolState()
+        ContinuousToolState()
             : PreviousMouseX(-1)
             , PreviousMouseY(-1)
             , PreviousTimestamp(std::chrono::steady_clock::now())
@@ -218,7 +221,7 @@ private:
         }
     };
 
-    ToolState mToolState;
+    ContinuousToolState mContinuousToolState;
 
     std::shared_ptr<ResourceLoader> mResourceLoader;
 	std::shared_ptr<GameController> mGameController;

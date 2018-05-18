@@ -47,6 +47,7 @@ public:
 
     void DestroyAt(vec2f const & screenCoordinates, float radiusMultiplier);
     void DrawTo(vec2f const & screenCoordinates, float strengthMultiplier);
+    void TogglePinAt(vec2f const & screenCoordinates);
     ElementContainer::ElementIndex GetNearestPointAt(vec2 const & screenCoordinates) const;
 
     void SetCanvasSize(int width, int height) { mRenderContext->SetCanvasSize(width, height); }

@@ -48,6 +48,7 @@ Prev perf (before point et al destructuring)
 =================================================
 
 - Optimizations:	
+	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
 	- UpdatePointForces:
 		- Precalculate things that do not depend on position nor velocity
 			- Stored either in buffers (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
@@ -101,21 +102,58 @@ Prev perf (before point et al destructuring)
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded
 	- See if can draw a bit more often
-	- Pin points
-		- Point: Pinned Characteristic
-		- Point::TogglePin():
-			- If pinning: set MassFactor to zero, and set velocity to zero
-			- If unpinning: recalc MassFactor (using same helper used at cctor)
-		- ShipRenderContext: draw pinned points (via new Render::Upload, done by Points::Upload) 
-		  using color ? and texture (centered) with bull's eye
-			- Draw at very end of Render(), after stressed springs
-		- Tool just toggles:
-			- Ship checks if exists pinned point in radius: if yes, unpin; else, pin
-			- Returns true if points belongs to ship, so to stop search by World
-			- Cursor is a pin
+	- Cosmetics:
+		- Explain Spring's coefficients (in terms of fractionXYZ* of return-to-rest-length, etc.)
+			- Rename Material::stiffness as fractionXYZ*Adjustment
+		- Rename Points::MassFactor as IntegrationFactor and explain
+	= Pin points
+		+ Point::TogglePin():
+			+ If pinning: set MassFactor to zero, and set velocity to zero
+			+ If unpinning: recalc MassFactor (using same helper used at cctor)
+		+ The entire search is implemented by Points
+			+ Together with isPinned (used at search to avoid pinning pinned point), also maintains
+			  stack of pinned point indices
+				+ Toggle: find topmost point in stack merely within radius; if found -> toggle it & remove from stack 
+				  & mark as dirty for re-upload and return true; 
+				  + else: find closest non-pinned point; 
+					+ if found: toggle it & add to stack & mark as dirty for re-upload & return true
+					+ else: return false
+				+ Destroy: also remove from stack, if there
+					+ And if there, mark as dirty for re-upload
+		+ Given that connected component changes affect rendering of pinned points:
+			+ Move stack and mArePinnedPointsDirty back into ship, together with search logic
+				+ Points gets back Pin() and Unpin()
+				+ Ship::Destroy as well
+			+ Pinned points are uploaded by decision of Ship
+				+ Decision: if mAreElementsDirty || mArePinnedPointsDirty
+				+ Ship does start & end & points
+		+ ShipRenderContext: draw pinned points using texture (centered)
+			+ Ship uploads coordinates and ConnectedComponentID of point
+			+ ShipRenderContext: behave exactly as with StressedSprings (i.e. reset at ElementsStart()), as 
+			  we're sure we'll re-upload pinned points when elements are dirty
+				+ Rename as "Elements"
+				+ Do with buffer
+				+ Calc bounding box, centered over point, like clouds
+			+ Render(): draw at very end of each connected component render, after stressed springs
+			+ Redo cursor and move to \textures
+		+ Tool just toggles:
+			+ Ship checks if exists pinned point in radius: if yes, unpin; else, pin
+			+ Returns true if points belongs to ship, so to stop search by World
+			+ Cursor is a pin
+		- Spring deletion at stress: also unpin point if one endpoint is a pinned point?
+		- SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
 	- Frontier:
 		- Only for non-rope points - rope points never take part in frontier
-		- TODO: all following might have to be revisited
+		- Preliminaries:
+			- Make sure endpoints in triangle are always in CW order
+			- In order to correctly draw dangling (i.e. same connected component) parts on top of all of the connected component's 
+			  frontiers, we'd need to have the dangling parts disconnected from the connected component, which means that we should
+			  not follow ropes during connected component detection
+				- Still vulnerable to dangling parts not connected via ropes (e.g. masts) though: frontier would be drawn on top of it
+				- Might get away with drawing frontiers - *enlarged* - before all of the rest? The enlarged part would be visible
+				  only through holes and around external frontiers
+		
+		- TODO: all the following might have to be revisited
 		- Realize that a node can belong to up to 4 frontiers (center of 4 holes)
 			- And a point deletion might cause a merge of the four
 		- Frontier is set of points, marked as frontier, and connected to each other via 

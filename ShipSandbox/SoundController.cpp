@@ -384,6 +384,7 @@ void SoundController::ChooseAndPlaySound(
     {
         assert(soundInfo.SoundBuffers.size() >= 2);
 
+        // Avoid choosing the last-chosen sound again
         std::uniform_int_distribution<size_t> dis(0, soundInfo.SoundBuffers.size() - 2);
         size_t soundIndex = dis(mRandomEngine);
         if (soundIndex >= soundInfo.LastPlayedSoundIndex)

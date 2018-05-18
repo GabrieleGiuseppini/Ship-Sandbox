@@ -14,6 +14,7 @@
 #include "ShipDefinition.h"
 #include "Vectors.h"
 
+#include <optional>
 #include <vector>
 
 namespace Physics
@@ -58,6 +59,10 @@ public:
     void DrawTo(
         vec2 const & targetPos,
         float strength);
+
+    bool TogglePinAt(
+        vec2 const & targetPos,
+        float searchRadius);
 
     ElementContainer::ElementIndex GetNearestPointIndexAt(
         vec2 const & targetPos,
@@ -116,12 +121,26 @@ private:
     std::vector<std::size_t> mConnectedComponentSizes;
 
     // Flag remembering whether points (elements) and/or springs (incl. ropes) and/or triangles have changed
-    // since the last time we delivered them to the rendering context
-    mutable bool mAreElementsDirty;
+    // since the last step.
+    // When this flag is set, we'll re-detect connected components and re-upload elements
+    // to the rendering context
+    bool mutable mAreElementsDirty;
 
     // Sinking detection
     bool mIsSinking;
     float mTotalWater;
+
+
+    //
+    // Pinned points
+    //
+
+    // The current set of pinned points
+    std::vector<ElementContainer::ElementIndex> mCurrentPinnedPoints;
+
+    // Flag remembering whether the set of pinned points has changed since the last step
+    bool mutable mArePinnedPointsDirty;
+
 
     //
     // Draw force to apply at next iteration

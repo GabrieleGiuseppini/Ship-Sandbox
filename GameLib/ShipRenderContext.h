@@ -24,7 +24,9 @@ public:
 
     ShipRenderContext(
         std::optional<ImageData> texture,
-        vec3f const & ropeColour);
+        vec3f const & ropeColour,
+        GLuint pinnedPointTexture,
+        ImageSize pinnedPointTextureSize);
     
     ~ShipRenderContext();
 
@@ -150,6 +152,54 @@ public:
     void UploadElementStressedSpringsEnd();
 
 
+    void UploadElementPinnedPointsStart();
+
+    inline void UploadElementPinnedPoint(
+        float pinnedPointX,
+        float pinnedPointY,
+        uint32_t connectedComponentId)
+    {
+        size_t const connectedComponentIndex = connectedComponentId - 1;
+
+        assert(connectedComponentIndex < mConnectedComponents.size());
+        assert(mConnectedComponents[connectedComponentIndex].pinnedPointElementCount + 1u <= mConnectedComponents[connectedComponentIndex].pinnedPointElementMaxCount);
+
+        PinnedPointElement * const pinnedPointElement = &(mConnectedComponents[connectedComponentIndex].pinnedPointElementBuffer[mConnectedComponents[connectedComponentIndex].pinnedPointElementCount]);
+
+        // World size that the texture should be scaled to
+        static constexpr float textureTileW = 4.0f;
+        static constexpr float textureTileH = 4.0f;
+        
+        float leftX = pinnedPointX - textureTileW / 2.0f;
+        float rightX = pinnedPointX + textureTileW / 2.0f;
+        float topY = pinnedPointY - textureTileH / 2.0f;
+        float bottomY = pinnedPointY + textureTileH / 2.0f;
+
+        pinnedPointElement->xTopLeft = leftX;
+        pinnedPointElement->yTopLeft = topY;
+        pinnedPointElement->textureXTopLeft = 0.0f;
+        pinnedPointElement->textureYTopLeft = 0.0f;
+
+        pinnedPointElement->xBottomLeft = leftX;
+        pinnedPointElement->yBottomLeft = bottomY;
+        pinnedPointElement->textureXBottomLeft = 0.0f;
+        pinnedPointElement->textureYBottomLeft = 1.0f;
+
+        pinnedPointElement->xTopRight = rightX;
+        pinnedPointElement->yTopRight = topY;
+        pinnedPointElement->textureXTopRight = 1.0f;
+        pinnedPointElement->textureYTopRight = 0.0f;
+
+        pinnedPointElement->xBottomRight = rightX;
+        pinnedPointElement->yBottomRight = bottomY;
+        pinnedPointElement->textureXBottomRight = 1.0f;
+        pinnedPointElement->textureYBottomRight = 1.0f;
+
+        ++(mConnectedComponents[connectedComponentIndex].pinnedPointElementCount);
+    }
+
+    void UploadElementPinnedPointsEnd();
+
     //
     // Lamps
     //
@@ -219,6 +269,11 @@ private:
         float canvasToVisibleWorldHeightRatio,
         float(&orthoMatrix)[4][4]);
 
+    void RenderPinnedPointElements(
+        ConnectedComponentData const & connectedComponent,
+        float ambientLightIntensity,
+        float(&orthoMatrix)[4][4]);
+
 private:
 
     //
@@ -233,15 +288,17 @@ private:
     GameOpenGLVBO mPointColorVBO;
     GameOpenGLVBO mPointElementTextureCoordinatesVBO;
     
-    static constexpr GLuint InputPosPosition = 0;
-    static constexpr GLuint InputLightPosition = 1;
-    static constexpr GLuint InputWaterPosition = 2;
-    static constexpr GLuint InputColorPosition = 3;
-    static constexpr GLuint InputTextureCoordinatesPosition = 4;
+    static constexpr GLuint InputPointPosPosition = 0;
+    static constexpr GLuint InputPointLightPosition = 1;
+    static constexpr GLuint InputPointWaterPosition = 2;
+    static constexpr GLuint InputPointColorPosition = 3;
+    static constexpr GLuint InputPointTextureCoordinatesPosition = 4;
+    static constexpr GLuint InputPinnedPointPosPosition = 5;
+    static constexpr GLuint InputPinnedPointTextureCoordinatesPosition = 6;
 
 
     //
-    // Elements (points, springs, ropes, triangles, stressed springs)
+    // Elements (points, springs, ropes, triangles, stressed springs, pinned points)
     //
 
     GameOpenGLShaderProgram mElementColorShaderProgram;
@@ -258,6 +315,10 @@ private:
 
     GameOpenGLShaderProgram mElementStressedSpringShaderProgram;
     GLint mElementStressedSpringShaderOrthoMatrixParameter;
+
+    GameOpenGLShaderProgram mElementPinnedPointShaderProgram;
+    GLint mElementPinnedPointShaderOrthoMatrixParameter;
+    GLint mElementPinnedPointShaderAmbientLightIntensityParameter;
 
 #pragma pack(push)
     struct PointElement
@@ -299,6 +360,31 @@ private:
     };
 #pragma pack(pop)
 
+#pragma pack(push)
+    struct PinnedPointElement
+    {
+        float xTopLeft;
+        float yTopLeft;
+        float textureXTopLeft;
+        float textureYTopLeft;
+
+        float xBottomLeft;
+        float yBottomLeft;
+        float textureXBottomLeft;
+        float textureYBottomLeft;
+
+        float xTopRight;
+        float yTopRight;
+        float textureXTopRight;
+        float textureYTopRight;
+
+        float xBottomRight;
+        float yBottomRight;
+        float textureXBottomRight;
+        float textureYBottomRight;
+    };
+#pragma pack(pop)
+
     /*
      * All the data that belongs to a single connected component.
      */
@@ -328,6 +414,11 @@ private:
         size_t stressedSpringElementMaxCount;
         std::unique_ptr<StressedSpringElement[]> stressedSpringElementBuffer;
         GameOpenGLVBO stressedSpringElementVBO;
+
+        size_t pinnedPointElementCount;
+        size_t pinnedPointElementMaxCount;
+        std::unique_ptr<PinnedPointElement[]> pinnedPointElementBuffer;
+        GameOpenGLVBO pinnedPointElementVBO;
         
         ConnectedComponentData()
             : pointElementCount(0)
@@ -350,6 +441,10 @@ private:
             , stressedSpringElementMaxCount(0)
             , stressedSpringElementBuffer()
             , stressedSpringElementVBO()
+            , pinnedPointElementCount(0)
+            , pinnedPointElementMaxCount(0)
+            , pinnedPointElementBuffer()
+            , pinnedPointElementVBO()
         {}
     };
 
@@ -357,6 +452,8 @@ private:
 
     GameOpenGLTexture mElementTexture;
     GameOpenGLTexture mElementStressedSpringTexture;
+    GLuint const mElementPinnedPointTexture;
+    ImageSize const mElementPinnedPointTextureSize;
 
     //
     // Lamps

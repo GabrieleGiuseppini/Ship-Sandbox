@@ -66,6 +66,10 @@ public:
         vec2 const & targetPos,
         float strength);
 
+    void TogglePinAt(
+        vec2 const & targetPos,
+        float searchRadius);
+
     ElementContainer::ElementIndex GetNearestPointAt(
         vec2 const & targetPos,
         float radius) const;

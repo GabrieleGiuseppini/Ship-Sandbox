@@ -49,6 +49,7 @@ const long ID_RESET_VIEW_MENUITEM = wxNewId();
 
 const long ID_SMASH_MENUITEM = wxNewId();
 const long ID_GRAB_MENUITEM = wxNewId();
+const long ID_PIN_MENUITEM = wxNewId();
 
 const long ID_OPEN_SETTINGS_WINDOW_MENUITEM = wxNewId();
 const long ID_OPEN_LOG_WINDOW_MENUITEM = wxNewId();
@@ -216,7 +217,12 @@ MainFrame::MainFrame(wxApp * mainApp)
 	toolsMenu->Append(grabMenuItem);	
 	Connect(ID_GRAB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnGrabMenuItemSelected);
 
-	toolsMenu->Check(mCurrentToolType == ToolType::Smash ? ID_SMASH_MENUITEM : ID_GRAB_MENUITEM, true);
+    wxMenuItem * pinMenuItem = new wxMenuItem(toolsMenu, ID_PIN_MENUITEM, _("Pin\tN"), wxEmptyString, wxITEM_RADIO);
+    toolsMenu->Append(pinMenuItem);
+    Connect(ID_PIN_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnPinMenuItemSelected);
+
+    assert(mCurrentToolType == ToolType::Smash);
+	toolsMenu->Check(ID_SMASH_MENUITEM, true);
 
 	mainMenuBar->Append(toolsMenu, _("Tools"));
 
@@ -288,6 +294,7 @@ MainFrame::MainFrame(wxApp * mainApp)
     mGrabCursors = MakeCursors("drag_cursor", 15, 15);
     mSmashCursors = MakeCursors("smash_cursor", 1, 16);
     mMoveCursor = MakeCursor("move_cursor", 15, 15);
+    mPinCursor = MakeCursor("pin_up_cursor", 1, 31);
 
     SwitchCursor();
 
@@ -586,8 +593,25 @@ void MainFrame::OnMainGLCanvasLeftDown(wxMouseEvent & /*event*/)
     // Remember the mouse button is down
     mMouseInfo.ldown = true;
 
-    // Initialize the tool
-    mToolState.Initialize(mMouseInfo.x, mMouseInfo.y);
+    switch (mCurrentToolType)
+    {
+        case ToolType::Grab:
+        case ToolType::Smash:
+        {
+            // Initialize the continuous tool
+            mContinuousToolState.Initialize(mMouseInfo.x, mMouseInfo.y);
+
+            break;
+        }
+
+        case ToolType::Pin:
+        {
+            // Toggle pin
+            mGameController->TogglePinAt(vec2(mMouseInfo.x, mMouseInfo.y));
+
+            break;
+        }
+    }
 
     // Change cursor
     SwitchCursor();
@@ -756,6 +780,13 @@ void MainFrame::OnGrabMenuItemSelected(wxCommandEvent & /*event*/)
     SwitchCursor();
 }
 
+void MainFrame::OnPinMenuItemSelected(wxCommandEvent & /*event*/)
+{
+    mCurrentToolType = ToolType::Pin;
+
+    SwitchCursor();
+}
+
 void MainFrame::OnOpenSettingsWindowMenuItemSelected(wxCommandEvent & /*event*/)
 {
 	if (!mSettingsDialog)
@@ -914,6 +945,12 @@ void MainFrame::SwitchCursor()
                 this->SetCursor(*(mSmashCursors[0]));
                 break;
             }
+
+            case ToolType::Pin:
+            {
+                this->SetCursor(*mPinCursor);
+                break;
+            }
         }
     }
 }
@@ -968,7 +1005,7 @@ void MainFrame::SetCursorStrength(float strength, float minStrength, float maxSt
     }
 }
 
-void MainFrame::UpdateTool()
+void MainFrame::UpdateContinuousTool()
 {
     // We apply the tool only if the left mouse button is down
     if (mMouseInfo.ldown)
@@ -976,11 +1013,11 @@ void MainFrame::UpdateTool()
         auto now = std::chrono::steady_clock::now();
 
         // Accumulate total time iff we haven't moved since last time
-        if (mToolState.PreviousMouseX == mMouseInfo.x
-            && mToolState.PreviousMouseY == mMouseInfo.y)
+        if (mContinuousToolState.PreviousMouseX == mMouseInfo.x
+            && mContinuousToolState.PreviousMouseY == mMouseInfo.y)
         {
-            mToolState.CumulatedTime += std::chrono::duration_cast<std::chrono::microseconds>(
-                now - mToolState.PreviousTimestamp);
+            mContinuousToolState.CumulatedTime += std::chrono::duration_cast<std::chrono::microseconds>(
+                now - mContinuousToolState.PreviousTimestamp);
         }
         else
         {
@@ -989,9 +1026,9 @@ void MainFrame::UpdateTool()
         }
 
         // Remember new position and timestamp
-        mToolState.PreviousMouseX = mMouseInfo.x;
-        mToolState.PreviousMouseY = mMouseInfo.y;
-        mToolState.PreviousTimestamp = now;
+        mContinuousToolState.PreviousMouseX = mMouseInfo.x;
+        mContinuousToolState.PreviousMouseY = mMouseInfo.y;
+        mContinuousToolState.PreviousTimestamp = now;
 
 	    // Apply current tool
         assert(!!mGameController);
@@ -1006,7 +1043,7 @@ void MainFrame::UpdateTool()
                 static constexpr float MaxMultiplier = 20.0f;
 
                 float millisecondsElapsed = static_cast<float>(
-                    std::chrono::duration_cast<std::chrono::milliseconds>(mToolState.CumulatedTime).count());
+                    std::chrono::duration_cast<std::chrono::milliseconds>(mContinuousToolState.CumulatedTime).count());
                 float strengthMultiplier = 1.0f + (MaxMultiplier - 1.0f) * std::min(1.0f, millisecondsElapsed / 5000.0f);
 
                 // Draw
@@ -1027,7 +1064,7 @@ void MainFrame::UpdateTool()
                 static constexpr float MaxMultiplier = 10.0f;
 
                 float millisecondsElapsed = static_cast<float>(
-                    std::chrono::duration_cast<std::chrono::milliseconds>(mToolState.CumulatedTime).count());
+                    std::chrono::duration_cast<std::chrono::milliseconds>(mContinuousToolState.CumulatedTime).count());
                 float radiusMultiplier = 1.0f + (MaxMultiplier - 1.0f) * std::min(1.0f, millisecondsElapsed / 5000.0f);
 
                 // Destroy
@@ -1038,6 +1075,12 @@ void MainFrame::UpdateTool()
 
 			    break;
 		    }
+
+            case ToolType::Pin:
+            {
+                // Not continuous
+                break;
+            }
 	    }
     }
 }
@@ -1093,8 +1136,8 @@ void MainFrame::DoGameStep()
 {
     assert(!!mGameController);
 
-    // Update the tool
-    UpdateTool();
+    // Update the continuous tool
+    UpdateContinuousTool();
 
     // Do a simulation step
     if (!IsPaused())

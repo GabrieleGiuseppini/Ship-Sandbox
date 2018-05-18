@@ -115,7 +115,7 @@ public:
     bool UpdateStrains(
         GameParameters const & gameParameters,
         World const & parentWorld,
-        IGameEventHandler * gameEventHandler,
+        IGameEventHandler & gameEventHandler,
         Points & points,
         Triangles & triangles);
 

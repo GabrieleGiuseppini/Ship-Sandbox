@@ -46,6 +46,11 @@ public:
         // Default-implemented
     }
 
+    virtual void OnPinToggled(bool /*isPinned*/)
+    {
+        // Default-implemented
+    }
+
     virtual void OnStress(
         Material const * /*material*/,
         bool /*isUnderwater*/,

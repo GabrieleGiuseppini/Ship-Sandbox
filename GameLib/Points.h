@@ -9,11 +9,13 @@
 #include "ElementContainer.h"
 #include "FixedSizeVector.h"
 #include "GameParameters.h"
+#include "IGameEventHandler.h"
 #include "Material.h"
 #include "RenderContext.h"
 #include "Vectors.h"
 
 #include <cassert>
+#include <vector>
 
 namespace Physics
 {
@@ -62,6 +64,8 @@ public:
         // Connected component
         , mConnectedComponentIdBuffer(elementCount)
         , mCurrentConnectedComponentDetectionStepSequenceNumberBuffer(elementCount)
+        // Pinning
+        , mIsPinnedBuffer(elementCount)
         // Immutable render attributes
         , mColorBuffer(elementCount)
         , mTextureCoordinatesBuffer(elementCount)
@@ -86,7 +90,7 @@ public:
 
     void Breach(
         ElementIndex pointElementIndex,
-        Triangles & triangles);
+        Triangles & triangles);    
 
     void Upload(
         int shipId,
@@ -352,6 +356,38 @@ public:
     }
 
     //
+    // Pinning
+    //
+
+    inline bool IsPinned(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mIsPinnedBuffer[pointElementIndex];
+    }
+
+    void Pin(ElementIndex pointElementIndex) 
+    {
+        assert(pointElementIndex < mElementCount);
+    
+        mIsPinnedBuffer[pointElementIndex] = true;
+
+        // Zero-out mass factor and velocity, freezing point
+        mMassFactorBuffer[pointElementIndex] = vec2f(0.0f, 0.0f);
+        mVelocityBuffer[pointElementIndex] = vec2f(0.0f, 0.0f);
+    }
+
+    void UnPin(ElementIndex pointElementIndex)
+    {
+        assert(pointElementIndex < mElementCount);
+    
+        mIsPinnedBuffer[pointElementIndex] = false;
+
+        // Re-populate its mass factor, thawing point
+        mMassFactorBuffer[pointElementIndex] = CalculateMassFactor(mMassBuffer[pointElementIndex]);
+    }
+
+    //
     // Connected component
     //
 
@@ -440,6 +476,12 @@ private:
 
     Buffer<uint32_t> mConnectedComponentIdBuffer; // Connected component IDs start from 1
     Buffer<uint64_t> mCurrentConnectedComponentDetectionStepSequenceNumberBuffer;
+
+    //
+    // Pinning
+    //
+
+    Buffer<bool> mIsPinnedBuffer;
 
     //
     // Immutable render attributes

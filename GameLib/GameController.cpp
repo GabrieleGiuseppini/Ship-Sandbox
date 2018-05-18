@@ -176,6 +176,20 @@ void GameController::DrawTo(
     mGameEventDispatcher->Flush();
 }
 
+void GameController::TogglePinAt(vec2 const & screenCoordinates)
+{
+    vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);
+
+    // Apply action
+    assert(!!mWorld);
+    mWorld->TogglePinAt(
+        worldCoordinates,
+        mGameParameters.PinSearchRadius);
+
+    // Flush events
+    mGameEventDispatcher->Flush();
+}
+
 ElementContainer::ElementIndex GameController::GetNearestPointAt(vec2 const & screenCoordinates) const
 {
     vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);

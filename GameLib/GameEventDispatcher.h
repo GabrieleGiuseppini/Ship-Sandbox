@@ -9,6 +9,7 @@
 #include "TupleKeys.h"
 
 #include <algorithm>
+#include <optional>
 #include <vector>
 
 class GameEventDispatcher : public IGameEventHandler
@@ -18,6 +19,7 @@ public:
     GameEventDispatcher()
         : mDestroyEvents()
         , mDrawEvent(false)
+        , mPinToggledEvent(std::nullopt)
         , mStressEvents()
         , mBreakEvents()
         , mSinkingBeginEvents()
@@ -58,6 +60,11 @@ public:
     virtual void OnDraw() override
     {
         mDrawEvent = true;
+    }
+
+    virtual void OnPinToggled(bool isPinned) override
+    {
+        mPinToggledEvent = isPinned;
     }
 
     virtual void OnStress(
@@ -104,6 +111,11 @@ public:
                 sink->OnDraw();
             }
 
+            if (!!mPinToggledEvent)
+            {
+                sink->OnPinToggled(*mPinToggledEvent);
+            }
+
             for (auto const & entry : mStressEvents)
             {
                 sink->OnStress(std::get<0>(entry.first), std::get<1>(entry.first), entry.second);
@@ -123,6 +135,7 @@ public:
         // Clear collections
         mDestroyEvents.clear();
         mDrawEvent = false;
+        mPinToggledEvent = std::nullopt;
         mStressEvents.clear();
         mBreakEvents.clear();
         mSinkingBeginEvents.clear();
@@ -138,6 +151,7 @@ private:
     // The current events being aggregated
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mDestroyEvents;
     bool mDrawEvent;
+    std::optional<bool> mPinToggledEvent;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mStressEvents;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mBreakEvents;
     std::vector<unsigned int> mSinkingBeginEvents;

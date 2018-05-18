@@ -6,6 +6,7 @@
 #include "Physics.h"
 
 #include <cmath>
+#include <limits>
 
 namespace Physics {
 
@@ -36,6 +37,8 @@ void Points::Add(
 
     mConnectedComponentIdBuffer.emplace_back(0u);
     mCurrentConnectedComponentDetectionStepSequenceNumberBuffer.emplace_back(0u);
+
+    mIsPinnedBuffer.emplace_back(false);
 
     mColorBuffer.emplace_back(color);
     mTextureCoordinatesBuffer.emplace_back(textureCoordinates);
@@ -86,7 +89,7 @@ void Points::Destroy(
 
 
     //
-    // Flag ourselves as deleted
+    // Finally, flag ourselves as deleted
     //
 
     mIsDeletedBuffer[pointElementIndex] = true;

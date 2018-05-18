@@ -362,7 +362,7 @@ public:
     // Ship elements (points, springs, ropes, and triangles)
     //
 
-    void UploadShipElementsStart(
+    inline void UploadShipElementsStart(
         int shipId, 
         std::vector<std::size_t> const & connectedComponentsMaxSizes)
     {
@@ -427,7 +427,7 @@ public:
             connectedComponentId);
     }
 
-    void UploadShipElementsEnd(int shipId)
+    inline void UploadShipElementsEnd(int shipId)
     {
         assert(shipId < mShips.size());
 
@@ -462,6 +462,33 @@ public:
         mShips[shipId]->UploadElementStressedSpringsEnd();
     }
 
+    inline void UploadShipElementPinnedPointsStart(int shipId)
+    {
+        assert(shipId < mShips.size());
+
+        mShips[shipId]->UploadElementPinnedPointsStart();
+    }
+
+    inline void UploadShipElementPinnedPoint(
+        int shipId,
+        float x,
+        float y,
+        uint32_t connectedComponentId)
+    {
+        assert(shipId < mShips.size());
+
+        mShips[shipId]->UploadElementPinnedPoint(
+            x,
+            y,
+            connectedComponentId);
+    }
+
+    inline void UploadShipElementPinnedPointsEnd(int shipId)
+    {
+        assert(shipId < mShips.size());
+
+        mShips[shipId]->UploadElementPinnedPointsEnd();
+    }
 
     //
     // Lamps
@@ -636,6 +663,8 @@ private:
 
     std::vector<std::unique_ptr<ShipRenderContext>> mShips;
     vec3f const mRopeColour;
+    ImageSize mPinnedPointTextureSize;
+    GameOpenGLTexture mPinnedPointTexture;
 
 
     //

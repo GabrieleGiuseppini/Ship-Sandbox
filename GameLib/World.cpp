@@ -91,6 +91,24 @@ void World::DrawTo(
     }
 }
 
+void World::TogglePinAt(
+    vec2 const & targetPos,
+    float searchRadius)
+{
+    // Stop at first ship that successfully pins or unpins a point
+    for (auto const & ship : mAllShips)
+    {
+        if (ship->TogglePinAt(targetPos, searchRadius))
+        {
+            // Found!
+            return;
+        }
+
+        // No luck...
+        // search other ships
+    }
+}
+
 ElementContainer::ElementIndex World::GetNearestPointAt(
     vec2 const & targetPos,
     float radius) const

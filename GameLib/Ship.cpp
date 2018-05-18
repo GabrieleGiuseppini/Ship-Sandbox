@@ -46,6 +46,8 @@ Ship::Ship(
     , mAreElementsDirty(true)
     , mIsSinking(false)
     , mTotalWater(0.0)
+    , mCurrentPinnedPoints()
+    , mArePinnedPointsDirty(false)
     , mCurrentDrawForce(std::nullopt)
 {
     DetectConnectedComponents(currentStepSequenceNumber);
@@ -72,11 +74,25 @@ void Ship::DestroyAt(
                 // This point must be deleted
                 //
 
-                // Notify
-                mParentWorld->GetGameEventHandler()->OnDestroy(
-                    mPoints.GetMaterial(pointIndex), 
-                    mParentWorld->IsUnderwater(mPoints.GetPosition(pointIndex)),
-                    1u);
+                //
+                // If the point is pinned, unpin it
+                //
+
+                auto it = std::find(mCurrentPinnedPoints.begin(), mCurrentPinnedPoints.end(), pointIndex);
+                if (it != mCurrentPinnedPoints.end())
+                {
+                    assert(!mPoints.IsDeleted(*it));
+
+                    // Unpin it
+                    assert(mPoints.IsPinned(*it));
+                    mPoints.UnPin(*it);
+
+                    // Remove from stack
+                    mCurrentPinnedPoints.erase(it);
+
+                    // Remember we have to re-upload the pinned points
+                    mArePinnedPointsDirty = true;
+                }
 
                 // Destroy point
                 mPoints.Destroy(
@@ -84,6 +100,12 @@ void Ship::DestroyAt(
                     mSprings,
                     mTriangles,
                     mElectricalElements);
+
+                // Notify
+                mParentWorld->GetGameEventHandler()->OnDestroy(
+                    mPoints.GetMaterial(pointIndex),
+                    mParentWorld->IsUnderwater(mPoints.GetPosition(pointIndex)),
+                    1u);
 
                 // Remember the elements are now dirty
                 mAreElementsDirty = true;
@@ -99,6 +121,97 @@ void Ship::DrawTo(
     // Store the force
     assert(!mCurrentDrawForce);
     mCurrentDrawForce.emplace(targetPos, strength);
+}
+
+bool Ship::TogglePinAt(
+    vec2f const & targetPos,
+    float searchRadius)
+{
+    float const squareSearchRadius = searchRadius * searchRadius;
+
+    //
+    // See first if there's a pinned point within the search radius, most recent first;
+    // if so we unpin it and we're done
+    //
+
+    for (auto it = mCurrentPinnedPoints.rbegin(); it != mCurrentPinnedPoints.rend(); ++it)
+    {
+        assert(!mPoints.IsDeleted(*it));
+        assert(mPoints.IsPinned(*it));
+
+        float squareDistance = (mPoints.GetPosition(*it) - targetPos).squareLength();
+        if (squareDistance < squareSearchRadius)
+        {
+            // Found a pinned point
+
+            // Unpin it
+            mPoints.UnPin(*it);
+
+            // Remove from set of pinned points
+            mCurrentPinnedPoints.erase(std::next(it).base());
+
+            // Remember we have to re-upload the pinned points
+            mArePinnedPointsDirty = true;
+
+            // Notify
+            mParentWorld->GetGameEventHandler()->OnPinToggled(false);
+
+            // We're done
+            return true;
+        }
+    }
+
+
+    //
+    // No pinned points in radius...
+    // ...so find closest unpinned point within the search radius, and
+    // if found, pin it
+    //
+
+    ElementContainer::ElementIndex nearestUnpinnedPointIndex = ElementContainer::NoneElementIndex;
+    float nearestUnpinnedPointDistance = std::numeric_limits<float>::max();
+
+    for (auto pointIndex : mPoints)
+    {
+        if (!mPoints.IsDeleted(pointIndex) && !mPoints.IsPinned(pointIndex))
+        {
+            float squareDistance = (mPoints.GetPosition(pointIndex) - targetPos).squareLength();
+            if (squareDistance < squareSearchRadius)
+            {
+                // This point is within the search radius
+
+                // Keep the nearest
+                if (squareDistance < squareSearchRadius && squareDistance < nearestUnpinnedPointDistance)
+                {
+                    nearestUnpinnedPointIndex = pointIndex;
+                    nearestUnpinnedPointDistance = squareDistance;
+                }
+            }
+        }
+    }
+
+    if (ElementContainer::NoneElementIndex != nearestUnpinnedPointIndex)
+    {
+        // We have a nearest, unpinned point
+
+        // Pin it
+        mPoints.Pin(nearestUnpinnedPointIndex);
+
+        // Add to set of pinned points
+        mCurrentPinnedPoints.push_back(nearestUnpinnedPointIndex);
+
+        // Remember we have to re-upload the pinned points
+        mArePinnedPointsDirty = true;
+
+        // Notify
+        mParentWorld->GetGameEventHandler()->OnPinToggled(true);
+
+        // We're done
+        return true;
+    }
+
+    // No point found on this ship
+    return false;
 }
 
 ElementContainer::ElementIndex Ship::GetNearestPointIndexAt(
@@ -147,7 +260,7 @@ void Ship::Update(
     if (mSprings.UpdateStrains(
         gameParameters,
         *mParentWorld,
-        gameEventHandler,                
+        *gameEventHandler,                
         mPoints,
         mTriangles))
     {
@@ -245,9 +358,7 @@ void Ship::Render(
                 renderContext,
                 mPoints);
 
-            renderContext.UploadShipElementsEnd(mId);
-
-            mAreElementsDirty = false;
+            renderContext.UploadShipElementsEnd(mId);            
         }
 
 
@@ -266,6 +377,34 @@ void Ship::Render(
         }
 
         renderContext.UploadShipElementStressedSpringsEnd(mId);
+
+
+        //
+        // Upload pinned points, if they've changed since the last time
+        //
+
+        if (mArePinnedPointsDirty || mAreElementsDirty)
+        {
+            renderContext.UploadShipElementPinnedPointsStart(mId);
+
+            for (auto pinnedPointIndex : mCurrentPinnedPoints)
+            {
+                assert(!mPoints.IsDeleted(pinnedPointIndex));
+                assert(mPoints.IsPinned(pinnedPointIndex));
+
+                renderContext.UploadShipElementPinnedPoint(
+                    mId,
+                    mPoints.GetPosition(pinnedPointIndex).x,
+                    mPoints.GetPosition(pinnedPointIndex).y,
+                    mPoints.GetConnectedComponentId(pinnedPointIndex));
+            }
+
+            renderContext.UploadShipElementPinnedPointsEnd(mId);
+
+            mArePinnedPointsDirty = false;
+        }
+
+        mAreElementsDirty = false;
     }        
 
 
@@ -426,6 +565,14 @@ void Ship::Integrate()
     // Note: technically it's not a drag force, it's just a dimensionless deceleration
     float constexpr GlobalDampCoefficient = 0.9996f;
 
+    //
+    // Take the four buffers that we need as restrict pointers, so that the compiler
+    // can better see it should parallelize this loop as much as possible
+    //
+    // This loop is compiled with single-precision packet SSE instructions on MSVC 17,
+    // integrating two points at each iteration
+    //
+
     float * restrict positionBuffer = mPoints.GetPositionBufferAsFloat();
     float * restrict velocityBuffer = mPoints.GetVelocityBufferAsFloat();
     float * restrict forceBuffer = mPoints.GetForceBufferAsFloat();
@@ -434,8 +581,10 @@ void Ship::Integrate()
     size_t const numIterations = mPoints.GetElementCount() * 2;
     for (size_t i = 0; i < numIterations; ++i)
     {
-        // Verlet (fourth order, with velocity being first order)
-        // - For each point: 6 * mul + 4 * add
+        //
+        // Verlet integration (fourth order, with velocity being first order)
+        //
+
         float const deltaPos = velocityBuffer[i] * dt + forceBuffer[i] * massFactorBuffer[i];
         positionBuffer[i] += deltaPos;
         velocityBuffer[i] = deltaPos * GlobalDampCoefficient / dt;
@@ -508,7 +657,7 @@ void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)
                     // Go through this point's adjacents
                     for (auto adjacentSpringElementIndex : mPoints.GetConnectedSprings(currentPointIndex))
                     {
-                        assert(!spring->IsDeleted());
+                        assert(!mSprings.IsDeleted(adjacentSpringElementIndex));
 
                         auto pointAIndex = mSprings.GetPointAIndex(adjacentSpringElementIndex);
                         assert(!mPoints.IsDeleted(pointAIndex));

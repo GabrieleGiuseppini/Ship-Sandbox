@@ -135,7 +135,7 @@ void Springs::UploadStressedSpringElements(
 bool Springs::UpdateStrains(
     GameParameters const & gameParameters,
     World const & parentWorld,    
-    IGameEventHandler * gameEventHandler,
+    IGameEventHandler & gameEventHandler,
     Points & points,
     Triangles & triangles)
 {
@@ -158,7 +158,7 @@ bool Springs::UpdateStrains(
                 this->Destroy(i, NoneElementIndex, points, triangles);
 
                 // Notify
-                gameEventHandler->OnBreak(
+                gameEventHandler.OnBreak(
                     mMaterialBuffer[i],
                     parentWorld.IsUnderwater(points.GetPosition(mEndpointsBuffer[i].PointAIndex)),
                     1);
@@ -173,7 +173,7 @@ bool Springs::UpdateStrains(
                     mIsStressedBuffer[i] = true;
 
                     // Notify
-                    gameEventHandler->OnStress(
+                    gameEventHandler.OnStress(
                         mMaterialBuffer[i],
                         parentWorld.IsUnderwater(points.GetPosition(mEndpointsBuffer[i].PointAIndex)),
                         1);

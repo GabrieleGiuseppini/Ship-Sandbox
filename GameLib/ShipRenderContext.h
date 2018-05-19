@@ -163,7 +163,13 @@ public:
 
         assert(connectedComponentIndex < mConnectedComponents.size());
 
-        PinnedPointElement & pinnedPointElement = mPinnedPointElementBuffer.emplace_back();
+        // Insert at end of this connected component's points
+        auto insertedIt = mPinnedPointElementBuffer.emplace(
+            mPinnedPointElementBuffer.begin()
+            + mConnectedComponents[connectedComponentIndex].pinnedPointElementOffset
+            + mConnectedComponents[connectedComponentIndex].pinnedPointElementCount);
+
+        PinnedPointElement & pinnedPointElement = *insertedIt;
 
         // World size that the texture should be scaled to
         static constexpr float textureTileW = 6.0f;

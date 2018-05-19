@@ -140,11 +140,30 @@ Prev perf (before point et al destructuring)
 			+ Ship checks if exists pinned point in radius: if yes, unpin; else, pin
 			+ Returns true if points belongs to ship, so to stop search by World
 			+ Cursor is a pin
-		- ShipRenderContext::UploadPinnedPoint(): do pinned point insertion at end of own connected component
-		+ Texture: lighter
-		+ Fix crash when reloading after paused stressed ship
+		= ShipRenderContext::UploadPinnedPoint(): do pinned point insertion at end of own connected component
+		= Texture: 
+			+ lighter
+			+ plug hole
+		+ Fix crash when loading Titanic
+		- Max 256 pins
+			- CircularList?
+				- Add() is templated on OnRemoved() handler
+					- Verify assembly
+				- Unit tests
+			- Constant at GameParameters
+			- When over, older are removed
+				- Need deque instead of vector
 		- Spring deletion at stress: also unpin point if one endpoint is a pinned point?
 		- SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
+			- Random choices, Over/Underwater - NO material
+				- Update sink event
+		- Points and Springs and Triangles::Destroy()'s are templated on Point/Spring/Triangle"Being"DeletedHandlers (others than self),
+		  & ship passes own methods
+			- Handlers invoked *before* actual deletion
+				- Comment on handlers on connected-to-argument might be deleted
+			- Not re-entrant - can't delete from within
+			- Handling of pinned point deletion is then done here
+
 	- Frontier:
 		- Only for non-rope points - rope points never take part in frontier
 		- Preliminaries:
@@ -174,6 +193,8 @@ Prev perf (before point et al destructuring)
 						- If one of the connected points is already a frontier, then the new frontier points
 						  take that frontierId
 						- TODO
+	- Water drag 
+		- The one already there assumes velocity always normal to surface, but we should consider surface normal instead
 	- Experiment with:
 		- Runge-Kutta
 		- Semi-implicit Euler (https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf)
@@ -196,11 +217,28 @@ Prev perf (before point et al destructuring)
 	- DestroyAt:
 		- Test: Spring::Destroy() only destroys triangles that contain A-B
 			- Should definitely make both A and B leak, as they both now have an adjacent hole
-	- Is Verlet implemented right?
+	+ Is Verlet implemented right?
 	+ Review parallel calculation, it suffers from races
 		+ Also See if can continue queueing tasks without waiting for all blocks of chunks
-	- Water drag 
-		- The one already there assumes velocity always normal to surface, but we should consider surface normal instead
+	- Bombs:
+		- Spec:
+			- Placed and removed with similar tool as Point Pinning
+			- Two types of bombs: timer and remote controlled
+			- A bomb explodes when:
+				- Its timer times out or the remote control is triggered
+				- The point it's attached to is destroyed
+				- A spring connected to the point it's attached to is destroyed
+		- Impl:
+			- Ship remembers set of bombs (capped), just like pinned points
+			- Points also has bool buffer for interactions & lookups, just like pinned points 
+			- Ship implements:
+				- ToggleBomb (like pinned points)
+				- DetonateRCBombs()
+				- Point::Destroy: check if bomb attached, just like pinned points
+				- Spring destroy: check if bomb attached
+					- This is complicated: Springs and Points delete springs by themselves
+					- Solution (see above): both Destroy()'s are template on OnPoint/SpringDeletedHandlers,
+					  & ship passes own methods
 
 - Controls:
 	- Set max and min zoom (or monsters awaken when you zoom out too much)

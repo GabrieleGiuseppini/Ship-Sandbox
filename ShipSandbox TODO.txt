@@ -140,8 +140,8 @@ Prev perf (before point et al destructuring)
 			+ Ship checks if exists pinned point in radius: if yes, unpin; else, pin
 			+ Returns true if points belongs to ship, so to stop search by World
 			+ Cursor is a pin
-		= ShipRenderContext::UploadPinnedPoint(): do pinned point insertion at end of own connected component
-		= Texture: 
+		+ ShipRenderContext::UploadPinnedPoint(): do pinned point insertion at end of own connected component
+		+ Texture: 
 			+ lighter
 			+ plug hole
 		+ Fix crash when loading Titanic

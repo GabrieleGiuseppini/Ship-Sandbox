@@ -494,10 +494,10 @@ TEST(CircularListTests, Erase_TailHead_TailPlusOne)
     EXPECT_EQ(4u, cl.size());
     EXPECT_EQ(40, *(cl.begin()));
 
-    int i = 0;
-    for (auto it = cl.begin(); it != cl.end(); ++it, ++i)
+    int iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
-        if (i == 2)
+        if (iCheck == 2)
         {
             cl.erase(it);
             break;
@@ -518,10 +518,10 @@ TEST(CircularListTests, Erase_TailHead_TailPlusOne)
     EXPECT_EQ(30, vals[1]);
     EXPECT_EQ(10, vals[2]);
 
-    i = 0;
-    for (auto it = cl.begin(); it != cl.end(); ++it, ++i)
+    iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
-        if (i == 1)
+        if (iCheck == 1)
         {
             cl.erase(it);
             break;
@@ -541,10 +541,10 @@ TEST(CircularListTests, Erase_TailHead_TailPlusOne)
     EXPECT_EQ(40, vals[0]);
     EXPECT_EQ(10, vals[1]);
 
-    i = 0;
-    for (auto it = cl.begin(); it != cl.end(); ++it, ++i)
+    iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
-        if (i == 0)
+        if (iCheck == 0)
         {
             cl.erase(it);
             break;
@@ -566,6 +566,8 @@ TEST(CircularListTests, Erase_TailHead_TailPlusOne)
 
 TEST(CircularListTests, Erase_HeadTail_Head)
 {
+    std::vector<int> vals;
+
     CircularList<int, 4> cl;
 
     cl.emplace([](int) {}, 10);
@@ -582,19 +584,47 @@ TEST(CircularListTests, Erase_HeadTail_Head)
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
-    EXPECT_EQ(50, *(cl.begin()));
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(3u, vals.size());
+    EXPECT_EQ(50, vals[0]);
+    EXPECT_EQ(40, vals[1]);
+    EXPECT_EQ(30, vals[2]);
 
     cl.erase(cl.begin());
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
-    EXPECT_EQ(40, *(cl.begin()));
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(2u, vals.size());
+    EXPECT_EQ(40, vals[0]);
+    EXPECT_EQ(30, vals[1]);
+
 
     cl.erase(cl.begin());
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
-    EXPECT_EQ(30, *(cl.begin()));
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(1u, vals.size());
+    EXPECT_EQ(30, vals[0]);
 
     cl.erase(cl.begin());
 
@@ -604,11 +634,8 @@ TEST(CircularListTests, Erase_HeadTail_Head)
 
 TEST(CircularListTests, Erase_HeadTail_HeadMinusOne)
 {
-    // TODO
-}
+    std::vector<int> vals;
 
-TEST(CircularListTests, Erase_HeadTail_Tail)
-{
     CircularList<int, 4> cl;
 
     cl.emplace([](int) {}, 10);
@@ -621,10 +648,72 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
     EXPECT_EQ(4u, cl.size());
     EXPECT_EQ(60, *(cl.begin()));
 
-    int i = 0;
-    for (auto it = cl.begin(); it != cl.end(); ++it, ++i)
+    cl.erase(std::next(cl.begin()));
+
+    EXPECT_EQ(3u, cl.size());
+    EXPECT_FALSE(cl.empty());
+
+    vals.clear();
+    for (auto i : cl)
     {
-        if (i == 3)
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(3u, vals.size());
+    EXPECT_EQ(60, vals[0]);
+    EXPECT_EQ(40, vals[1]);
+    EXPECT_EQ(30, vals[2]);
+
+    cl.erase(std::next(cl.begin()));
+
+    EXPECT_EQ(2u, cl.size());
+    EXPECT_FALSE(cl.empty());
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(2u, vals.size());
+    EXPECT_EQ(60, vals[0]);
+    EXPECT_EQ(30, vals[1]);
+
+    cl.erase(std::next(cl.begin()));
+
+    EXPECT_EQ(1u, cl.size());
+    EXPECT_FALSE(cl.empty());
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(1u, vals.size());
+    EXPECT_EQ(60, vals[0]);
+}
+
+TEST(CircularListTests, Erase_HeadTail_Tail)
+{
+    std::vector<int> vals;
+
+    CircularList<int, 4> cl;
+
+    cl.emplace([](int) {}, 10);
+    cl.emplace([](int) {}, 20);
+    cl.emplace([](int) {}, 30);
+    cl.emplace([](int) {}, 40);
+    cl.emplace([](int) {}, 50);
+    cl.emplace([](int) {}, 60);
+
+    EXPECT_EQ(4u, cl.size());
+    EXPECT_EQ(60, *(cl.begin()));
+
+    int iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
+    {
+        if (iCheck == 3)
         {
             cl.erase(it);
             break;
@@ -634,16 +723,21 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
 
-    i = 60;
-    for (auto it = cl.begin(); it != cl.end(); ++it, i -= 10)
+    vals.clear();
+    for (auto i : cl)
     {
-        EXPECT_EQ(i, *it);
+        vals.push_back(i);
     }
 
-    i = 0;
-    for (auto it = cl.begin(); it != cl.end(); ++it, ++i)
+    ASSERT_EQ(3u, vals.size());
+    EXPECT_EQ(60, vals[0]);
+    EXPECT_EQ(50, vals[1]);
+    EXPECT_EQ(40, vals[2]);
+
+    iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
-        if (i == 2)
+        if (iCheck == 2)
         {
             cl.erase(it);
             break;
@@ -653,16 +747,20 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
 
-    i = 60;
-    for (auto it = cl.begin(); it != cl.end(); ++it, i -= 10)
+    vals.clear();
+    for (auto i : cl)
     {
-        EXPECT_EQ(i, *it);
+        vals.push_back(i);
     }
 
-    i = 0;
-    for (auto it = cl.begin(); it != cl.end(); ++it, ++i)
+    ASSERT_EQ(2u, vals.size());
+    EXPECT_EQ(60, vals[0]);
+    EXPECT_EQ(50, vals[1]);
+
+    iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
-        if (i == 1)
+        if (iCheck == 1)
         {
             cl.erase(it);
             break;
@@ -672,16 +770,19 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
 
-    i = 60;
-    for (auto it = cl.begin(); it != cl.end(); ++it, i -= 10)
+    vals.clear();
+    for (auto i : cl)
     {
-        EXPECT_EQ(i, *it);
+        vals.push_back(i);
     }
 
-    i = 0;
-    for (auto it = cl.begin(); it != cl.end(); ++it, ++i)
+    ASSERT_EQ(1u, vals.size());
+    EXPECT_EQ(60, vals[0]);
+
+    iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
-        if (i == 0)
+        if (iCheck == 0)
         {
             cl.erase(it);
             break;
@@ -694,5 +795,99 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
 
 TEST(CircularListTests, Erase_HeadTail_TailPlusOne)
 {
-    // TODO
+    std::vector<int> vals;
+
+    CircularList<int, 4> cl;
+
+    cl.emplace([](int) {}, 10);
+    cl.emplace([](int) {}, 20);
+    cl.emplace([](int) {}, 30);
+    cl.emplace([](int) {}, 40);
+    cl.emplace([](int) {}, 50);
+    cl.emplace([](int) {}, 60);
+
+    EXPECT_EQ(4u, cl.size());
+    EXPECT_EQ(60, *(cl.begin()));
+
+    int iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
+    {
+        if (iCheck == 2)
+        {
+            cl.erase(it);
+            break;
+        }
+    }
+
+    EXPECT_EQ(3u, cl.size());
+    EXPECT_FALSE(cl.empty());
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(3u, vals.size());
+    EXPECT_EQ(60, vals[0]);
+    EXPECT_EQ(50, vals[1]);
+    EXPECT_EQ(30, vals[2]);
+
+    iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
+    {
+        if (iCheck == 1)
+        {
+            cl.erase(it);
+            break;
+        }
+    }
+
+    EXPECT_EQ(2u, cl.size());
+    EXPECT_FALSE(cl.empty());
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(2u, vals.size());
+    EXPECT_EQ(60, vals[0]);
+    EXPECT_EQ(30, vals[1]);
+
+    iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
+    {
+        if (iCheck == 0)
+        {
+            cl.erase(it);
+            break;
+        }
+    }
+
+    EXPECT_EQ(1u, cl.size());
+    EXPECT_FALSE(cl.empty());
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(1u, vals.size());
+    EXPECT_EQ(30, vals[0]);
+
+    iCheck = 0;
+    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
+    {
+        if (iCheck == 0)
+        {
+            cl.erase(it);
+            break;
+        }
+    }
+
+    EXPECT_EQ(0u, cl.size());
+    EXPECT_TRUE(cl.empty());
 }

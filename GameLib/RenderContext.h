@@ -534,7 +534,7 @@ public:
             mShipRenderMode,
             mShowStressedSprings,
             mAmbientLightIntensity,
-            mCanvasHeight / mVisibleWorldHeight,
+            static_cast<float>(mCanvasHeight) / mVisibleWorldHeight,
             mOrthoMatrix);
     }
 

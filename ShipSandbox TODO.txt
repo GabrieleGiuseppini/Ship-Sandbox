@@ -160,15 +160,14 @@ Prev perf (before point et al destructuring)
 			+ lighter
 			+ plug hole
 		+ Fix crash when loading Titanic
-		= Max 64 pins
-			= CircularList
-				= Add() is templated on OnRemoved() handler
-					- Verify assembly
+		+ Max 64 pins
+			+ CircularList
+				+ Add() is templated on OnRemoved() handler
 					+ When over, older are removed
 				+ Unit tests
 			+ Constant at GameParameters
-		- Spring deletion at stress: also unpin point if one endpoint is a pinned point?
-			- Requires global dlete handler above
+		- Spring deletion at stress: also unpin endpoint if the endpoint has no more springs attached to it
+			- Requires global destroy handler above
 		+ SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
 			+ Random choices, Over/Underwater - NO material
 				+ Update sink event

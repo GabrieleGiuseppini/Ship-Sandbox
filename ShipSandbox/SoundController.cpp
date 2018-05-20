@@ -42,7 +42,7 @@ SoundController::SoundController(
     }
 
     mSinkingMusic.setLoop(true);
-    mSinkingMusic.setVolume(50);
+    mSinkingMusic.setVolume(20);
 
 
     //

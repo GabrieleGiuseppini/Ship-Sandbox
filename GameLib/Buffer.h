@@ -47,21 +47,22 @@ public:
         }
     }
 
-    Buffer & operator=(Buffer && other)
-    {
-        if (nullptr != mBuffer)
-        {
-            aligned_free(reinterpret_cast<void *>(mBuffer));
-        }
+    // TODO: needed?
+    ////Buffer & operator=(Buffer && other)
+    ////{
+    ////    if (nullptr != mBuffer)
+    ////    {
+    ////        aligned_free(reinterpret_cast<void *>(mBuffer));
+    ////    }
 
-        mBuffer = other.mBuffer;
-        mSize = other.mSize;
-        mCurrentSize = other.mCurrentSize;
+    ////    mBuffer = other.mBuffer;
+    ////    mSize = other.mSize;
+    ////    mCurrentSize = other.mCurrentSize;
 
-        other.mBuffer = nullptr;
+    ////    other.mBuffer = nullptr;
 
-        return *this;
-    }
+    ////    return *this;
+    ////}
 
     /*
      * Adds an element to the buffer. Assumed to be invoked only at initialization time.
@@ -88,7 +89,7 @@ public:
     inline TElement const & operator[](size_t index) const noexcept
     {
 #ifndef NDEBUG
-        // This allows us to set breakpoints
+        // Ugly trick to allows setting breakpoints
         if (index >= mCurrentSize)
         {
             assert(index < mCurrentSize);
@@ -123,6 +124,6 @@ private:
 
     TElement * restrict mBuffer;
     // TODO: make const after phase I
-    size_t /*const*/ mSize;
+    size_t const mSize;
     size_t mCurrentSize;
 };

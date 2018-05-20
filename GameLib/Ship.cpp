@@ -85,7 +85,7 @@ void Ship::DestroyAt(
 
                     // Unpin it
                     assert(mPoints.IsPinned(*it));
-                    mPoints.UnPin(*it);
+                    mPoints.Unpin(*it);
 
                     // Remove from stack
                     mCurrentPinnedPoints.erase(it);
@@ -145,7 +145,7 @@ bool Ship::TogglePinAt(
             // Found a pinned point
 
             // Unpin it
-            mPoints.UnPin(*it);
+            mPoints.Unpin(*it);
 
             // Remove from set of pinned points
             mCurrentPinnedPoints.erase(std::next(it).base());
@@ -154,7 +154,9 @@ bool Ship::TogglePinAt(
             mArePinnedPointsDirty = true;
 
             // Notify
-            mParentWorld->GetGameEventHandler()->OnPinToggled(false);
+            mParentWorld->GetGameEventHandler()->OnPinToggled(
+                false,
+                mParentWorld->IsUnderwater(mPoints.GetPosition(*it)));
 
             // We're done
             return true;
@@ -204,7 +206,9 @@ bool Ship::TogglePinAt(
         mArePinnedPointsDirty = true;
 
         // Notify
-        mParentWorld->GetGameEventHandler()->OnPinToggled(true);
+        mParentWorld->GetGameEventHandler()->OnPinToggled(
+            true,
+            mParentWorld->IsUnderwater(mPoints.GetPosition(nearestUnpinnedPointIndex)));
 
         // We're done
         return true;

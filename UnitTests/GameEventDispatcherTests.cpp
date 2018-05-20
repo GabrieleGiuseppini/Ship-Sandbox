@@ -9,6 +9,7 @@ public:
     MOCK_METHOD3(OnDestroy, void(Material const * material, bool isUnderwater, unsigned int size));
     MOCK_METHOD0(OnDraw, void());
     MOCK_METHOD3(OnBreak, void(Material const * material, bool isUnderwater, unsigned int size));
+    MOCK_METHOD2(OnPinToggled, void(bool isPinned, bool isUnderwater));
     MOCK_METHOD3(OnStress, void(Material const * material, bool isUnderwater, unsigned int size));
     MOCK_METHOD1(OnSinkingBegin, void(unsigned int shipId));
 };
@@ -121,6 +122,52 @@ TEST(GameEventDispatcherTests, Aggregates_OnBreak_MultipleKeys)
     EXPECT_CALL(handler, OnBreak(pm1, false, 13)).Times(1);
     EXPECT_CALL(handler, OnBreak(pm2, false, 3)).Times(1);
     EXPECT_CALL(handler, OnBreak(pm2, true, 4)).Times(1);
+
+    dispatcher.Flush();
+
+    Mock::VerifyAndClear(&handler);
+}
+
+TEST(GameEventDispatcherTests, Aggregates_OnPinToggled)
+{
+    MockHandler handler;
+
+    GameEventDispatcher dispatcher;
+    dispatcher.RegisterSink(&handler);
+
+    EXPECT_CALL(handler, OnPinToggled(_, _)).Times(0);
+
+    dispatcher.OnPinToggled(true, false);
+    dispatcher.OnPinToggled(true, false);
+
+    Mock::VerifyAndClear(&handler);
+
+    EXPECT_CALL(handler, OnPinToggled(true, false)).Times(1);
+
+    dispatcher.Flush();
+
+    Mock::VerifyAndClear(&handler);
+}
+
+TEST(GameEventDispatcherTests, Aggregates_OnPinToggled_MultipleKeys)
+{
+    MockHandler handler;
+
+    GameEventDispatcher dispatcher;
+    dispatcher.RegisterSink(&handler);
+
+    EXPECT_CALL(handler, OnPinToggled(_, _)).Times(0);
+
+    dispatcher.OnPinToggled(true, false);
+    dispatcher.OnPinToggled(true, false);
+    dispatcher.OnPinToggled(false, false);
+    dispatcher.OnPinToggled(true, true);
+
+    Mock::VerifyAndClear(&handler);
+
+    EXPECT_CALL(handler, OnPinToggled(true, false)).Times(1);
+    EXPECT_CALL(handler, OnPinToggled(false, false)).Times(1);
+    EXPECT_CALL(handler, OnPinToggled(true, true)).Times(1);
 
     dispatcher.Flush();
 

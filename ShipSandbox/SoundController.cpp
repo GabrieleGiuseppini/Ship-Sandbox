@@ -18,7 +18,8 @@ SoundController::SoundController(
     ProgressCallback const & progressCallback)
     : mResourceLoader(std::move(resourceLoader))
     , mCurrentVolume(100.0f)
-    , mCrashSoundBuffers()
+    , mMSUSoundBuffers()
+    , mUSoundBuffers()
     , mDrawSoundBuffer()
     , mDrawSound()
     , mCurrentlyPlayingSounds()
@@ -85,29 +86,29 @@ SoundController::SoundController(
         if (soundType == SoundType::Break || soundType == SoundType::Destroy || soundType == SoundType::Stress)
         {
             //
-            // Crash sound
+            // MSU sound
             //
 
-            std::regex crashRegex(R"(([^_]+)_([^_]+)_([^_]+)_(?:(underwater)_)?\d+)");
-            std::smatch crashMatch;
-            if (!std::regex_match(soundName, crashMatch, crashRegex))
+            std::regex msuRegex(R"(([^_]+)_([^_]+)_([^_]+)_(?:(underwater)_)?\d+)");
+            std::smatch msuMatch;
+            if (!std::regex_match(soundName, msuMatch, msuRegex))
             {
-                throw GameException("Crash sound filename \"" + soundName + "\" is not recognized");
+                throw GameException("MSU sound filename \"" + soundName + "\" is not recognized");
             }
 
-            assert(crashMatch.size() == 1 + 4);
+            assert(msuMatch.size() == 1 + 4);
 
             // 1. Parse SoundElementType
-            Material::SoundProperties::SoundElementType soundElementType = Material::SoundProperties::StrToSoundElementType(crashMatch[2].str());
+            Material::SoundProperties::SoundElementType soundElementType = Material::SoundProperties::StrToSoundElementType(msuMatch[2].str());
 
             // 2. Parse Size
-            SizeType sizeType = StrToSizeType(crashMatch[3].str());
+            SizeType sizeType = StrToSizeType(msuMatch[3].str());
 
             // 3. Parse Underwater
             bool isUnderwater;
-            if (crashMatch[4].matched)
+            if (msuMatch[4].matched)
             {
-                assert(crashMatch[4].str() == "underwater");
+                assert(msuMatch[4].str() == "underwater");
                 isUnderwater = true;
             }
             else
@@ -120,7 +121,42 @@ SoundController::SoundController(
             // Store sound buffer
             //
 
-            mCrashSoundBuffers[std::make_tuple(soundType, soundElementType, sizeType, isUnderwater)]
+            mMSUSoundBuffers[std::make_tuple(soundType, soundElementType, sizeType, isUnderwater)]
+                .SoundBuffers.emplace_back(std::move(soundBuffer));
+        }
+        else if (soundType == SoundType::PinPoint || soundType == SoundType::UnpinPoint)
+        {
+            //
+            // U sound
+            //
+
+            std::regex uRegex(R"(([^_]+)_(?:(underwater)_)?\d+)");
+            std::smatch uMatch;
+            if (!std::regex_match(soundName, uMatch, uRegex))
+            {
+                throw GameException("U sound filename \"" + soundName + "\" is not recognized");
+            }
+
+            assert(uMatch.size() == 1 + 2);
+
+            // 1. Parse Underwater
+            bool isUnderwater;
+            if (uMatch[2].matched)
+            {
+                assert(uMatch[2].str() == "underwater");
+                isUnderwater = true;
+            }
+            else
+            {
+                isUnderwater = false;
+            }
+
+
+            //
+            // Store sound buffer
+            //
+
+            mUSoundBuffers[std::make_tuple(soundType, isUnderwater)]
                 .SoundBuffers.emplace_back(std::move(soundBuffer));
         }
         else if (soundType == SoundType::Draw)
@@ -244,7 +280,7 @@ void SoundController::OnDestroy(
 {
     assert(nullptr != material);
 
-    PlayCrashSound(SoundType::Destroy, material, size, isUnderwater);
+    PlayMSUSound(SoundType::Destroy, material, size, isUnderwater);
 }
 
 void SoundController::OnDraw()
@@ -262,6 +298,13 @@ void SoundController::OnDraw()
     }
 }
 
+void SoundController::OnPinToggled(
+    bool isPinned,
+    bool isUnderwater)
+{
+    PlayUSound(isPinned ? SoundType::PinPoint : SoundType::UnpinPoint, isUnderwater);
+}
+
 void SoundController::OnStress(
     Material const * material,
     bool isUnderwater,
@@ -269,7 +312,7 @@ void SoundController::OnStress(
 {
     assert(nullptr != material);
 
-    PlayCrashSound(SoundType::Stress, material, size, isUnderwater);
+    PlayMSUSound(SoundType::Stress, material, size, isUnderwater);
 }
 
 void SoundController::OnBreak(
@@ -279,7 +322,7 @@ void SoundController::OnBreak(
 {
     assert(nullptr != material);
 
-    PlayCrashSound(SoundType::Break, material, size, isUnderwater);
+    PlayMSUSound(SoundType::Break, material, size, isUnderwater);
 }
 
 void SoundController::OnSinkingBegin(unsigned int /*shipId*/)
@@ -292,7 +335,7 @@ void SoundController::OnSinkingBegin(unsigned int /*shipId*/)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-void SoundController::PlayCrashSound(
+void SoundController::PlayMSUSound(
     SoundType soundType,
     Material const * material,
     unsigned int size,
@@ -312,47 +355,92 @@ void SoundController::PlayCrashSound(
     else
         sizeType = SizeType::Large;
 
-    LogMessage("CrashSound: <", static_cast<int>(soundType), ",", static_cast<int>(material->Sound->ElementType), ",", static_cast<int>(sizeType), ">");
+    LogMessage("MSUSound: <", 
+        static_cast<int>(soundType), 
+        ",", 
+        static_cast<int>(material->Sound->ElementType), 
+        ",", 
+        static_cast<int>(sizeType), 
+        ",", 
+        static_cast<int>(isUnderwater),
+        ">");
 
     //
     // Find vector
     //
     
-    auto it = mCrashSoundBuffers.find(std::make_tuple(soundType, material->Sound->ElementType, sizeType, isUnderwater));
+    auto it = mMSUSoundBuffers.find(std::make_tuple(soundType, material->Sound->ElementType, sizeType, isUnderwater));
 
-    if (it == mCrashSoundBuffers.end())
+    if (it == mMSUSoundBuffers.end())
     {
         // Find a smaller one
         for (int s = static_cast<int>(sizeType) - 1; s >= static_cast<int>(SizeType::Min); --s)
         {
-            it = mCrashSoundBuffers.find(std::make_tuple(soundType, material->Sound->ElementType, static_cast<SizeType>(s), isUnderwater));
-            if (it != mCrashSoundBuffers.end())
+            it = mMSUSoundBuffers.find(std::make_tuple(soundType, material->Sound->ElementType, static_cast<SizeType>(s), isUnderwater));
+            if (it != mMSUSoundBuffers.end())
             {
                 break;
             }
         }
     }
 
-    if (it == mCrashSoundBuffers.end())
+    if (it == mMSUSoundBuffers.end())
     {
         // Find this or smaller size with different underwater
         for (int s = static_cast<int>(sizeType); s >= static_cast<int>(SizeType::Min); --s)
         {
-            it = mCrashSoundBuffers.find(std::make_tuple(soundType, material->Sound->ElementType, static_cast<SizeType>(s), !isUnderwater));
-            if (it != mCrashSoundBuffers.end())
+            it = mMSUSoundBuffers.find(std::make_tuple(soundType, material->Sound->ElementType, static_cast<SizeType>(s), !isUnderwater));
+            if (it != mMSUSoundBuffers.end())
             {
                 break;
             }
         }
     }
 
-    if (it == mCrashSoundBuffers.end())
+    if (it == mMSUSoundBuffers.end())
     {
         // No luck
         return;
     }
 
     
+    //
+    // Play sound
+    //
+
+    ChooseAndPlaySound(
+        soundType,
+        it->second);
+}
+
+void SoundController::PlayUSound(
+    SoundType soundType,
+    bool isUnderwater)
+{
+    LogMessage("USound: <",
+        static_cast<int>(soundType),
+        ",",
+        static_cast<int>(isUnderwater),
+        ">");
+
+    //
+    // Find vector
+    //
+
+    auto it = mUSoundBuffers.find(std::make_tuple(soundType, isUnderwater));
+    if (it == mUSoundBuffers.end())
+    {
+        // Find different underwater
+        it = mUSoundBuffers.find(std::make_tuple(soundType, !isUnderwater));
+    }
+
+    if (it == mUSoundBuffers.end())
+    {
+        // No luck
+        return;
+    }
+
+
     //
     // Play sound
     //

@@ -377,7 +377,7 @@ public:
         mVelocityBuffer[pointElementIndex] = vec2f(0.0f, 0.0f);
     }
 
-    void UnPin(ElementIndex pointElementIndex)
+    void Unpin(ElementIndex pointElementIndex)
     {
         assert(pointElementIndex < mElementCount);
     

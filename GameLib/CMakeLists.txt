@@ -7,6 +7,7 @@ set  (GAME_SOURCES
 	AABB.cpp
 	AABB.h
 	Buffer.h
+	CircularList.h
 	ElementContainer.h
 	FixedSizeVector.h
 	GameController.cpp

@@ -46,7 +46,9 @@ public:
         // Default-implemented
     }
 
-    virtual void OnPinToggled(bool /*isPinned*/)
+    virtual void OnPinToggled(
+        bool /*isPinned*/,
+        bool /*isUnderwater*/)
     {
         // Default-implemented
     }

@@ -49,6 +49,10 @@ public:
 
     virtual void OnDraw() override;
 
+    virtual void OnPinToggled(
+        bool isPinned,
+        bool isUnderwater) override;
+
     virtual void OnStress(
         Material const * material,
         bool isUnderwater,
@@ -67,6 +71,8 @@ private:
     {
         Break,
         Destroy,
+        PinPoint,
+        UnpinPoint,
         Draw,
         Stress,
     };
@@ -81,6 +87,10 @@ private:
             return SoundType::Destroy;
         else if (lstr == "draw")
             return SoundType::Draw;
+        else if (lstr == "pinpoint")
+            return SoundType::PinPoint;
+        else if (lstr == "unpinpoint")
+            return SoundType::UnpinPoint;
         else if (lstr == "stress")
             return SoundType::Stress;
         else
@@ -145,10 +155,14 @@ private:
 
 private:
 
-    void PlayCrashSound(
+    void PlayMSUSound(
         SoundType soundType,
         Material const * material,
         unsigned int size,
+        bool isUnderwater);
+
+    void PlayUSound(
+        SoundType soundType,
         bool isUnderwater);
 
     void ChooseAndPlaySound(
@@ -176,7 +190,11 @@ private:
 
     unordered_tuple_map<
         std::tuple<SoundType, Material::SoundProperties::SoundElementType, SizeType, bool>,
-        SoundInfo> mCrashSoundBuffers;
+        SoundInfo> mMSUSoundBuffers;
+
+    unordered_tuple_map<
+        std::tuple<SoundType, bool>,
+        SoundInfo> mUSoundBuffers;
 
     std::unique_ptr<sf::SoundBuffer> mDrawSoundBuffer;
     std::unique_ptr<sf::Sound> mDrawSound;

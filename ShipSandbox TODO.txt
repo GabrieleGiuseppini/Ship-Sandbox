@@ -53,9 +53,10 @@ Prev perf (before point et al destructuring)
 		- Precalculate things that do not depend on position nor velocity
 			- Stored either in buffers (if we go for exploded Pos, Vel, etc.) or in Point (if we don't go for that)
 			- Technically, would have to store separately effectiveMassMultiplier (*Mass) and effectiveBuoyancy (*Mass)
-				- But could cheat and use water height based on initial positions only, in which case
-				  we store directly StaticForce == Gravity + Water Drag
+				- Test: but could cheat and use water height based on initial positions only, in which case
+				  we store directly StaticForce == Gravity + Water Drag (?REALLY?)
 				  - StaticForce used directly in Integrate() added to Force
+					- Or better if added to Force at UpdatePointDynamics()?
 	- Split Spring::WaterPermeability in two, with pre-calculated values:
 		- WaterGravitationFactor
 		- WaterPropagationFactor
@@ -98,6 +99,10 @@ Prev perf (before point et al destructuring)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
+	- Make stiffness adjustment
+		- Points::SetStiffnessAdjustment(stiffnessAdjustment):
+			- Called by Ship at each Update()
+			- If != last, recalc coefficient/s
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded
@@ -145,18 +150,22 @@ Prev perf (before point et al destructuring)
 			+ lighter
 			+ plug hole
 		+ Fix crash when loading Titanic
-		- Max 256 pins
-			- CircularList?
-				- Add() is templated on OnRemoved() handler
+		= Max 64 pins
+			= CircularList
+				= Add() is templated on OnRemoved() handler
 					- Verify assembly
-				- Unit tests
+					+ When over, older are removed
+				+ Unit tests
 			- Constant at GameParameters
-			- When over, older are removed
-				- Need deque instead of vector
 		- Spring deletion at stress: also unpin point if one endpoint is a pinned point?
 		- SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
-			- Random choices, Over/Underwater - NO material
-				- Update sink event
+			+ Random choices, Over/Underwater - NO material
+				+ Update sink event
+			= Do sounds:
+				= 4 pin
+				- 4 pin underwater
+				- 4 unpin
+				- 4 unpin underwater
 		- Points and Springs and Triangles::Destroy()'s are templated on Point/Spring/Triangle"Being"DeletedHandlers (others than self),
 		  & ship passes own methods
 			- Handlers invoked *before* actual deletion

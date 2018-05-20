@@ -19,7 +19,7 @@ public:
     GameEventDispatcher()
         : mDestroyEvents()
         , mDrawEvent(false)
-        , mPinToggledEvent(std::nullopt)
+        , mPinToggledEvents()
         , mStressEvents()
         , mBreakEvents()
         , mSinkingBeginEvents()
@@ -62,9 +62,11 @@ public:
         mDrawEvent = true;
     }
 
-    virtual void OnPinToggled(bool isPinned) override
+    virtual void OnPinToggled(
+        bool isPinned,
+        bool isUnderwater) override
     {
-        mPinToggledEvent = isPinned;
+        mPinToggledEvents.insert(std::make_tuple(isPinned, isUnderwater));
     }
 
     virtual void OnStress(
@@ -111,9 +113,9 @@ public:
                 sink->OnDraw();
             }
 
-            if (!!mPinToggledEvent)
+            for (auto const & entry : mPinToggledEvents)
             {
-                sink->OnPinToggled(*mPinToggledEvent);
+                sink->OnPinToggled(std::get<0>(entry), std::get<1>(entry));
             }
 
             for (auto const & entry : mStressEvents)
@@ -135,7 +137,7 @@ public:
         // Clear collections
         mDestroyEvents.clear();
         mDrawEvent = false;
-        mPinToggledEvent = std::nullopt;
+        mPinToggledEvents.clear();
         mStressEvents.clear();
         mBreakEvents.clear();
         mSinkingBeginEvents.clear();
@@ -151,7 +153,7 @@ private:
     // The current events being aggregated
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mDestroyEvents;
     bool mDrawEvent;
-    std::optional<bool> mPinToggledEvent;
+    unordered_tuple_set<std::tuple<bool, bool>> mPinToggledEvents;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mStressEvents;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mBreakEvents;
     std::vector<unsigned int> mSinkingBeginEvents;

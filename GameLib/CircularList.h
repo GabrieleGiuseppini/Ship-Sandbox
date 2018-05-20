@@ -62,12 +62,12 @@ private:
 
         inline reference operator*() noexcept
         {
-            return mList.mArray[mCurrentHead > 0 ? mCurrentHead - 1u : MaxSize];
+            return mList->mArray[mCurrentHead > 0 ? mCurrentHead - 1u : MaxSize];
         }
 
         inline pointer operator->() noexcept
         {
-            return mList.mArray + (mCurrentHead > 0 ? mCurrentHead - 1u : MaxSize);
+            return mList->mArray + (mCurrentHead > 0 ? mCurrentHead - 1u : MaxSize);
         }
 
     private:
@@ -76,13 +76,13 @@ private:
 
         explicit _iterator(
             size_t head,
-            TList & list) noexcept
+            TList * list) noexcept
             : mCurrentHead(head)
             , mList(list)
         {}
 
         size_t mCurrentHead;
-        TList & mList;
+        TList * mList;
     };
 
 public:
@@ -114,14 +114,14 @@ public:
     {
         return iterator(
             mHead,
-            *this);
+            this);
     }
 
     inline iterator end() noexcept
     {
         return iterator(
             mTail,
-            *this);
+            this);
     }
 
     // Returns an iterator to the beginning (most recently added) element
@@ -129,14 +129,14 @@ public:
     {
         return const_iterator(
             mHead,
-            *this);
+            this);
     }
 
     inline const_iterator end() const noexcept
     {
         return const_iterator(
             mTail,
-            *this);
+            this);
     }
 
     inline size_t size() const noexcept

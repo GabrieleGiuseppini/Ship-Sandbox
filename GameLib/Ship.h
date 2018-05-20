@@ -7,6 +7,7 @@
 ***************************************************************************************/
 #pragma once
 
+#include "CircularList.h"
 #include "GameParameters.h"
 #include "MaterialDatabase.h"
 #include "Physics.h"
@@ -136,7 +137,7 @@ private:
     //
 
     // The current set of pinned points
-    std::vector<ElementContainer::ElementIndex> mCurrentPinnedPoints;
+    CircularList<ElementContainer::ElementIndex, GameParameters::MaxPinnedPoints> mCurrentPinnedPoints;
 
     // Flag remembering whether the set of pinned points has changed since the last step
     bool mutable mArePinnedPointsDirty;

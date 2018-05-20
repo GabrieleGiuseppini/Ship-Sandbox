@@ -134,7 +134,7 @@ bool Ship::TogglePinAt(
     // if so we unpin it and we're done
     //
 
-    for (auto it = mCurrentPinnedPoints.rbegin(); it != mCurrentPinnedPoints.rend(); ++it)
+    for (auto it = mCurrentPinnedPoints.begin(); it != mCurrentPinnedPoints.end(); ++it)
     {
         assert(!mPoints.IsDeleted(*it));
         assert(mPoints.IsPinned(*it));
@@ -148,7 +148,7 @@ bool Ship::TogglePinAt(
             mPoints.Unpin(*it);
 
             // Remove from set of pinned points
-            mCurrentPinnedPoints.erase(std::next(it).base());
+            mCurrentPinnedPoints.erase(it);
 
             // Remember we have to re-upload the pinned points
             mArePinnedPointsDirty = true;
@@ -199,8 +199,13 @@ bool Ship::TogglePinAt(
         // Pin it
         mPoints.Pin(nearestUnpinnedPointIndex);
 
-        // Add to set of pinned points
-        mCurrentPinnedPoints.push_back(nearestUnpinnedPointIndex);
+        // Add to set of pinned points, unpinning the pin that might get purged 
+        mCurrentPinnedPoints.emplace(
+            [this](auto purgedPinnedPointIndex)
+            {
+                this->mPoints.Unpin(purgedPinnedPointIndex);
+            },
+            nearestUnpinnedPointIndex);
 
         // Remember we have to re-upload the pinned points
         mArePinnedPointsDirty = true;

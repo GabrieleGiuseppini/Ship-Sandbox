@@ -81,5 +81,11 @@ struct GameParameters
 
     float WindSpeed;
 
+    //
+    // Limits
+    //
+
+    static constexpr size_t MaxPinnedPoints = 64u;
+
     GameParameters();
 };

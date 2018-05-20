@@ -47,6 +47,17 @@ Prev perf (before point et al destructuring)
 	- RenderContext::RenderCloudsEnd: 1.69%
 =================================================
 
+- Code:
+	- Points and Springs and Triangles::Destroy()'s are templated on Point/Spring/Triangle"Being"DeletedHandlers (others than self),
+	  & ship passes own methods
+		- OR: even better, as handler never really changes: cctor takes handler at beginning, given by ship,
+		  and stores as std::function
+		- Handlers invoked *before* actual deletion
+			- Comment on handlers on connected-to-argument might be deleted
+		- Not re-entrant - can't delete from within
+		- Handling of pinned point deletion is then done here
+			- See if also whole logic of point<->spring<->triangle can be done in handler
+
 - Optimizations:	
 	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
 	- UpdatePointForces:
@@ -77,13 +88,12 @@ Prev perf (before point et al destructuring)
 		- 1: see if it's better to store delta's and/or other pre-calculated things
 		- 2: see if can do semi-integer x-axis interpolation
 
-- Fix ShipCreate unit tests
-
 - Release:
 	- Do final round with all ships
 	- Post on Forum
 
 - Gfx:
+	- Option to enable drawing of force vectors for each point
 	- Optimizations:
 		- See if drawing springs & triangles with Z buffer and depth test helps (for springs' fragment shader)
 	- AmbientLightIntensity:
@@ -156,22 +166,17 @@ Prev perf (before point et al destructuring)
 					- Verify assembly
 					+ When over, older are removed
 				+ Unit tests
-			- Constant at GameParameters
+			+ Constant at GameParameters
 		- Spring deletion at stress: also unpin point if one endpoint is a pinned point?
-		- SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
+			- Requires global dlete handler above
+		+ SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
 			+ Random choices, Over/Underwater - NO material
 				+ Update sink event
-			= Do sounds:
-				= 4 pin
-				- 4 pin underwater
-				- 4 unpin
-				- 4 unpin underwater
-		- Points and Springs and Triangles::Destroy()'s are templated on Point/Spring/Triangle"Being"DeletedHandlers (others than self),
-		  & ship passes own methods
-			- Handlers invoked *before* actual deletion
-				- Comment on handlers on connected-to-argument might be deleted
-			- Not re-entrant - can't delete from within
-			- Handling of pinned point deletion is then done here
+			+ Do sounds:
+				+ 4 pin
+				+ 4 pin underwater
+				+ 4 unpin
+				+ 4 unpin underwater
 
 	- Frontier:
 		- Only for non-rope points - rope points never take part in frontier
@@ -243,11 +248,15 @@ Prev perf (before point et al destructuring)
 			- Ship implements:
 				- ToggleBomb (like pinned points)
 				- DetonateRCBombs()
+				- UpdateBombs():
+					- 1. Advances animations (textures of bombs, sounds via events - BombSubEvent)
+					- 2. Finds all bombs whose timer has elapsed and explodes them
 				- Point::Destroy: check if bomb attached, just like pinned points
 				- Spring destroy: check if bomb attached
 					- This is complicated: Springs and Points delete springs by themselves
 					- Solution (see above): both Destroy()'s are template on OnPoint/SpringDeletedHandlers,
-					  & ship passes own methods
+					  & ship passes own methods, or ship passes own OnPoint/SpringDeletedHandlers
+					  at containers' cctors
 
 - Controls:
 	- Set max and min zoom (or monsters awaken when you zoom out too much)
@@ -395,9 +404,6 @@ Prev perf (before point et al destructuring)
 						- EventTicker: say this and other Reset/Load
 						- SoundController: play sound
 				- Stop PendingShipPlace tool
-
-- Force-driven Feature Wishlist:
-	- Draw option to draw force vectors for each point
 
 ==============================================================================
 ==============================================================================

@@ -44,54 +44,18 @@ void Points::Add(
     mTextureCoordinatesBuffer.emplace_back(textureCoordinates);
 }
 
-void Points::Destroy(
-    ElementIndex pointElementIndex,
-    Springs & springs,
-    Triangles & triangles,
-    ElectricalElements & electricalElements)
+void Points::Destroy(ElementIndex pointElementIndex)
 {
     assert(pointElementIndex < mElementCount);
+    assert(!IsDeleted(pointElementIndex));
 
-    Network & pointNetwork = mNetworkBuffer[pointElementIndex];
-
-    //
-    // Destroy all springs attached to this point
-    //
-
-    for (auto springIndex : pointNetwork.ConnectedSprings)
+    // Invoke destroy handler
+    if (!!mDestroyHandler)
     {
-        assert(!springs.IsDeleted(springIndex));
-        springs.Destroy(springIndex, pointElementIndex, *this, triangles);
+        mDestroyHandler(pointElementIndex);
     }
 
-    pointNetwork.ConnectedSprings.clear();
-
-    //
-    // Destroy all triangles connected to this point
-    //
-
-    for (auto triangleIndex : pointNetwork.ConnectedTriangles)
-    {
-        assert(!triangles.IsDeleted(triangleIndex));
-        triangles.Destroy(triangleIndex, pointElementIndex, *this);
-    }
-
-    pointNetwork.ConnectedTriangles.clear();
-
-    //
-    // Destroy the connected electrical element
-    //
-
-    if (NoneElementIndex != pointNetwork.ConnectedElectricalElement)
-    {
-        electricalElements.Destroy(pointNetwork.ConnectedElectricalElement);
-    }
-
-
-    //
-    // Finally, flag ourselves as deleted
-    //
-
+    // Flag ourselves as deleted
     mIsDeletedBuffer[pointElementIndex] = true;
 }
 
@@ -111,15 +75,16 @@ void Points::Breach(
     // Destroy all of our connected triangles
     //
 
-    Network & pointNetwork = mNetworkBuffer[pointElementIndex];
-
-    for (auto triangleIndex : pointNetwork.ConnectedTriangles)
+    // Note: we can't simply iterate and destroy, as destroying a triangle causes
+    // that triangle to be removed from the vector being iterated
+    auto & connectedTriangles = GetConnectedTriangles(pointElementIndex);
+    while (!connectedTriangles.empty())
     {
-        assert(!triangles.IsDeleted(triangleIndex));
-        triangles.Destroy(triangleIndex, pointElementIndex, *this);
+        assert(!triangles.IsDeleted(connectedTriangles.back()));
+        triangles.Destroy(connectedTriangles.back());
     }
 
-    pointNetwork.ConnectedTriangles.clear();
+    assert(GetConnectedTriangles(pointElementIndex).empty());
 }
 
 void Points::Upload(

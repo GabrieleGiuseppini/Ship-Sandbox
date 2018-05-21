@@ -50,6 +50,13 @@ Ship::Ship(
     , mArePinnedPointsDirty(false)
     , mCurrentDrawForce(std::nullopt)
 {
+    // Set destroy handlers
+    mPoints.SetDestroyHandler([this](auto idx) { this->PointDestroyHandler(idx); });
+    mSprings.SetDestroyHandler([this](auto idx) { this->SpringDestroyHandler(idx); });
+    mTriangles.SetDestroyHandler([this](auto idx) { this->TriangleDestroyHandler(idx); });
+    mElectricalElements.SetDestroyHandler([this](auto idx) { this->ElectricalElementDestroyHandler(idx); });
+
+    // Do a first connected component detection pass 
     DetectConnectedComponents(currentStepSequenceNumber);
 }
 
@@ -70,45 +77,8 @@ void Ship::DestroyAt(
         {
             if ((mPoints.GetPosition(pointIndex) - targetPos).squareLength() < squareRadius)
             {
-                //
-                // This point must be deleted
-                //
-
-                //
-                // If the point is pinned, unpin it
-                //
-
-                auto it = std::find(mCurrentPinnedPoints.begin(), mCurrentPinnedPoints.end(), pointIndex);
-                if (it != mCurrentPinnedPoints.end())
-                {
-                    assert(!mPoints.IsDeleted(*it));
-
-                    // Unpin it
-                    assert(mPoints.IsPinned(*it));
-                    mPoints.Unpin(*it);
-
-                    // Remove from stack
-                    mCurrentPinnedPoints.erase(it);
-
-                    // Remember we have to re-upload the pinned points
-                    mArePinnedPointsDirty = true;
-                }
-
                 // Destroy point
-                mPoints.Destroy(
-                    pointIndex,
-                    mSprings,
-                    mTriangles,
-                    mElectricalElements);
-
-                // Notify
-                mParentWorld->GetGameEventHandler()->OnDestroy(
-                    mPoints.GetMaterial(pointIndex),
-                    mParentWorld->IsUnderwater(mPoints.GetPosition(pointIndex)),
-                    1u);
-
-                // Remember the elements are now dirty
-                mAreElementsDirty = true;
+                mPoints.Destroy(pointIndex);
             }
         }
     }
@@ -199,7 +169,7 @@ bool Ship::TogglePinAt(
         // Pin it
         mPoints.Pin(nearestUnpinnedPointIndex);
 
-        // Add to set of pinned points, unpinning the pin that might get purged 
+        // Add to set of pinned points, unpinning eventual pins that might get purged 
         mCurrentPinnedPoints.emplace(
             [this](auto purgedPinnedPointIndex)
             {
@@ -263,24 +233,18 @@ void Ship::Update(
 
     //
     // Update strain for all springs; might cause springs to break
-    // (which would flag elements as dirty)
+    // (which would flag our elements as dirty)
     //
 
-    if (mSprings.UpdateStrains(
+    mSprings.UpdateStrains(
         gameParameters,
         *mParentWorld,
-        *gameEventHandler,                
-        mPoints,
-        mTriangles))
-    {
-        // At least one spring broke up...
-        // ...remember the elements are now dirty
-        mAreElementsDirty = true;
-    }
+        *gameEventHandler,
+        mPoints);
 
 
     //
-    // Detect connected components, if there have been deletions
+    // Detect connected components, if there have been any deletions
     //
 
     if (mAreElementsDirty)
@@ -534,14 +498,12 @@ void Ship::UpdateSpringForces(GameParameters const & /*gameParameters*/)
         float const displacementLength = displacement.length();
         vec2f const springDir = displacement.normalise(displacementLength);
 
-
         //
         // 1. Hooke's law
         //
 
         // Calculate spring force on point A
         vec2f const fSpringA = springDir * (displacementLength - mSprings.GetRestLength(springIndex)) * mSprings.GetStiffnessCoefficient(springIndex);
-
 
 
         //
@@ -848,6 +810,155 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
             }
         }
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// Private helpers
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)
+{
+    //
+    // Destroy all springs attached to this point
+    //
+
+    // Note: we can't simply iterate and destroy, as destroying a spring causes
+    // that spring to be removed from the vector being iterated
+    auto & connectedSprings = mPoints.GetConnectedSprings(pointElementIndex);
+    while (!connectedSprings.empty())
+    {
+        assert(!mSprings.IsDeleted(connectedSprings.back()));
+        mSprings.Destroy(connectedSprings.back());
+    }
+
+    assert(mPoints.GetConnectedSprings(pointElementIndex).empty());
+    
+
+    //
+    // Destroy all triangles connected to this point
+    //
+
+    // Note: we can't simply iterate and destroy, as destroying a triangle causes
+    // that triangle to be removed from the vector being iterated
+    auto & connectedTriangles = mPoints.GetConnectedTriangles(pointElementIndex);
+    while(!connectedTriangles.empty())
+    {
+        assert(!mTriangles.IsDeleted(connectedTriangles.back()));
+        mTriangles.Destroy(connectedTriangles.back());
+    }
+
+    assert(mPoints.GetConnectedTriangles(pointElementIndex).empty());
+
+
+    //
+    // Destroy the connected electrical element, if any
+    //
+
+    if (ElementContainer::NoneElementIndex != mPoints.GetConnectedElectricalElement(pointElementIndex))
+    {
+        mElectricalElements.Destroy(mPoints.GetConnectedElectricalElement(pointElementIndex));
+    }
+
+
+    //
+    // If the point is pinned, unpin it
+    //
+
+    auto it = std::find(mCurrentPinnedPoints.begin(), mCurrentPinnedPoints.end(), pointElementIndex);
+    if (it != mCurrentPinnedPoints.end())
+    {
+        // Unpin it
+        assert(mPoints.IsPinned(*it));
+        mPoints.Unpin(*it);
+
+        // Remove from stack
+        mCurrentPinnedPoints.erase(it);
+
+        // Remember we have to re-upload the pinned points
+        mArePinnedPointsDirty = true;
+    }
+
+
+    //
+    // Notify point destruction
+    //
+
+    mParentWorld->GetGameEventHandler()->OnDestroy(
+        mPoints.GetMaterial(pointElementIndex),
+        mParentWorld->IsUnderwater(mPoints.GetPosition(pointElementIndex)),
+        1u);
+
+
+    //
+    // Remember our elements are now dirty
+    //
+
+    mAreElementsDirty = true;
+}
+
+void Ship::SpringDestroyHandler(ElementContainer::ElementIndex springElementIndex)
+{
+    auto const pointAIndex = mSprings.GetPointAIndex(springElementIndex);
+    auto const pointBIndex = mSprings.GetPointBIndex(springElementIndex);
+
+    // Make endpoints leak and destroy their triangles.
+    // Note: technically, should only destroy those triangles that contain the A-B side (and definitely
+    // still make both A and B leak), but destroying everything seems to yield a nicer effect
+    mPoints.Breach(pointAIndex, mTriangles);
+    mPoints.Breach(pointBIndex, mTriangles);
+
+    // Remove the spring from its endpoints
+    mPoints.RemoveConnectedSpring(pointAIndex, springElementIndex);
+    mPoints.RemoveConnectedSpring(pointBIndex, springElementIndex);
+
+    // If an endpoint was pinned and it has now lost all of its springs, then make 
+    // it unpinned
+
+    if (mPoints.IsPinned(pointAIndex)
+        && mPoints.GetConnectedSprings(pointAIndex).empty())
+    {
+        // Unpin it
+        mPoints.Unpin(pointAIndex);
+
+        // Remove from set of pinned points
+        mCurrentPinnedPoints.erase(pointAIndex);
+
+        // Remember we have to re-upload the pinned points
+        mArePinnedPointsDirty = true;
+    }
+
+    if (mPoints.IsPinned(pointBIndex)
+        && mPoints.GetConnectedSprings(pointBIndex).empty())
+    {
+        // Unpin it
+        mPoints.Unpin(pointBIndex);
+
+        // Remove from set of pinned points
+        mCurrentPinnedPoints.erase(pointBIndex);
+
+        // Remember we have to re-upload the pinned points
+        mArePinnedPointsDirty = true;
+    }
+
+    // Remember our elements are now dirty
+    mAreElementsDirty = true;
+}
+
+void Ship::TriangleDestroyHandler(ElementContainer::ElementIndex triangleElementIndex)
+{
+    // Remove triangle from its endpoints
+    mPoints.RemoveConnectedTriangle(mTriangles.GetPointAIndex(triangleElementIndex), triangleElementIndex);
+    mPoints.RemoveConnectedTriangle(mTriangles.GetPointBIndex(triangleElementIndex), triangleElementIndex);
+    mPoints.RemoveConnectedTriangle(mTriangles.GetPointCIndex(triangleElementIndex), triangleElementIndex);
+
+    // Remember our elements are now dirty
+    mAreElementsDirty = true;
+}
+
+void Ship::ElectricalElementDestroyHandler(ElementContainer::ElementIndex /*electricalElementIndex*/)
+{
+    // Remember our elements are now dirty
+    mAreElementsDirty = true;
 }
 
 }

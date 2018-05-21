@@ -257,3 +257,16 @@ TEST(FixedSizeVectorTests, Erases_Copies_Last)
     EXPECT_EQ(1, vec[0]);
     EXPECT_EQ(2, vec[1]);
 }
+
+TEST(FixedSizeVectorTests, Back)
+{
+    FixedSizeVector<int, 6> vec;
+
+    vec.push_back(4);
+
+    EXPECT_EQ(4, vec.back());
+
+    vec.push_back(6);
+
+    EXPECT_EQ(6, vec.back());
+}

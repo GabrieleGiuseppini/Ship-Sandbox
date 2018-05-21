@@ -891,3 +891,35 @@ TEST(CircularListTests, Erase_HeadTail_TailPlusOne)
     EXPECT_EQ(0u, cl.size());
     EXPECT_TRUE(cl.empty());
 }
+
+TEST(CircularListTests, Erase_ByElement)
+{
+    std::vector<int> vals;
+
+    CircularList<int, 4> cl;
+
+    cl.emplace([](int) {}, 10);
+    cl.emplace([](int) {}, 20);
+    cl.emplace([](int) {}, 30);
+    cl.emplace([](int) {}, 40);
+
+    EXPECT_EQ(4u, cl.size());
+    EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(40, *(cl.begin()));
+
+    cl.erase(20);
+
+    EXPECT_EQ(3u, cl.size());
+    EXPECT_FALSE(cl.empty());
+
+    vals.clear();
+    for (auto i : cl)
+    {
+        vals.push_back(i);
+    }
+
+    ASSERT_EQ(3u, vals.size());
+    EXPECT_EQ(40, vals[0]);
+    EXPECT_EQ(30, vals[1]);
+    EXPECT_EQ(10, vals[2]);
+}

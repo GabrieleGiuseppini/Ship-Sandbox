@@ -17,31 +17,18 @@ void Triangles::Add(
     mEndpointsBuffer.emplace_back(pointAIndex, pointBIndex, pointCIndex);
 }
 
-void Triangles::Destroy(
-    ElementIndex triangleElementIndex,
-    ElementIndex sourcePointElementIndex,
-    Points & points)
+void Triangles::Destroy(ElementIndex triangleElementIndex)
 {
     assert(triangleElementIndex < mElementCount);
+    assert(!IsDeleted(triangleElementIndex));
 
-    Endpoints const & endpoints = mEndpointsBuffer[triangleElementIndex];
+    // Invoke destroy handler
+    if (!!mDestroyHandler)
+    {
+        mDestroyHandler(triangleElementIndex);
+    }
 
-    assert(!points.IsDeleted(endpoints.PointAIndex));
-    assert(!points.IsDeleted(endpoints.PointBIndex));
-    assert(!points.IsDeleted(endpoints.PointCIndex));
-
-    // Remove ourselves from our endpoints
-    if (endpoints.PointAIndex != sourcePointElementIndex)
-        points.RemoveConnectedTriangle(endpoints.PointAIndex, triangleElementIndex);
-    if (endpoints.PointBIndex != sourcePointElementIndex)
-        points.RemoveConnectedTriangle(endpoints.PointBIndex, triangleElementIndex);
-    if (endpoints.PointCIndex != sourcePointElementIndex)
-        points.RemoveConnectedTriangle(endpoints.PointCIndex, triangleElementIndex);
-
-    //
     // Flag ourselves as deleted
-    //
-
     mIsDeletedBuffer[triangleElementIndex] = true;
 }
 

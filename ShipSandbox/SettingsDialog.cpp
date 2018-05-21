@@ -15,6 +15,8 @@
 #include <wx/string.h>
 
 static constexpr int SliderTicks = 100;
+static constexpr int SliderWidth = 50;
+static constexpr int SliderHeight = 200;
 
 const long ID_STRENGTH_SLIDER = wxNewId();
 const long ID_BUOYANCY_SLIDER = wxNewId();
@@ -74,7 +76,7 @@ SettingsDialog::SettingsDialog(
 	// Strength
 
 	wxBoxSizer* strengthSizer = new wxBoxSizer(wxVERTICAL);
-	mStrengthSlider = new wxSlider(this, ID_STRENGTH_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(50, 200),
+	mStrengthSlider = new wxSlider(this, ID_STRENGTH_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
 		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Strength Slider"));
 	mStrengthSlider->SetTickFreq(4);
 	strengthSizer->Add(mStrengthSlider, 0, wxALIGN_CENTRE);
@@ -96,7 +98,7 @@ SettingsDialog::SettingsDialog(
 	
 	wxBoxSizer* buoyancySizer = new wxBoxSizer(wxVERTICAL);
 
-	mBuoyancySlider = new wxSlider(this, ID_BUOYANCY_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(50, 200),
+	mBuoyancySlider = new wxSlider(this, ID_BUOYANCY_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
 		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Buoyancy Slider"));
 	mBuoyancySlider->SetTickFreq(4);
 	buoyancySizer->Add(mBuoyancySlider, 0, wxALIGN_CENTRE);
@@ -118,7 +120,7 @@ SettingsDialog::SettingsDialog(
 
 	wxBoxSizer* waterPressureSizer = new wxBoxSizer(wxVERTICAL);
 
-	mWaterPressureSlider = new wxSlider(this, ID_WATER_PRESSURE_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(50, 200),
+	mWaterPressureSlider = new wxSlider(this, ID_WATER_PRESSURE_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
 		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Water Pressure Slider"));
 	mWaterPressureSlider->SetTickFreq(4);
 	waterPressureSizer->Add(mWaterPressureSlider, 0, wxALIGN_CENTRE);
@@ -140,7 +142,7 @@ SettingsDialog::SettingsDialog(
 
 	wxBoxSizer* waveHeightSizer = new wxBoxSizer(wxVERTICAL);
 
-	mWaveHeightSlider = new wxSlider(this, ID_WAVE_HEIGHT_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(50, 200),
+	mWaveHeightSlider = new wxSlider(this, ID_WAVE_HEIGHT_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
 		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Wave Height Slider"));
 	mWaveHeightSlider->SetTickFreq(4);
 	waveHeightSizer->Add(mWaveHeightSlider, 0, wxALIGN_CENTRE);
@@ -162,7 +164,7 @@ SettingsDialog::SettingsDialog(
 
     wxBoxSizer* waterTransparencySizer = new wxBoxSizer(wxVERTICAL);
 
-    mWaterTransparencySlider = new wxSlider(this, ID_WATER_TRANSPARENCY_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(50, 200),
+    mWaterTransparencySlider = new wxSlider(this, ID_WATER_TRANSPARENCY_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
         wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Water Transparency Slider"));
     mWaterTransparencySlider->SetTickFreq(4);
     waterTransparencySizer->Add(mWaterTransparencySlider, 0, wxALIGN_CENTRE);
@@ -184,7 +186,7 @@ SettingsDialog::SettingsDialog(
 
     wxBoxSizer* lightDiffusionSizer = new wxBoxSizer(wxVERTICAL);
 
-    mLightDiffusionSlider = new wxSlider(this, ID_LIGHT_DIFFUSION_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(50, 200),
+    mLightDiffusionSlider = new wxSlider(this, ID_LIGHT_DIFFUSION_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
         wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Light Diffusion Slider"));
     mLightDiffusionSlider->SetTickFreq(4);
     lightDiffusionSizer->Add(mLightDiffusionSlider, 0, wxALIGN_CENTRE);
@@ -206,7 +208,7 @@ SettingsDialog::SettingsDialog(
 
 	wxBoxSizer* seaDepthSizer = new wxBoxSizer(wxVERTICAL);
 
-	mSeaDepthSlider = new wxSlider(this, ID_SEA_DEPTH_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(50, 200),
+	mSeaDepthSlider = new wxSlider(this, ID_SEA_DEPTH_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
 		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Sea Depth Slider"));
 	mSeaDepthSlider->SetTickFreq(4);
 	seaDepthSizer->Add(mSeaDepthSlider, 0, wxALIGN_CENTRE);
@@ -228,7 +230,7 @@ SettingsDialog::SettingsDialog(
 
 	wxBoxSizer* destroyRadiusSizer = new wxBoxSizer(wxVERTICAL);
 
-	mDestroyRadiusSlider = new wxSlider(this, ID_DESTROY_RADIUS_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(50, 200),
+	mDestroyRadiusSlider = new wxSlider(this, ID_DESTROY_RADIUS_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
 		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Destroy Radius Slider"));
 	mDestroyRadiusSlider->SetTickFreq(4);
 	destroyRadiusSizer->Add(mDestroyRadiusSlider, 0, wxALIGN_CENTRE);

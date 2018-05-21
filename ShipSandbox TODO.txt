@@ -47,17 +47,6 @@ Prev perf (before point et al destructuring)
 	- RenderContext::RenderCloudsEnd: 1.69%
 =================================================
 
-- Code:
-	- Points and Springs and Triangles::Destroy()'s are templated on Point/Spring/Triangle"Being"DeletedHandlers (others than self),
-	  & ship passes own methods
-		- OR: even better, as handler never really changes: cctor takes handler at beginning, given by ship,
-		  and stores as std::function
-		- Handlers invoked *before* actual deletion
-			- Comment on handlers on connected-to-argument might be deleted
-		- Not re-entrant - can't delete from within
-		- Handling of pinned point deletion is then done here
-			- See if also whole logic of point<->spring<->triangle can be done in handler
-
 - Optimizations:	
 	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
 	- UpdatePointForces:
@@ -113,6 +102,7 @@ Prev perf (before point et al destructuring)
 		- Points::SetStiffnessAdjustment(stiffnessAdjustment):
 			- Called by Ship at each Update()
 			- If != last, recalc coefficient/s
+	- Find sweet spot between bending and more strength needed
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded
@@ -121,62 +111,6 @@ Prev perf (before point et al destructuring)
 		- Explain Spring's coefficients (in terms of fractionXYZ* of return-to-rest-length, etc.)
 			- Rename Material::stiffness as fractionXYZ*Adjustment
 		- Rename Points::MassFactor as IntegrationFactor and explain
-	= Pin points
-		+ Point::TogglePin():
-			+ If pinning: set MassFactor to zero, and set velocity to zero
-			+ If unpinning: recalc MassFactor (using same helper used at cctor)
-		+ The entire search is implemented by Points
-			+ Together with isPinned (used at search to avoid pinning pinned point), also maintains
-			  stack of pinned point indices
-				+ Toggle: find topmost point in stack merely within radius; if found -> toggle it & remove from stack 
-				  & mark as dirty for re-upload and return true; 
-				  + else: find closest non-pinned point; 
-					+ if found: toggle it & add to stack & mark as dirty for re-upload & return true
-					+ else: return false
-				+ Destroy: also remove from stack, if there
-					+ And if there, mark as dirty for re-upload
-		+ Given that connected component changes affect rendering of pinned points:
-			+ Move stack and mArePinnedPointsDirty back into ship, together with search logic
-				+ Points gets back Pin() and Unpin()
-				+ Ship::Destroy as well
-			+ Pinned points are uploaded by decision of Ship
-				+ Decision: if mAreElementsDirty || mArePinnedPointsDirty
-				+ Ship does start & end & points
-		+ ShipRenderContext: draw pinned points using texture (centered)
-			+ Ship uploads coordinates and ConnectedComponentID of point
-			+ ShipRenderContext: behave exactly as with StressedSprings (i.e. reset at ElementsStart()), as 
-			  we're sure we'll re-upload pinned points when elements are dirty
-				+ Rename as "Elements"
-				+ Do with buffer
-				+ Calc bounding box, centered over point, like clouds
-			+ Render(): draw at very end of each connected component render, after stressed springs
-			+ Redo cursor and move to \textures
-		+ Tool just toggles:
-			+ Ship checks if exists pinned point in radius: if yes, unpin; else, pin
-			+ Returns true if points belongs to ship, so to stop search by World
-			+ Cursor is a pin
-		+ ShipRenderContext::UploadPinnedPoint(): do pinned point insertion at end of own connected component
-		+ Texture: 
-			+ lighter
-			+ plug hole
-		+ Fix crash when loading Titanic
-		+ Max 64 pins
-			+ CircularList
-				+ Add() is templated on OnRemoved() handler
-					+ When over, older are removed
-				+ Unit tests
-			+ Constant at GameParameters
-		- Spring deletion at stress: also unpin endpoint if the endpoint has no more springs attached to it
-			- Requires global destroy handler above
-		+ SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
-			+ Random choices, Over/Underwater - NO material
-				+ Update sink event
-			+ Do sounds:
-				+ 4 pin
-				+ 4 pin underwater
-				+ 4 unpin
-				+ 4 unpin underwater
-
 	- Frontier:
 		- Only for non-rope points - rope points never take part in frontier
 		- Preliminaries:
@@ -243,12 +177,13 @@ Prev perf (before point et al destructuring)
 				- A spring connected to the point it's attached to is destroyed
 		- Impl:
 			- Ship remembers set of bombs (capped), just like pinned points
-			- Points also has bool buffer for interactions & lookups, just like pinned points 
+			- Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
 			- Ship implements:
 				- ToggleBomb (like pinned points)
 				- DetonateRCBombs()
 				- UpdateBombs():
 					- 1. Advances animations (textures of bombs, sounds via events - BombSubEvent)
+						- Use ByteCode pattern
 					- 2. Finds all bombs whose timer has elapsed and explodes them
 				- Point::Destroy: check if bomb attached, just like pinned points
 				- Spring destroy: check if bomb attached
@@ -343,8 +278,10 @@ Prev perf (before point et al destructuring)
 						- iff: state==On and generationVisitNumber != current
 						- Invokes IGameEventHandler->StartFlicker("whichOne")
 							- After choosing "whichOne" and compiling the plan
+							- OR: bytecode invokes IGameEventHandler->OnLightFlicker() for each peak
 						- Sets gen_number = 0
 						- Flicker state machine is based off clock time, not simulation step
+							- Use ByteCode pattern
 					- Sets own lightIntensity = f(generationVisitNumber, state, flicker state machine)
 
 			TODOOLD:
@@ -1269,6 +1206,62 @@ IF WX:
 			+ 0.001+((exp(x/70)-1)/2.3)^3.4
 			+ Verify inverted formula
 			+ finalize default StrengthAdjustment: 0.03421?
+	+ Pin points
+		+ Point::TogglePin():
+			+ If pinning: set MassFactor to zero, and set velocity to zero
+			+ If unpinning: recalc MassFactor (using same helper used at cctor)
+		+ The entire search is implemented by Points
+			+ Together with isPinned (used at search to avoid pinning pinned point), also maintains
+			  stack of pinned point indices
+				+ Toggle: find topmost point in stack merely within radius; if found -> toggle it & remove from stack 
+				  & mark as dirty for re-upload and return true; 
+				  + else: find closest non-pinned point; 
+					+ if found: toggle it & add to stack & mark as dirty for re-upload & return true
+					+ else: return false
+				+ Destroy: also remove from stack, if there
+					+ And if there, mark as dirty for re-upload
+		+ Given that connected component changes affect rendering of pinned points:
+			+ Move stack and mArePinnedPointsDirty back into ship, together with search logic
+				+ Points gets back Pin() and Unpin()
+				+ Ship::Destroy as well
+			+ Pinned points are uploaded by decision of Ship
+				+ Decision: if mAreElementsDirty || mArePinnedPointsDirty
+				+ Ship does start & end & points
+		+ ShipRenderContext: draw pinned points using texture (centered)
+			+ Ship uploads coordinates and ConnectedComponentID of point
+			+ ShipRenderContext: behave exactly as with StressedSprings (i.e. reset at ElementsStart()), as 
+			  we're sure we'll re-upload pinned points when elements are dirty
+				+ Rename as "Elements"
+				+ Do with buffer
+				+ Calc bounding box, centered over point, like clouds
+			+ Render(): draw at very end of each connected component render, after stressed springs
+			+ Redo cursor and move to \textures
+		+ Tool just toggles:
+			+ Ship checks if exists pinned point in radius: if yes, unpin; else, pin
+			+ Returns true if points belongs to ship, so to stop search by World
+			+ Cursor is a pin
+		+ ShipRenderContext::UploadPinnedPoint(): do pinned point insertion at end of own connected component
+		+ Texture: 
+			+ lighter
+			+ plug hole
+		+ Fix crash when loading Titanic
+		+ Max 64 pins
+			+ CircularList
+				+ Add() is templated on OnRemoved() handler
+					+ When over, older are removed
+				+ Unit tests
+			+ Constant at GameParameters
+		+ Spring deletion at stress: also unpin endpoint if the endpoint has no more springs attached to it
+			+ Requires global destroy handler above
+			+ Do at Ship::SpringDestroyHandler
+		+ SoundController reacts to IGameHandler event (true/false) with two sounds (Pin/Unpin)
+			+ Random choices, Over/Underwater - NO material
+				+ Update sink event
+			+ Do sounds:
+				+ 4 pin
+				+ 4 pin underwater
+				+ 4 unpin
+				+ 4 unpin underwater
 
 + Debug light/drag issue
 	+ Could be due to distance too close and shooting light to sky
@@ -1442,6 +1435,17 @@ IF WX:
 		+ Also, don't load default ship autonomously (need to register event handlers before that happens);
 		  rely on MainFrame calling GameController::LoadDefaultShip() after registration
 	+ Change calls to Point::SubtractFromLastPosition() to AddToLastPosition() and use (& implement) unary '-' operator for vectors
+	+ Points and Springs and Triangles::Destroy()'s are templated on Point/Spring/Triangle"Being"DeletedHandlers (others than self),
+	  & ship passes own methods
+		+ OR: even better, as handler never really changes: cctor takes handler at beginning, given by ship,
+		  and stores as std::function
+		+ Handlers invoked *before* actual deletion
+			+ Comment on handlers on connected-to-argument might be deleted
+		+ Not re-entrant - can't delete from within
+		+ Handling of pinned point deletion is then done here
+		+ See if also whole logic of point<->spring<->triangle can be done in handler
+			+ If so, don't pass containers at various Destroy()'s
+		+ Test
 
 + Fix bug: when you reload ship when paused, no clouds & no ship are visible until resumed
 	+ World::Initialize():

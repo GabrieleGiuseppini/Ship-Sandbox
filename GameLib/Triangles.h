@@ -58,10 +58,7 @@ public:
         ElementIndex pointBIndex,
         ElementIndex pointCIndex);
 
-    void Destroy(
-        ElementIndex triangleElementIndex,
-        ElementIndex sourcePointElementIndex,
-        Points & points);
+    void Destroy(ElementIndex triangleElementIndex);
 
     void UploadElements(
         int shipId,

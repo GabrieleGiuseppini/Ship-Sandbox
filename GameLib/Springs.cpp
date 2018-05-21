@@ -32,34 +32,16 @@ void Springs::Add(
     mIsStressedBuffer.emplace_back(false);
 }
 
-void Springs::Destroy(
-    ElementIndex springElementIndex,
-    ElementIndex sourcePointElementIndex,
-    Points & points,
-    Triangles & triangles)
+void Springs::Destroy(ElementIndex springElementIndex)
 {
     assert(springElementIndex < mElementCount);
-    
-    Endpoints const & endpoints = mEndpointsBuffer[springElementIndex];
+    assert(!IsDeleted(springElementIndex));
 
-    assert(!points.IsDeleted(endpoints.PointAIndex));
-    assert(!points.IsDeleted(endpoints.PointBIndex));
-
-    // Used to do more complicated checks, but easier (and better) to make everything leak when it breaks
-
-    // Make endpoints leak and destroy their triangles
-    // Note: technically, should only destroy those triangles that contain the A-B side, and definitely
-    // make both A and B leak
-    if (endpoints.PointAIndex != sourcePointElementIndex)
-        points.Breach(endpoints.PointAIndex, triangles);
-    if (endpoints.PointBIndex != sourcePointElementIndex)
-        points.Breach(endpoints.PointBIndex, triangles);
-
-    // Remove ourselves from our endpoints
-    if (endpoints.PointAIndex != sourcePointElementIndex)
-        points.RemoveConnectedSpring(endpoints.PointAIndex, springElementIndex);
-    if (endpoints.PointBIndex != sourcePointElementIndex)
-        points.RemoveConnectedSpring(endpoints.PointBIndex, springElementIndex);
+    // Invoke destroy handler
+    if (!!mDestroyHandler)
+    {
+        mDestroyHandler(springElementIndex);
+    }
 
     // Zero out our coefficients, so that we can still calculate Hooke's 
     // and damping forces for this spring without running the risk of 
@@ -71,10 +53,7 @@ void Springs::Destroy(
     // avoid draining water to destroyed points
     mWaterPermeabilityBuffer[springElementIndex] = 0.0f;
 
-    //
     // Flag ourselves as deleted
-    //
-
     mIsDeletedBuffer[springElementIndex] = true;
 }
 
@@ -136,8 +115,7 @@ bool Springs::UpdateStrains(
     GameParameters const & gameParameters,
     World const & parentWorld,    
     IGameEventHandler & gameEventHandler,
-    Points & points,
-    Triangles & triangles)
+    Points & points)
 {
     bool isAtLeastOneBroken = false;
     
@@ -155,7 +133,7 @@ bool Springs::UpdateStrains(
             if (strain > effectiveStrength)
             {
                 // It's broken!
-                this->Destroy(i, NoneElementIndex, points, triangles);
+                this->Destroy(i);
 
                 // Notify
                 gameEventHandler.OnBreak(

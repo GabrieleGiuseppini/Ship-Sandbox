@@ -207,6 +207,14 @@ public:
             --mHead;
     }
 
+    void erase(TElement const & element)
+    {
+        auto it = std::find(this->begin(), this->end(), element);
+
+        assert(it != this->end());
+        erase(it);
+    }
+
     void clear()
     {
         mHead = mTail = 0;

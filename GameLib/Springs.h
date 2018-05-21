@@ -91,11 +91,7 @@ public:
         Material const * material,
         Points const & points);
 
-    void Destroy(
-        ElementIndex springElementIndex,        
-        ElementIndex sourcePointElementIndex,
-        Points & points,
-        Triangles & triangles);
+    void Destroy(ElementIndex springElementIndex);
 
     void UploadElements(
         int shipId,
@@ -116,8 +112,7 @@ public:
         GameParameters const & gameParameters,
         World const & parentWorld,
         IGameEventHandler & gameEventHandler,
-        Points & points,
-        Triangles & triangles);
+        Points & points);
 
 public:
 

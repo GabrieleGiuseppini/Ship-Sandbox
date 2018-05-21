@@ -47,7 +47,7 @@ private:
             ++mCurrent;
         }
 
-        inline TIterated operator*() noexcept
+        inline TIterated & operator*() noexcept
         {
             return *mCurrent;
         }
@@ -110,16 +110,28 @@ public:
         return const_iterator(mArray.data() + mCurrentSize);
     }
 
-    inline TElement operator[](size_t index) noexcept
+    inline TElement & operator[](size_t index) noexcept
     {
         assert(index < mCurrentSize);
         return mArray[index];
     }
 
-    inline TElement const operator[](size_t index) const noexcept
+    inline TElement const & operator[](size_t index) const noexcept
     {
         assert(index < mCurrentSize);
         return mArray[index];
+    }
+
+    inline TElement & back() noexcept
+    {
+        assert(mCurrentSize > 0);
+        return mArray[mCurrentSize - 1];
+    }
+
+    inline TElement const & back() const noexcept
+    {
+        assert(mCurrentSize > 0);
+        return mArray[mCurrentSize - 1];
     }
 
     inline size_t size() const noexcept

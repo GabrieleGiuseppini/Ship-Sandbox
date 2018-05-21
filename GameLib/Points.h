@@ -82,11 +82,7 @@ public:
         vec3f const & color,
         vec2f const & textureCoordinates);
 
-    void Destroy(
-        ElementIndex pointElementIndex,
-        Springs & springs,
-        Triangles & triangles,
-        ElectricalElements & electricalElements);
+    void Destroy(ElementIndex pointElementIndex);
 
     void Breach(
         ElementIndex pointElementIndex,
@@ -289,6 +285,13 @@ public:
         return mNetworkBuffer[pointElementIndex].ConnectedSprings;
     }
 
+    inline auto & GetConnectedSprings(ElementIndex pointElementIndex) 
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNetworkBuffer[pointElementIndex].ConnectedSprings;
+    }
+
     inline void AddConnectedSpring(
         ElementIndex pointElementIndex,
         ElementIndex springElementIndex)
@@ -317,6 +320,13 @@ public:
         return mNetworkBuffer[pointElementIndex].ConnectedTriangles;
     }
 
+    inline auto & GetConnectedTriangles(ElementIndex pointElementIndex)
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mNetworkBuffer[pointElementIndex].ConnectedTriangles;
+    }
+
     inline void AddConnectedTriangle(
         ElementIndex pointElementIndex,
         ElementIndex triangleElementIndex)
@@ -333,6 +343,10 @@ public:
         assert(pointElementIndex < mElementCount);
 
         bool found = mNetworkBuffer[pointElementIndex].ConnectedTriangles.erase_first(triangleElementIndex);
+
+        // TODO
+        if (!found)
+            assert(found);
 
         assert(found);
         (void)found;

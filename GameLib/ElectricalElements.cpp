@@ -17,7 +17,15 @@ void ElectricalElements::Add(std::unique_ptr<ElectricalElement> electricalElemen
 void ElectricalElements::Destroy(ElementIndex electricalElementIndex)
 {
     assert(electricalElementIndex < mElementCount);
+    assert(!IsDeleted(electricalElementIndex));
 
+    // Invoke destroy handler
+    if (!!mDestroyHandler)
+    {
+        mDestroyHandler(electricalElementIndex);
+    }
+
+    // Flag ourselves as deleted
     mIsDeletedBuffer[electricalElementIndex] = true;
 }
 

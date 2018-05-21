@@ -109,6 +109,16 @@ public:
 
 private:
 
+    void PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex);
+
+    void SpringDestroyHandler(ElementContainer::ElementIndex springElementIndex);
+
+    void TriangleDestroyHandler(ElementContainer::ElementIndex triangleElementIndex);
+
+    void ElectricalElementDestroyHandler(ElementContainer::ElementIndex electricalElementIndex);
+
+private:
+
     unsigned int const mId;
     World * const mParentWorld;
 

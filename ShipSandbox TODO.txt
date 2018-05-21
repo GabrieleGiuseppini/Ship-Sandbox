@@ -98,19 +98,10 @@ Prev perf (before point et al destructuring)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
-	- Make stiffness adjustment
-		- Points::SetStiffnessAdjustment(stiffnessAdjustment):
-			- Called by Ship at each Update()
-			- If != last, recalc coefficient/s
-	- Find sweet spot between bending and more strength needed
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded
 	- See if can draw a bit more often
-	- Cosmetics:
-		- Explain Spring's coefficients (in terms of fractionXYZ* of return-to-rest-length, etc.)
-			- Rename Material::stiffness as fractionXYZ*Adjustment
-		- Rename Points::MassFactor as IntegrationFactor and explain
 	- Frontier:
 		- Only for non-rope points - rope points never take part in frontier
 		- Preliminaries:
@@ -145,11 +136,11 @@ Prev perf (before point et al destructuring)
 	- Experiment with:
 		- Runge-Kutta
 		- Semi-implicit Euler (https://www.scss.tcd.ie/Michael.Manzke/CS7057/cs7057-1516-14-MassSpringSystems-mm.pdf)
-	- Do we really need Spring::Damp 3 times? Would once with a higher coeff suffice?
 	- Water:
 		- Sinking detection is broken - it currently only considers total water that entered the ship, which comes proportionally to external
 		  water pressure; all this water could be confined to a tiny volume, and yet we trigger sinking
-		  - Should be based on total number of points that have water instead
+			- Should be based on total number of points that have water instead, i.e. wet points
+			- ...which requires Points to keep track of point's water going from 0.0 to > 0.0
 		+ Did original game propagate water also through hull springs? YES. How did hull thin dividers work? THEY DIDN'T WORK
 		+ Add Point::Hull Characteristic, and don't leak/propagate(incl. gravitate) water if at least one of the two points is hull			
 			+ Alternatively: just make a spring hull if one point is hull; test it
@@ -162,7 +153,7 @@ Prev perf (before point et al destructuring)
 		- Make waves with Shallow Water Equations plus breaking waves
 			- And if frontier works, change height when frontier touches water for the first time
 	- DestroyAt:
-		- Test: Spring::Destroy() only destroys triangles that contain A-B
+		- Test: Ship::SpringDestroyHandler() only destroys triangles that contain A-B
 			- Should definitely make both A and B leak, as they both now have an adjacent hole
 	+ Is Verlet implemented right?
 	+ Review parallel calculation, it suffers from races
@@ -179,22 +170,19 @@ Prev perf (before point et al destructuring)
 			- Ship remembers set of bombs (capped), just like pinned points
 			- Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
 			- Ship implements:
-				- ToggleBomb (like pinned points)
+				- ToggleBombAt(position) (like pinned points)
 				- DetonateRCBombs()
-				- UpdateBombs():
+				- UpdateBombs() (private, invoked by Update() after spring stress check, so explosion is visible before it breaks 
+				  things up)
 					- 1. Advances animations (textures of bombs, sounds via events - BombSubEvent)
-						- Use ByteCode pattern
+						- Use ByteCode pattern?
 					- 2. Finds all bombs whose timer has elapsed and explodes them
-				- Point::Destroy: check if bomb attached, just like pinned points
-				- Spring destroy: check if bomb attached
-					- This is complicated: Springs and Points delete springs by themselves
-					- Solution (see above): both Destroy()'s are template on OnPoint/SpringDeletedHandlers,
-					  & ship passes own methods, or ship passes own OnPoint/SpringDeletedHandlers
-					  at containers' cctors
+				- Ship::PointDestroyHandler: check if bomb attached, just like pinned points
+				- Ship::SpringDestroyHandler: check if bomb attached
 
 - Controls:
-	- Set max and min zoom (or monsters awaken when you zoom out too much)
-	- Reset view (ESC) should also reset camera pan
+	+ Set max and min zoom (or monsters awaken when you zoom out too much)
+	+ Reset view (ESC) should also reset camera pan
 	- Tool cursors: cursor should change when mouse down
 		- Just the cursors used with the strength bar
 		- Hammer
@@ -867,6 +855,10 @@ IF WX:
 	+ Space bar for pause
 		+ When pause, also pause sounds and music
 	+ MainFrame: AboutDialog is member & shown on demand
+	+ Make stiffness adjustment
+		+ Points::SetStiffnessAdjustment(stiffnessAdjustment):
+			+ Called by Ship at each Update()
+			+ If != last, recalc coefficient/s
 
 + Gfx:
 	+ Do ropes with two endpoints (000xxx)
@@ -1262,6 +1254,16 @@ IF WX:
 				+ 4 pin underwater
 				+ 4 unpin
 				+ 4 unpin underwater
+	+ Find sweet spot of stiffness and strength between bending and more strength for pinning
+		+ stiff: 0.500750
+		+ strength: 0.006200
+			    0.005376
+		+ pinning: fine (can't pin when it's very fast)
+		+ wood: 2.0 (titanic masts like before)
+		+ new titanic structure
+	+ Cosmetics:
+		+ Explain Spring's coefficients (in terms of fractionXYZ* of return-to-rest-length, etc.)
+		+ Rename Points::MassFactor as IntegrationFactor and explain
 
 + Debug light/drag issue
 	+ Could be due to distance too close and shooting light to sky

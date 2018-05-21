@@ -225,6 +225,15 @@ void Ship::Update(
     IGameEventHandler * const gameEventHandler = mParentWorld->GetGameEventHandler();
 
     //
+    // Process eventual parameter changes
+    //
+
+    mSprings.SetStiffnessAdjustment(
+        gameParameters.StiffnessAdjustment, 
+        mPoints);
+
+
+    //
     // Update dynamics
     //
 
@@ -547,7 +556,7 @@ void Ship::Integrate()
     float * restrict positionBuffer = mPoints.GetPositionBufferAsFloat();
     float * restrict velocityBuffer = mPoints.GetVelocityBufferAsFloat();
     float * restrict forceBuffer = mPoints.GetForceBufferAsFloat();
-    float * restrict massFactorBuffer = mPoints.GetMassFactorBufferAsFloat();
+    float * restrict integrationFactorBuffer = mPoints.GetIntegrationFactorBufferAsFloat();
 
     size_t const numIterations = mPoints.GetElementCount() * 2;
     for (size_t i = 0; i < numIterations; ++i)
@@ -556,7 +565,7 @@ void Ship::Integrate()
         // Verlet integration (fourth order, with velocity being first order)
         //
 
-        float const deltaPos = velocityBuffer[i] * dt + forceBuffer[i] * massFactorBuffer[i];
+        float const deltaPos = velocityBuffer[i] * dt + forceBuffer[i] * integrationFactorBuffer[i];
         positionBuffer[i] += deltaPos;
         velocityBuffer[i] = deltaPos * GlobalDampCoefficient / dt;
 

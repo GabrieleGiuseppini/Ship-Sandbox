@@ -47,23 +47,6 @@ public:
         }
     }
 
-    // TODO: needed?
-    ////Buffer & operator=(Buffer && other)
-    ////{
-    ////    if (nullptr != mBuffer)
-    ////    {
-    ////        aligned_free(reinterpret_cast<void *>(mBuffer));
-    ////    }
-
-    ////    mBuffer = other.mBuffer;
-    ////    mSize = other.mSize;
-    ////    mCurrentSize = other.mCurrentSize;
-
-    ////    other.mBuffer = nullptr;
-
-    ////    return *this;
-    ////}
-
     /*
      * Adds an element to the buffer. Assumed to be invoked only at initialization time.
      *
@@ -123,7 +106,6 @@ public:
 private:
 
     TElement * restrict mBuffer;
-    // TODO: make const after phase I
     size_t const mSize;
     size_t mCurrentSize;
 };

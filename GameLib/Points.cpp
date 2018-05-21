@@ -24,7 +24,7 @@ void Points::Add(
     mPositionBuffer.emplace_back(position);
     mVelocityBuffer.emplace_back(vec2f(0.0f, 0.0f));
     mForceBuffer.emplace_back(vec2f(0.0f, 0.0f));
-    mMassFactorBuffer.emplace_back(CalculateMassFactor(material->Mass));
+    mIntegrationFactorBuffer.emplace_back(CalculateIntegrationFactor(material->Mass));
     mMassBuffer.emplace_back(material->Mass);
 
     mBuoyancyBuffer.emplace_back(buoyancy);
@@ -128,9 +128,14 @@ void Points::UploadElements(
     }
 }
 
-vec2f Points::CalculateMassFactor(float mass)
+vec2f Points::CalculateIntegrationFactor(float mass)
 {
     assert(mass > 0.0f);
+
+    //
+    // The integration factor is the quantity which, once multiplied with the force on the point,
+    // yields the change in position, during a time interval equal to the dynamics simulation step.
+    //
 
     static constexpr float dt = GameParameters::DynamicsSimulationStepTimeDuration<float>;
     

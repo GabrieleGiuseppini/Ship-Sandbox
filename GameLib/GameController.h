@@ -78,9 +78,18 @@ public:
 
     void AdjustZoom(float amount) 
     { 
-        mTargetZoom = mTargetZoom * amount;
-        mStartingZoom = mCurrentZoom;
-        mStartZoomTimestamp = std::chrono::steady_clock::now();
+        float newTargetZoom = mTargetZoom * amount;
+        if (newTargetZoom < GameParameters::MinZoom)
+            newTargetZoom = GameParameters::MinZoom;
+        else if (newTargetZoom > GameParameters::MaxZoom)
+            newTargetZoom = GameParameters::MaxZoom;
+
+        if (newTargetZoom != mTargetZoom)
+        {
+            mTargetZoom = newTargetZoom;
+            mStartingZoom = mCurrentZoom;
+            mStartZoomTimestamp = std::chrono::steady_clock::now();
+        }
     }
 
     void ResetZoom() 
@@ -89,6 +98,11 @@ public:
 
         mTargetZoom = mCurrentZoom = mRenderContext->GetZoom();
     }
+
+    float GetStiffnessAdjustment() const { return mGameParameters.StiffnessAdjustment; }
+    void SetStiffnessAdjustment(float value) { mGameParameters.StiffnessAdjustment = value; }
+    float GetMinStiffnessAdjustment() const { return GameParameters::MinStiffnessAdjustment; }
+    float GetMaxStiffnessAdjustment() const { return GameParameters::MaxStiffnessAdjustment; }
 
     float GetStrengthAdjustment() const { return mGameParameters.StrengthAdjustment; }
     void SetStrengthAdjustment(float value) { mGameParameters.StrengthAdjustment = value; }

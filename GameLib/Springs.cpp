@@ -22,7 +22,7 @@ void Springs::Add(
 
     mRestLengthBuffer.emplace_back((points.GetPosition(pointAIndex) - points.GetPosition(pointBIndex)).length());
     mCoefficientsBuffer.emplace_back(
-        CalculateStiffnessCoefficient(pointAIndex, pointBIndex, material->Stiffness, points),
+        CalculateStiffnessCoefficient(pointAIndex, pointBIndex, material->Stiffness, 1.0f, points),
         CalculateDampingCoefficient(pointAIndex, pointBIndex, points));
     mCharacteristicsBuffer.emplace_back(characteristics);
     mMaterialBuffer.emplace_back(material);
@@ -55,6 +55,31 @@ void Springs::Destroy(ElementIndex springElementIndex)
 
     // Flag ourselves as deleted
     mIsDeletedBuffer[springElementIndex] = true;
+}
+
+void Springs::SetStiffnessAdjustment(
+    float stiffnessAdjustment,
+    Points const & points)
+{
+    if (stiffnessAdjustment != mCurrentStiffnessAdjustment)
+    {       
+        // Recalc coefficients
+        for (ElementIndex i : *this)
+        {
+            if (!IsDeleted(i))
+            {
+                mCoefficientsBuffer[i].StiffnessCoefficient = CalculateStiffnessCoefficient(
+                    GetPointAIndex(i),
+                    GetPointBIndex(i),
+                    GetMaterial(i)->Stiffness,
+                    stiffnessAdjustment,
+                    points);
+            }
+        }
+
+        // Remember the new stiffness
+        mCurrentStiffnessAdjustment = stiffnessAdjustment;
+    }
 }
 
 void Springs::UploadElements(
@@ -172,19 +197,25 @@ float Springs::CalculateStiffnessCoefficient(
     ElementIndex pointAIndex,
     ElementIndex pointBIndex,
     float springStiffness,
+    float stiffnessAdjustment,
     Points const & points)
 {
-    // The empirically-determined constant for the spring stiffness
     //
-    // The simulation is quite sensitive to this value:
-    // - 0.80 is almost fine (though bodies are sometimes soft)
-    // - 0.95 makes everything explode (this was the equivalent of Luke's original code)
-    static constexpr float C = 0.8f;
+    // The "stiffness coefficient" is the factor which, once multiplied with the spring displacement,
+    // yields the spring force, according to Hooke's law.
+    //
+    // We calculate the coefficient so that the two forces applied to each of the masses reduce the spring
+    // displacement by a quantity equal to C * adjustment, in the time interval of the dynamics simulation.
+    //
+    // The adjustment is both the material-specific adjustment and the global game adjustment.
+    //       
 
     float const massFactor = (points.GetMass(pointAIndex) * points.GetMass(pointBIndex)) / (points.GetMass(pointAIndex) + points.GetMass(pointBIndex));
     static constexpr float dtSquared = GameParameters::DynamicsSimulationStepTimeDuration<float> * GameParameters::DynamicsSimulationStepTimeDuration<float>;
 
-    return C * springStiffness * massFactor / dtSquared;
+    static constexpr float C = 0.4f;
+
+    return C * springStiffness * stiffnessAdjustment * massFactor / dtSquared;
 }
 
 float Springs::CalculateDampingCoefficient(    

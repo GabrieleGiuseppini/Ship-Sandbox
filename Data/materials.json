@@ -49,7 +49,7 @@
         "name": "Wooden Hull",
         "strength": 50,
         "mass": 1000,
-	"stiffness": 1,
+	"stiffness": 2,
         "structural_colour": "#905020",
 	"render_colour": "#905020",
         "isHull": true,
@@ -61,7 +61,7 @@
         "name": "Wood",
         "strength": 40,
         "mass": 800,
-	"stiffness": 1,
+	"stiffness": 2,
         "structural_colour": "#E0D8C0",
 	"render_colour": "#E0D8C0",
 	"sound_properties": {

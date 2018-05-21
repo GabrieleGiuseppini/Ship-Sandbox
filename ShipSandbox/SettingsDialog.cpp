@@ -15,9 +15,10 @@
 #include <wx/string.h>
 
 static constexpr int SliderTicks = 100;
-static constexpr int SliderWidth = 50;
-static constexpr int SliderHeight = 200;
+static constexpr int SliderWidth = 40;
+static constexpr int SliderHeight = 140;
 
+const long ID_STIFFNESS_SLIDER = wxNewId();
 const long ID_STRENGTH_SLIDER = wxNewId();
 const long ID_BUOYANCY_SLIDER = wxNewId();
 const long ID_WATER_PRESSURE_SLIDER = wxNewId();
@@ -31,6 +32,7 @@ const long ID_QUICK_WATER_FIX_CHECKBOX = wxNewId();
 const long ID_SHOW_STRESS_CHECKBOX = wxNewId();
 
 wxBEGIN_EVENT_TABLE(SettingsDialog, wxDialog)
+    EVT_COMMAND_SCROLL(ID_STIFFNESS_SLIDER, SettingsDialog::OnStiffnessSliderScroll)
 	EVT_COMMAND_SCROLL(ID_STRENGTH_SLIDER, SettingsDialog::OnStrengthSliderScroll)
 	EVT_COMMAND_SCROLL(ID_BUOYANCY_SLIDER, SettingsDialog::OnBuoyancySliderScroll)
 	EVT_COMMAND_SCROLL(ID_WATER_PRESSURE_SLIDER, SettingsDialog::OnWaterPressureSliderScroll)
@@ -66,12 +68,33 @@ SettingsDialog::SettingsDialog(
 	mainSizer->AddSpacer(10);
 	
 
-	// Controls
+	// Controls 1
 
-	wxBoxSizer* controlsSizer = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* controls1Sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	controlsSizer->AddSpacer(20);
-	
+	controls1Sizer->AddSpacer(20);
+
+
+    // Stiffness
+
+    wxBoxSizer* stiffnessSizer = new wxBoxSizer(wxVERTICAL);
+    mStiffnessSlider = new wxSlider(this, ID_STIFFNESS_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
+        wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Stiffness Slider"));
+    mStiffnessSlider->SetTickFreq(4);
+    stiffnessSizer->Add(mStiffnessSlider, 0, wxALIGN_CENTRE);
+
+    wxStaticText * stiffnessLabel = new wxStaticText(this, wxID_ANY, _("Stiffness Adjust"), wxDefaultPosition, wxDefaultSize, 0, _T("Stiffness Label"));
+    stiffnessSizer->Add(stiffnessLabel, 0, wxALIGN_CENTRE);
+
+    mStiffnessTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
+    stiffnessSizer->Add(mStiffnessTextCtrl, 0, wxALIGN_CENTRE);
+
+    stiffnessSizer->AddSpacer(20);
+
+    controls1Sizer->Add(stiffnessSizer, 0);
+
+    controls1Sizer->AddSpacer(20);
+
 
 	// Strength
 
@@ -89,9 +112,9 @@ SettingsDialog::SettingsDialog(
 
 	strengthSizer->AddSpacer(20);
 
-	controlsSizer->Add(strengthSizer, 0);
+    controls1Sizer->Add(strengthSizer, 0);
 	
-	controlsSizer->AddSpacer(20);
+    controls1Sizer->AddSpacer(20);
 
 
 	// Buoyancy
@@ -111,9 +134,9 @@ SettingsDialog::SettingsDialog(
 
 	buoyancySizer->AddSpacer(20);
 
-	controlsSizer->Add(buoyancySizer, 0);
+    controls1Sizer->Add(buoyancySizer, 0);
 	
-    controlsSizer->AddSpacer(20);
+    controls1Sizer->AddSpacer(20);
 
 
 	// Water Pressure
@@ -133,9 +156,9 @@ SettingsDialog::SettingsDialog(
 
 	waterPressureSizer->AddSpacer(20);
 
-	controlsSizer->Add(waterPressureSizer, 0);
+    controls1Sizer->Add(waterPressureSizer, 0);
 
-    controlsSizer->AddSpacer(20);
+    controls1Sizer->AddSpacer(20);
 
 
 	// Wave Height
@@ -155,9 +178,53 @@ SettingsDialog::SettingsDialog(
 
 	waveHeightSizer->AddSpacer(20);
 
-	controlsSizer->Add(waveHeightSizer, 0);
+    controls1Sizer->Add(waveHeightSizer, 0);
 
-    controlsSizer->AddSpacer(20);
+    controls1Sizer->AddSpacer(20);
+
+
+    // Check boxes
+
+    wxStaticBoxSizer* checkboxesSizer = new wxStaticBoxSizer(wxVERTICAL, this);
+
+    mQuickWaterFixCheckBox = new wxCheckBox(this, ID_QUICK_WATER_FIX_CHECKBOX, _("See Ship Through Water"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Quick Water Fix Checkbox"));
+    Connect(ID_QUICK_WATER_FIX_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnQuickWaterFixCheckBoxClick);
+    checkboxesSizer->Add(mQuickWaterFixCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
+
+    wxString shipRenderModeChoices[] =
+    {
+        _("Draw Only Points"),
+        _("Draw Only Springs"),
+        _("Draw Structure"),
+        _("Draw Image")
+    };
+
+    mShipRenderModeRadioBox = new wxRadioBox(this, wxID_ANY, _("Ship Draw Options"), wxDefaultPosition, wxDefaultSize,
+        WXSIZEOF(shipRenderModeChoices), shipRenderModeChoices, 1, wxRA_SPECIFY_COLS);
+    Connect(mShipRenderModeRadioBox->GetId(), wxEVT_RADIOBOX, (wxObjectEventFunction)&SettingsDialog::OnShipRenderModeRadioBox);
+    checkboxesSizer->Add(mShipRenderModeRadioBox, 0, wxALL | wxALIGN_LEFT, 5);
+
+    mShowStressCheckBox = new wxCheckBox(this, ID_SHOW_STRESS_CHECKBOX, _("Show Stress"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Show Stress Checkbox"));
+    Connect(ID_SHOW_STRESS_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnShowStressCheckBoxClick);
+    checkboxesSizer->Add(mShowStressCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
+
+    controls1Sizer->Add(checkboxesSizer, 0);
+
+    controls1Sizer->AddSpacer(20);
+
+
+    mainSizer->Add(controls1Sizer);
+
+    mainSizer->AddSpacer(20);
+
+
+
+
+    // Controls 2
+
+    wxBoxSizer* controls2Sizer = new wxBoxSizer(wxHORIZONTAL);
+
+    controls2Sizer->AddSpacer(20);
 
     
     // Water Transparency
@@ -177,9 +244,9 @@ SettingsDialog::SettingsDialog(
 
     waterTransparencySizer->AddSpacer(20);
 
-    controlsSizer->Add(waterTransparencySizer, 0);
+    controls2Sizer->Add(waterTransparencySizer, 0);
 
-    controlsSizer->AddSpacer(20);
+    controls2Sizer->AddSpacer(20);
 
 
     // Light Diffusion
@@ -199,9 +266,9 @@ SettingsDialog::SettingsDialog(
 
     lightDiffusionSizer->AddSpacer(20);
 
-    controlsSizer->Add(lightDiffusionSizer, 0);
+    controls2Sizer->Add(lightDiffusionSizer, 0);
 
-    controlsSizer->AddSpacer(20);
+    controls2Sizer->AddSpacer(20);
 
 
 	// Sea Depth
@@ -221,9 +288,9 @@ SettingsDialog::SettingsDialog(
 
 	seaDepthSizer->AddSpacer(20);
 
-	controlsSizer->Add(seaDepthSizer, 0);
+    controls2Sizer->Add(seaDepthSizer, 0);
 
-    controlsSizer->AddSpacer(20);
+    controls2Sizer->AddSpacer(20);
 
 
 	// Destroy Radius
@@ -243,44 +310,14 @@ SettingsDialog::SettingsDialog(
 
 	destroyRadiusSizer->AddSpacer(20);
 
-	controlsSizer->Add(destroyRadiusSizer, 0);
+    controls2Sizer->Add(destroyRadiusSizer, 0);
 
-    controlsSizer->AddSpacer(20);
+    controls2Sizer->AddSpacer(20);
 
 	
-	// Check boxes
-
-	wxStaticBoxSizer* checkboxesSizer = new wxStaticBoxSizer(wxVERTICAL, this);
-	
-	mQuickWaterFixCheckBox = new wxCheckBox(this, ID_QUICK_WATER_FIX_CHECKBOX, _("See Ship Through Water"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Quick Water Fix Checkbox"));
-	Connect(ID_QUICK_WATER_FIX_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnQuickWaterFixCheckBoxClick);
-	checkboxesSizer->Add(mQuickWaterFixCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
-
-    wxString shipRenderModeChoices[] =
-    {
-        _("Draw Only Points"), 
-        _("Draw Only Springs"),
-        _("Draw Structure"),
-        _("Draw Image")
-    };
-
-    mShipRenderModeRadioBox = new wxRadioBox(this, wxID_ANY, _("Ship Draw Options"), wxDefaultPosition, wxDefaultSize, 
-        WXSIZEOF(shipRenderModeChoices), shipRenderModeChoices, 1, wxRA_SPECIFY_COLS);
-    Connect(mShipRenderModeRadioBox->GetId(), wxEVT_RADIOBOX, (wxObjectEventFunction)&SettingsDialog::OnShipRenderModeRadioBox);
-    checkboxesSizer->Add(mShipRenderModeRadioBox, 0, wxALL | wxALIGN_LEFT, 5);
-
-	mShowStressCheckBox = new wxCheckBox(this, ID_SHOW_STRESS_CHECKBOX, _("Show Stress"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Show Stress Checkbox"));
-	Connect(ID_SHOW_STRESS_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnShowStressCheckBoxClick);
-	checkboxesSizer->Add(mShowStressCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
 
 
-	controlsSizer->Add(checkboxesSizer, 0);
-
-
-
-	controlsSizer->AddSpacer(20);
-
-	mainSizer->Add(controlsSizer);
+	mainSizer->Add(controls2Sizer);
 
 	mainSizer->AddSpacer(20);
 
@@ -337,6 +374,21 @@ void SettingsDialog::Open()
 	mApplyButton->Enable(false);
 
 	this->Show();
+}
+
+void SettingsDialog::OnStiffnessSliderScroll(wxScrollEvent & /*event*/)
+{
+    assert(!!mGameController);
+
+    float realValue = LinearSliderToRealValue(
+        mStiffnessSlider,
+        mGameController->GetMinStiffnessAdjustment(),
+        mGameController->GetMaxStiffnessAdjustment());
+
+    mStiffnessTextCtrl->SetValue(std::to_string(realValue));
+
+    // Remember we're dirty now
+    mApplyButton->Enable(true);
 }
 
 void SettingsDialog::OnStrengthSliderScroll(wxScrollEvent & /*event*/)
@@ -500,6 +552,12 @@ void SettingsDialog::ApplySettings()
 {
 	assert(!!mGameController);
 
+    mGameController->SetStiffnessAdjustment(
+        LinearSliderToRealValue(
+            mStiffnessSlider,
+            mGameController->GetMinStiffnessAdjustment(),
+            mGameController->GetMaxStiffnessAdjustment()));
+
 	mGameController->SetStrengthAdjustment(
 		StrengthSliderToRealValue());
 
@@ -572,6 +630,16 @@ void SettingsDialog::ApplySettings()
 void SettingsDialog::ReadSettings()
 {
 	assert(!!mGameController);
+
+
+    RealValueToLinearSlider(
+        mGameController->GetStiffnessAdjustment(),
+        mGameController->GetMinStiffnessAdjustment(),
+        mGameController->GetMaxStiffnessAdjustment(),
+        mStiffnessSlider);
+
+    mStiffnessTextCtrl->SetValue(std::to_string(mGameController->GetStiffnessAdjustment()));
+
 
 	RealValueToStrengthSlider(
 		mGameController->GetStrengthAdjustment());

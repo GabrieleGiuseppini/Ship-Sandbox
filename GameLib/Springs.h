@@ -14,6 +14,7 @@
 #include "RenderContext.h"
 
 #include <cassert>
+#include <limits>
 
 namespace Physics
 {
@@ -79,6 +80,8 @@ public:
         , mWaterPermeabilityBuffer(elementCount)
         // Stress
         , mIsStressedBuffer(elementCount)
+        // Container state
+        , mCurrentStiffnessAdjustment(std::numeric_limits<float>::lowest())
     {
     }
 
@@ -92,6 +95,10 @@ public:
         Points const & points);
 
     void Destroy(ElementIndex springElementIndex);
+
+    void SetStiffnessAdjustment(
+        float stiffnessAdjustment,
+        Points const & points);
 
     void UploadElements(
         int shipId,
@@ -198,6 +205,7 @@ private:
         ElementIndex pointAIndex,
         ElementIndex pointBIndex,
         float springStiffness,
+        float stiffnessAdjustment,
         Points const & points);
 
     static float CalculateDampingCoefficient(        
@@ -236,6 +244,13 @@ private:
 
     // State variable that tracks when we enter and exit the stressed state
     Buffer<bool> mIsStressedBuffer;
+
+    //
+    // Container state
+    //
+
+    // The current stiffness adjustment
+    float mCurrentStiffnessAdjustment;
 };
 
 }

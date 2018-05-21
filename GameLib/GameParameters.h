@@ -49,8 +49,12 @@ struct GameParameters
 	vec2 const GravityNormal;
 	float const GravityMagnitude;
 
+    float StiffnessAdjustment;
+    static constexpr float MinStiffnessAdjustment = 0.001f;
+    static constexpr float MaxStiffnessAdjustment = 2.4f;
+
 	float StrengthAdjustment;
-	static constexpr float MinStrengthAdjustment = 0.0010f;
+	static constexpr float MinStrengthAdjustment = 0.001f;
 	static constexpr float MaxStrengthAdjustment = 0.5f;
 
 	float BuoyancyAdjustment;
@@ -84,6 +88,9 @@ struct GameParameters
     //
     // Limits
     //
+
+    static constexpr float MinZoom = 0.0001f;
+    static constexpr float MaxZoom = 2000.0f;
 
     static constexpr size_t MaxPinnedPoints = 64u;
 

@@ -32,6 +32,7 @@ public:
 
 private:
 
+    void OnStiffnessSliderScroll(wxScrollEvent & event);
     void OnStrengthSliderScroll(wxScrollEvent & event);
     void OnBuoyancySliderScroll(wxScrollEvent & event);
     void OnWaterPressureSliderScroll(wxScrollEvent & event);
@@ -52,6 +53,8 @@ private:
 
     // Controls
 
+    wxSlider * mStiffnessSlider;
+    wxTextCtrl * mStiffnessTextCtrl;
     wxSlider * mStrengthSlider;
     wxTextCtrl * mStrengthTextCtrl;
     wxSlider * mBuoyancySlider;

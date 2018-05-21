@@ -51,7 +51,7 @@ public:
         , mPositionBuffer(elementCount)
         , mVelocityBuffer(elementCount)
         , mForceBuffer(elementCount)
-        , mMassFactorBuffer(elementCount)
+        , mIntegrationFactorBuffer(elementCount)
         , mMassBuffer(elementCount)
         // Water dynamics
         , mBuoyancyBuffer(elementCount)        
@@ -69,6 +69,7 @@ public:
         // Immutable render attributes
         , mColorBuffer(elementCount)
         , mTextureCoordinatesBuffer(elementCount)
+        // Container state
         , mAreImmutableRenderAttributesUploaded(false)
     {
     }
@@ -86,7 +87,7 @@ public:
 
     void Breach(
         ElementIndex pointElementIndex,
-        Triangles & triangles);    
+        Triangles & triangles);        
 
     void Upload(
         int shipId,
@@ -182,16 +183,16 @@ public:
         return reinterpret_cast<float *>(mForceBuffer.data());
     }
 
-    vec2f const & GetMassFactor(ElementIndex pointElementIndex) const
+    vec2f const & GetIntegrationFactor(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
-        return mMassFactorBuffer[pointElementIndex];
+        return mIntegrationFactorBuffer[pointElementIndex];
     }
 
-    float * restrict GetMassFactorBufferAsFloat()
+    float * restrict GetIntegrationFactorBufferAsFloat()
     {
-        return reinterpret_cast<float *>(mMassFactorBuffer.data());
+        return reinterpret_cast<float *>(mIntegrationFactorBuffer.data());
     }
 
     float GetMass(ElementIndex pointElementIndex) const
@@ -386,8 +387,8 @@ public:
     
         mIsPinnedBuffer[pointElementIndex] = true;
 
-        // Zero-out mass factor and velocity, freezing point
-        mMassFactorBuffer[pointElementIndex] = vec2f(0.0f, 0.0f);
+        // Zero-out integration factor and velocity, freezing point
+        mIntegrationFactorBuffer[pointElementIndex] = vec2f(0.0f, 0.0f);
         mVelocityBuffer[pointElementIndex] = vec2f(0.0f, 0.0f);
     }
 
@@ -397,8 +398,8 @@ public:
     
         mIsPinnedBuffer[pointElementIndex] = false;
 
-        // Re-populate its mass factor, thawing point
-        mMassFactorBuffer[pointElementIndex] = CalculateMassFactor(mMassBuffer[pointElementIndex]);
+        // Re-populate its integration factor, thawing point
+        mIntegrationFactorBuffer[pointElementIndex] = CalculateIntegrationFactor(mMassBuffer[pointElementIndex]);
     }
 
     //
@@ -440,7 +441,7 @@ public:
 
 private:
 
-    static vec2f CalculateMassFactor(float mass);
+    static vec2f CalculateIntegrationFactor(float mass);
 
 private:
 
@@ -457,7 +458,7 @@ private:
     Buffer<vec2f> mPositionBuffer;
     Buffer<vec2f> mVelocityBuffer;
     Buffer<vec2f> mForceBuffer;
-    Buffer<vec2f> mMassFactorBuffer;
+    Buffer<vec2f> mIntegrationFactorBuffer;
     Buffer<float> mMassBuffer;
 
     //
@@ -503,6 +504,11 @@ private:
 
     Buffer<vec3f> mColorBuffer;
     Buffer<vec2f> mTextureCoordinatesBuffer;
+
+
+    //
+    // Container state
+    //
 
     // Flag remembering whether or not we've already uploaded
     // the immutable render attributes

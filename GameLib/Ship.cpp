@@ -367,7 +367,9 @@ void Ship::Render(
 
         if (mArePinnedPointsDirty || mAreElementsDirty)
         {
-            renderContext.UploadShipElementPinnedPointsStart(mId);
+            renderContext.UploadShipElementPinnedPointsStart(
+                mId,
+                mCurrentPinnedPoints.size());
 
             for (auto pinnedPointIndex : mCurrentPinnedPoints)
             {

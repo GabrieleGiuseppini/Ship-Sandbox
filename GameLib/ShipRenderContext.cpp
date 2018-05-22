@@ -608,6 +608,7 @@ void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & con
         // Prepare point elements
         //
 
+        // Max # of points = number of points
         size_t maxConnectedComponentPoints = connectedComponentsMaxSizes[c];
         if (mConnectedComponents[c].pointElementMaxCount != maxConnectedComponentPoints)
         {
@@ -629,6 +630,7 @@ void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & con
         // Prepare spring elements
         //
 
+        // Max # of springs = number of points * 9 (8 neighbours plus one rope for endpoint points)
         size_t maxConnectedComponentSprings = connectedComponentsMaxSizes[c] * 9;        
         if (mConnectedComponents[c].springElementMaxCount != maxConnectedComponentSprings)
         {
@@ -650,7 +652,8 @@ void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & con
         // Prepare rope elements
         //
 
-        size_t maxConnectedComponentRopes = connectedComponentsMaxSizes[c];
+        // Max # of ropes = max number of springs
+        size_t maxConnectedComponentRopes = maxConnectedComponentSprings;
         if (mConnectedComponents[c].ropeElementMaxCount != maxConnectedComponentRopes)
         {
             // A change in the max size of this connected component
@@ -671,6 +674,7 @@ void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & con
         // Prepare triangle elements
         //
 
+        // Max # of triangles = number of points * 8 (each of the 8 directions)
         size_t maxConnectedComponentTriangles = connectedComponentsMaxSizes[c] * 8;
         if (mConnectedComponents[c].triangleElementMaxCount != maxConnectedComponentTriangles)
         {
@@ -692,7 +696,8 @@ void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & con
         // Prepare stressed spring elements
         //
 
-        size_t maxConnectedComponentStressedSprings = connectedComponentsMaxSizes[c] * 9;
+        // Max # of stressed springs = max number of springs
+        size_t maxConnectedComponentStressedSprings = maxConnectedComponentSprings;
         if (mConnectedComponents[c].stressedSpringElementMaxCount != maxConnectedComponentStressedSprings)
         {
             // A change in the max size of this connected component
@@ -716,9 +721,6 @@ void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & con
         mConnectedComponents[c].pinnedPointElementOffset = 0;
         mConnectedComponents[c].pinnedPointElementCount = 0;
     }
-
-    // Clear pinned point buffer, as it'll be re-uploaded soon
-    mPinnedPointElementBuffer.clear();
 }
 
 void ShipRenderContext::UploadElementsEnd()
@@ -769,7 +771,7 @@ void ShipRenderContext::UploadElementStressedSpringsEnd()
     }
 }
 
-void ShipRenderContext::UploadElementPinnedPointsStart()
+void ShipRenderContext::UploadElementPinnedPointsStart(size_t count)
 {
     // Clear per-connected component metadata
     for (auto c = 0; c < mConnectedComponents.size(); ++c)
@@ -780,6 +782,7 @@ void ShipRenderContext::UploadElementPinnedPointsStart()
 
     // Clear pinned point buffer
     mPinnedPointElementBuffer.clear();
+    mPinnedPointElementBuffer.reserve(count);
 }
 
 void ShipRenderContext::UploadElementPinnedPointsEnd()

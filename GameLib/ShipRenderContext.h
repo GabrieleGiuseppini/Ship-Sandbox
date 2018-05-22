@@ -152,7 +152,7 @@ public:
     void UploadElementStressedSpringsEnd();
 
 
-    void UploadElementPinnedPointsStart();
+    void UploadElementPinnedPointsStart(size_t count);
 
     inline void UploadElementPinnedPoint(
         float pinnedPointX,

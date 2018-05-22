@@ -462,11 +462,13 @@ public:
         mShips[shipId]->UploadElementStressedSpringsEnd();
     }
 
-    inline void UploadShipElementPinnedPointsStart(int shipId)
+    inline void UploadShipElementPinnedPointsStart(
+        int shipId,
+        size_t count)
     {
         assert(shipId < mShips.size());
 
-        mShips[shipId]->UploadElementPinnedPointsStart();
+        mShips[shipId]->UploadElementPinnedPointsStart(count);
     }
 
     inline void UploadShipElementPinnedPoint(

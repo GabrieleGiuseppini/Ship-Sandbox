@@ -139,8 +139,14 @@ Prev perf (before point et al destructuring)
 	- Water:
 		- Sinking detection is broken - it currently only considers total water that entered the ship, which comes proportionally to external
 		  water pressure; all this water could be confined to a tiny volume, and yet we trigger sinking
-			- Should be based on total number of points that have water instead, i.e. wet points
-			- ...which requires Points to keep track of point's water going from 0.0 to > 0.0
+			- Option 1: make it based on total number of points that have water instead, i.e. wet points
+				- ...which requires Points to keep track of point's water going from 0.0 to > 0.0, at all possible
+				  avenues of change (LeakWater, BalancePressure, etc.)
+			- Option 2: make it based on total number of points whose Y is underwater
+				- Could be done @ Ship::UpdatePoint() when the count of underwater points reaches threshold for the first time
+					- Just reset count before loop
+				- HOWEVER: a big part of the ship could be below water but dry...
+				- So: should try a combination of current mTotalWater and 3/4ths of points below water
 		+ Did original game propagate water also through hull springs? YES. How did hull thin dividers work? THEY DIDN'T WORK
 		+ Add Point::Hull Characteristic, and don't leak/propagate(incl. gravitate) water if at least one of the two points is hull			
 			+ Alternatively: just make a spring hull if one point is hull; test it
@@ -167,18 +173,52 @@ Prev perf (before point et al destructuring)
 				- The point it's attached to is destroyed
 				- A spring connected to the point it's attached to is destroyed
 		- Impl:
+			- Bombs class
+				- Not ElementContainer, just manager
+				- cctor takes shared_ptr<IGameEventHandler> and Points &
+				
+			- Events:
+				- OnRCBombPlaced/Removed(size, underwater): used by MainFrame to enable/disable detonation menu item
+				- OnTimerBombPlaced/Removed(size, underwater): used by SoundController to start/stop and set volume
+				  of RC bomb sound
+				- OnBombDetonated(size): used by SoundController 
+				- OnRCBombPing(size)
+			- TODOOLD
 			- Ship remembers set of bombs (capped), just like pinned points
+				- BombBase class, w/type enum
+					- Update() = 0: runs state machine with local clock
+					- IsTriggered() -> bool
+						- via protected mIsTriggered, set by subclasses
+					- GetRenderFrameIndex() -> size_t
+						- via protected mRenderFrameIndex, set by subclasses
+					- Detonate(): sets mIsTriggered
+					- "ProximityDisturbed"(): starts new state machine
+						- TimerBomb: only if state machine duration < own time left
+				- Two subclasses - TimerBomb and RCBomb
 			- Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
+				- Also changes mass (just at point, for gravity only...)				
+				- Flag and mass chage at AttachBomb()/DetachBomb() 
 			- Ship implements:
-				- ToggleBombAt(position) (like pinned points)
+				- ToggleTimer/RCBombAt(position) (like pinned points)
+					- templated internal helper
 				- DetonateRCBombs()
+					- Just sets flag at each RC bomb via BaseBomb::Detonate()
 				- UpdateBombs() (private, invoked by Update() after spring stress check, so explosion is visible before it breaks 
 				  things up)
-					- 1. Advances animations (textures of bombs, sounds via events - BombSubEvent)
-						- Use ByteCode pattern?
+					- 1. Advances animations (textures of bombs, sounds via events)
+						- Use hardcoded version of ByteCode pattern, via BombSubclass::Update()
 					- 2. Finds all bombs whose timer has elapsed and explodes them
+						- Just asks bomb.IsTriggered()
 				- Ship::PointDestroyHandler: check if bomb attached, just like pinned points
+					- Find bomb index via CircularList::find()
+					- Call 
 				- Ship::SpringDestroyHandler: check if bomb attached
+					- Find bomb index via CircularList::find()
+				- @Render(): always upload all bombs, with their RenderFrameIndex
+			- MainFrame/Tool:
+				- Use events
+				- OLD: Detonation of RC bombs enabled via GameController->HasRCBombs(), @end of each timer trigger, acting only
+				       if different than current menuitem status
 
 - Controls:
 	+ Set max and min zoom (or monsters awaken when you zoom out too much)

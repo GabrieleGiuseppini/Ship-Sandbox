@@ -9,6 +9,7 @@
 #include "ElementContainer.h"
 #include "FixedSizeVector.h"
 #include "GameParameters.h"
+#include "GameTypes.h"
 #include "IGameEventHandler.h"
 #include "Material.h"
 #include "RenderContext.h"
@@ -66,6 +67,8 @@ public:
         , mCurrentConnectedComponentDetectionStepSequenceNumberBuffer(elementCount)
         // Pinning
         , mIsPinnedBuffer(elementCount)
+        // Bombs
+        , mIsBombAttachedBuffer(elementCount)
         // Immutable render attributes
         , mColorBuffer(elementCount)
         , mTextureCoordinatesBuffer(elementCount)
@@ -384,6 +387,7 @@ public:
     void Pin(ElementIndex pointElementIndex) 
     {
         assert(pointElementIndex < mElementCount);
+        assert(false == mIsPinnedBuffer[pointElementIndex]);
     
         mIsPinnedBuffer[pointElementIndex] = true;
 
@@ -395,6 +399,7 @@ public:
     void Unpin(ElementIndex pointElementIndex)
     {
         assert(pointElementIndex < mElementCount);
+        assert(true == mIsPinnedBuffer[pointElementIndex]);
     
         mIsPinnedBuffer[pointElementIndex] = false;
 
@@ -403,10 +408,47 @@ public:
     }
 
     //
+    // Bombs
+    //
+
+    inline bool IsBombAttached(ElementIndex pointElementIndex) const
+    {
+        assert(pointElementIndex < mElementCount);
+
+        return mIsBombAttachedBuffer[pointElementIndex];
+    }
+
+    void AttachBomb(
+        ElementIndex pointElementIndex,
+        GameParameters const & gameParameters)
+    {
+        assert(pointElementIndex < mElementCount);
+        assert(false == mIsBombAttachedBuffer[pointElementIndex]);
+
+        mIsBombAttachedBuffer[pointElementIndex] = true;
+
+        // Augment mass due to the bomb
+        mMassBuffer[pointElementIndex] = mMaterialBuffer[pointElementIndex]->Mass + gameParameters.BombMass;
+    }
+
+    void DetachBomb(
+        ElementIndex pointElementIndex,
+        GameParameters const & /*gameParameters*/)
+    {
+        assert(pointElementIndex < mElementCount);
+        assert(true == mIsBombAttachedBuffer[pointElementIndex]);
+
+        mIsBombAttachedBuffer[pointElementIndex] = false;
+
+        // Reset mass
+        mMassBuffer[pointElementIndex] = mMaterialBuffer[pointElementIndex]->Mass;
+    }
+
+    //
     // Connected component
     //
 
-    inline uint32_t GetConnectedComponentId(ElementIndex pointElementIndex) const
+    inline ConnectedComponentId GetConnectedComponentId(ElementIndex pointElementIndex) const
     {
         assert(pointElementIndex < mElementCount);
 
@@ -415,7 +457,7 @@ public:
 
     inline void SetConnectedComponentId(
         ElementIndex pointElementIndex,
-        uint32_t connectedComponentId) 
+        ConnectedComponentId connectedComponentId)
     { 
         assert(pointElementIndex < mElementCount);
 
@@ -489,7 +531,7 @@ private:
     // Connected component
     //
 
-    Buffer<uint32_t> mConnectedComponentIdBuffer; // Connected component IDs start from 1
+    Buffer<ConnectedComponentId> mConnectedComponentIdBuffer; 
     Buffer<uint64_t> mCurrentConnectedComponentDetectionStepSequenceNumberBuffer;
 
     //
@@ -497,6 +539,12 @@ private:
     //
 
     Buffer<bool> mIsPinnedBuffer;
+
+    //
+    // Bombs
+    //
+
+    Buffer<bool> mIsBombAttachedBuffer;
 
     //
     // Immutable render attributes

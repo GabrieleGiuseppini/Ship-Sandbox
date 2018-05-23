@@ -6,9 +6,9 @@
 #pragma once
 
 #include "GameOpenGL.h"
+#include "GameTypes.h"
 #include "ImageData.h"
 #include "ProgressCallback.h"
-#include "RenderTypes.h"
 #include "ResourceLoader.h"
 #include "ShipRenderContext.h"
 #include "SysSpecifics.h"
@@ -374,7 +374,7 @@ public:
     inline void UploadShipElementPoint(
         int shipId,
         int shipPointIndex,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -387,7 +387,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -401,7 +401,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -416,7 +416,7 @@ public:
         int shipPointIndex1,
         int shipPointIndex2,
         int shipPointIndex3,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -445,7 +445,7 @@ public:
         int shipId,
         int shipPointIndex1,
         int shipPointIndex2,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -475,7 +475,7 @@ public:
         int shipId,
         float x,
         float y,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -490,6 +490,42 @@ public:
         assert(shipId < mShips.size());
 
         mShips[shipId]->UploadElementPinnedPointsEnd();
+    }
+
+    inline void UploadShipElementBombsStart(
+        int shipId,
+        size_t count)
+    {
+        assert(shipId < mShips.size());
+
+        mShips[shipId]->UploadElementBombsStart(count);
+    }
+
+    inline void UploadShipElementBomb(
+        int shipId,
+        float x,
+        float y,
+        float scale,
+        BombType bombType,
+        uint32_t frameIndex,
+        ConnectedComponentId connectedComponentId)
+    {
+        assert(shipId < mShips.size());
+
+        mShips[shipId]->UploadElementBomb(
+            x,
+            y,
+            scale,
+            bombType,
+            frameIndex,
+            connectedComponentId);
+    }
+
+    inline void UploadShipElementBombsEnd(int shipId)
+    {
+        assert(shipId < mShips.size());
+
+        mShips[shipId]->UploadElementBombsEnd();
     }
 
     //
@@ -510,7 +546,7 @@ public:
         float x,
         float y,
         float lightIntensity,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         assert(shipId < mShips.size());
 
@@ -667,6 +703,10 @@ private:
     vec3f const mRopeColour;
     ImageSize mPinnedPointTextureSize;
     GameOpenGLTexture mPinnedPointTexture;
+    std::vector<ImageSize> mRCBombTextureSizes;
+    std::vector<GameOpenGLTexture> mRCBombTextures;
+    std::vector<ImageSize> mTimerBombTextureSizes;
+    std::vector<GameOpenGLTexture> mTimerBombTextures;
 
 
     //

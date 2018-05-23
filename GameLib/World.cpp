@@ -56,7 +56,7 @@ int World::AddShip(
 
     auto newShip = ShipBuilder::Create(
         shipId,
-        this,
+        *this,
         mGameEventHandler,
         shipDefinition,
         materials,
@@ -94,12 +94,12 @@ void World::DrawTo(
 
 void World::TogglePinAt(
     vec2 const & targetPos,
-    float searchRadius)
+    GameParameters const & gameParameters)
 {
     // Stop at first ship that successfully pins or unpins a point
     for (auto const & ship : mAllShips)
     {
-        if (ship->TogglePinAt(targetPos, searchRadius))
+        if (ship->TogglePinAt(targetPos, gameParameters))
         {
             // Found!
             return;
@@ -107,6 +107,50 @@ void World::TogglePinAt(
 
         // No luck...
         // search other ships
+    }
+}
+
+void World::ToggleTimerBombAt(
+    vec2 const & targetPos,
+    GameParameters const & gameParameters)
+{
+    // Stop at first ship that successfully places or removes a bomb
+    for (auto const & ship : mAllShips)
+    {
+        if (ship->ToggleTimerBombAt(targetPos, gameParameters))
+        {
+            // Found!
+            return;
+        }
+
+        // No luck...
+        // search other ships
+    }
+}
+
+void World::ToggleRCBombAt(
+    vec2 const & targetPos,
+    GameParameters const & gameParameters)
+{
+    // Stop at first ship that successfully places or removes a bomb
+    for (auto const & ship : mAllShips)
+    {
+        if (ship->ToggleRCBombAt(targetPos, gameParameters))
+        {
+            // Found!
+            return;
+        }
+
+        // No luck...
+        // search other ships
+    }
+}
+
+void World::DetonateRCBombs()
+{
+    for (auto const & ship : mAllShips)
+    {
+        ship->DetonateRCBombs();
     }
 }
 

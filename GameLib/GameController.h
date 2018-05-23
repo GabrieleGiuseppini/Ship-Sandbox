@@ -7,6 +7,7 @@
 
 #include "GameEventDispatcher.h"
 #include "GameParameters.h"
+#include "GameTypes.h"
 #include "MaterialDatabase.h"
 #include "Physics.h"
 #include "ProgressCallback.h"
@@ -48,6 +49,9 @@ public:
     void DestroyAt(vec2f const & screenCoordinates, float radiusMultiplier);
     void DrawTo(vec2f const & screenCoordinates, float strengthMultiplier);
     void TogglePinAt(vec2f const & screenCoordinates);
+    void ToggleTimerBombAt(vec2f const & screenCoordinates);
+    void ToggleRCBombAt(vec2f const & screenCoordinates);
+    void DetonateRCBombs();
     ElementContainer::ElementIndex GetNearestPointAt(vec2 const & screenCoordinates) const;
 
     void SetCanvasSize(int width, int height) { mRenderContext->SetCanvasSize(width, height); }

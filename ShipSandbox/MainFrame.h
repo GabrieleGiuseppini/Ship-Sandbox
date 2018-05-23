@@ -55,6 +55,7 @@ private:
 
     wxBoxSizer * mMainFrameSizer;
     wxMenuItem * mPauseMenuItem;    
+    wxMenuItem * mRCBombsDetonateMenuItem;
     wxMenuItem * mShowEventTickerMenuItem;
     wxMenuItem * mMuteMenuItem;
     std::unique_ptr<EventTickerPanel> mEventTickerPanel;
@@ -72,11 +73,13 @@ private:
     // Cursors
     //
 
-    // Cursor 0 is base; cursor 1 -> size-1 are strength-based
+    // For multi-cursor: cursor 0 is base; cursor 1 up to size-1 are strength-based
     std::vector<std::unique_ptr<wxCursor>> mGrabCursors;
     std::vector<std::unique_ptr<wxCursor>> mSmashCursors;
     std::unique_ptr<wxCursor> mMoveCursor;
     std::unique_ptr<wxCursor> mPinCursor;
+    std::unique_ptr<wxCursor> mTimerBombCursor;
+    std::unique_ptr<wxCursor> mRCBombCursor;
 
 
 	//
@@ -123,6 +126,9 @@ private:
 	void OnSmashMenuItemSelected(wxCommandEvent& event);
 	void OnGrabMenuItemSelected(wxCommandEvent& event);
     void OnPinMenuItemSelected(wxCommandEvent& event);
+    void OnTimerBombMenuItemSelected(wxCommandEvent& event);
+    void OnRCBombMenuItemSelected(wxCommandEvent& event);
+    void OnRCBombDetonateMenuItemSelected(wxCommandEvent& event);
 	void OnOpenSettingsWindowMenuItemSelected(wxCommandEvent& event);
     void OnOpenLogWindowMenuItemSelected(wxCommandEvent& event);
     void OnShowEventTickerMenuItemSelected(wxCommandEvent& event);
@@ -145,6 +151,28 @@ private:
         mCurrentShipNames.push_back(name);
     }
 
+    virtual void OnBombPlaced(
+        BombType bombType,
+        bool /*isUnderwater*/) override
+    {
+        if (BombType::RCBomb == bombType)
+        {
+            ++mCurrentRCBombCount;
+            mRCBombsDetonateMenuItem->Enable(mCurrentRCBombCount > 0);
+        }
+    }
+
+    virtual void OnBombRemoved(
+        BombType bombType,
+        bool /*isUnderwater*/) override
+    {
+        if (BombType::RCBomb == bombType)
+        {
+            assert(mCurrentRCBombCount > 0u);
+            --mCurrentRCBombCount;
+            mRCBombsDetonateMenuItem->Enable(mCurrentRCBombCount > 0);
+        }
+    }
 
 private:
 
@@ -185,7 +213,9 @@ private:
 	{
 		Smash,
 		Grab,
-        Pin
+        Pin,
+        TimerBomb,
+        RCBomb
 	};
 
 	ToolType mCurrentToolType;
@@ -223,11 +253,26 @@ private:
 
     ContinuousToolState mContinuousToolState;
 
+    //
+    // Helpers
+    //
+
     std::shared_ptr<ResourceLoader> mResourceLoader;
 	std::shared_ptr<GameController> mGameController;
     std::unique_ptr<SoundController> mSoundController;
 
+
+    //
+    // State
+    //
+
     std::vector<std::string> mCurrentShipNames;
+    size_t mCurrentRCBombCount;
+
+
+    //
+    // Stats
+    //
 
 	uint64_t mTotalFrameCount;	
     uint64_t mLastFrameCount;

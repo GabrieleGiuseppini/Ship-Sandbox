@@ -7,11 +7,15 @@
 
 #include "Vectors.h"
 
+#include <chrono>
+
 /*
 * Parameters that affect the game (physics, world).
 */
 struct GameParameters
 {
+    GameParameters();
+
     //
     // The dt of each step
     //
@@ -77,7 +81,15 @@ struct GameParameters
 	static constexpr float MinDestroyRadius = 0.1f;
 	static constexpr float MaxDestroyRadius = 10.0f;
 
-    float PinSearchRadius;
+    float BombBlastRadius;
+    static constexpr float MinBombBlastRadius = 0.1f;
+    static constexpr float MaxBombBlastRadius = 20.0f;
+
+    std::chrono::seconds TimerBombInterval;
+
+    float BombMass;
+
+    float ToolPointSearchRadius;
 
     float LightDiffusionAdjustment;
 
@@ -92,7 +104,6 @@ struct GameParameters
     static constexpr float MinZoom = 0.0001f;
     static constexpr float MaxZoom = 2000.0f;
 
-    static constexpr size_t MaxPinnedPoints = 64u;
-
-    GameParameters();
+    static constexpr size_t MaxBombs = 64u;
+    static constexpr size_t MaxPinnedPoints = 64u;    
 };

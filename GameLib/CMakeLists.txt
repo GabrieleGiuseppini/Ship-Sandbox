@@ -19,6 +19,7 @@ set  (GAME_SOURCES
 	GameOpenGL.h
 	GameParameters.cpp
 	GameParameters.h
+	GameTypes.h
 	IGameEventHandler.h
 	ImageData.h
 	ImageSize.h
@@ -29,8 +30,7 @@ set  (GAME_SOURCES
 	MaterialDatabase.h
 	ProgressCallback.h
 	RenderContext.cpp
-	RenderContext.h
-	RenderTypes.h
+	RenderContext.h	
 	ResourceLoader.cpp
 	ResourceLoader.h
 	ShipBuilder.cpp
@@ -48,6 +48,9 @@ set  (GAME_SOURCES
 	Vectors.h)
 
 set  (PHYSICS_SOURCES
+	Bomb.h
+	Bombs.cpp
+	Bombs.h
 	Cable.cpp
 	Cable.h
 	Cloud.h
@@ -64,10 +67,14 @@ set  (PHYSICS_SOURCES
 	Physics.h
 	Points.cpp
 	Points.h
+	RCBomb.cpp
+	RCBomb.h
 	Ship.cpp
 	Ship.h
 	Springs.cpp
 	Springs.h
+	TimerBomb.cpp
+	TimerBomb.h
 	Triangles.cpp
 	Triangles.h
 	WaterSurface.cpp

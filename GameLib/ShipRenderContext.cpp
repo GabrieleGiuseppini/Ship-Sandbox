@@ -13,7 +13,8 @@ ShipRenderContext::ShipRenderContext(
     std::optional<ImageData> texture,
     vec3f const & ropeColour,
     GLuint pinnedPointTexture,
-    ImageSize pinnedPointTextureSize)
+    std::vector<GLuint> rcBombTextures,
+    std::vector<GLuint> timerBombTextures)
     // Points
     : mPointCount(0u)
     , mPointPositionVBO()
@@ -36,14 +37,20 @@ ShipRenderContext::ShipRenderContext(
     , mElementPinnedPointShaderProgram(0)
     , mElementPinnedPointShaderOrthoMatrixParameter(0)
     , mElementPinnedPointShaderAmbientLightIntensityParameter(0)
+    , mElementBombShaderProgram(0)
+    , mElementBombShaderOrthoMatrixParameter(0)
+    , mElementBombShaderAmbientLightIntensityParameter(0)
     , mConnectedComponents()
     , mPinnedPointElementBuffer()
     , mPinnedPointVBO()
+    , mBombElementBuffer()
+    , mBombVBO()
     // Texture
     , mElementTexture()
     , mElementStressedSpringTexture()
     , mElementPinnedPointTexture(pinnedPointTexture)
-    , mElementPinnedPointTextureSize(pinnedPointTextureSize)
+    , mElementRCBombTextures(rcBombTextures)
+    , mElementTimerBombTextures(timerBombTextures)
     // Lamps
     , mLampBuffers()
 {
@@ -526,6 +533,83 @@ ShipRenderContext::ShipRenderContext(
 
     // Unbind VBO
     glBindBuffer(GL_ARRAY_BUFFER, 0u);
+
+
+    //
+    // Create bombs program
+    //
+
+    // Create program
+
+    mElementBombShaderProgram = glCreateProgram();
+
+    char const * elementBombVertexShaderSource = R"(
+
+        // Inputs
+        attribute vec2 inputPos;
+        attribute vec2 inputTextureCoords;
+        
+        // Outputs
+        varying vec2 vertexTextureCoords;
+
+        // Params
+        uniform mat4 paramOrthoMatrix;
+
+        void main()
+        {
+            vertexTextureCoords = inputTextureCoords; 
+            gl_Position = paramOrthoMatrix * vec4(inputPos.xy, -1.0, 1.0);
+        }
+    )";
+
+    GameOpenGL::CompileShader(elementBombVertexShaderSource, GL_VERTEX_SHADER, mElementBombShaderProgram);
+
+    char const * elementBombFragmentShaderSource = R"(
+
+        // Inputs from previous shader
+        varying vec2 vertexTextureCoords;
+
+        // The texture
+        uniform sampler2D inputTexture;
+
+        // Parameters        
+        uniform float paramAmbientLightIntensity;
+
+        void main()
+        {
+            gl_FragColor = texture2D(inputTexture, vertexTextureCoords) * paramAmbientLightIntensity;
+        } 
+    )";
+
+    GameOpenGL::CompileShader(elementBombFragmentShaderSource, GL_FRAGMENT_SHADER, mElementBombShaderProgram);
+
+    // Bind attribute locations
+    glBindAttribLocation(*mElementBombShaderProgram, BombPosVertexAttribute, "inputPos");
+    glBindAttribLocation(*mElementBombShaderProgram, BombTextureCoordinatesVertexAttribute, "inputTextureCoords");
+
+    // Link
+    GameOpenGL::LinkShaderProgram(mElementBombShaderProgram, "Bomb");
+
+    // Get uniform locations
+    mElementBombShaderOrthoMatrixParameter = GameOpenGL::GetParameterLocation(mElementBombShaderProgram, "paramOrthoMatrix");
+    mElementBombShaderAmbientLightIntensityParameter = GameOpenGL::GetParameterLocation(mElementBombShaderProgram, "paramAmbientLightIntensity");
+
+    // Create VBO
+    GLuint bombVBO;
+    glGenBuffers(1, &bombVBO);
+    mBombVBO = bombVBO;
+
+    // Bind VBO
+    glBindBuffer(GL_ARRAY_BUFFER, *mBombVBO);
+
+    // Describe buffer
+    glVertexAttribPointer(BombPosVertexAttribute, 2, GL_FLOAT, GL_FALSE, (2 + 2) * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(BombPosVertexAttribute);
+    glVertexAttribPointer(BombTextureCoordinatesVertexAttribute, 2, GL_FLOAT, GL_FALSE, (2 + 2) * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(BombTextureCoordinatesVertexAttribute);
+
+    // Unbind VBO
+    glBindBuffer(GL_ARRAY_BUFFER, 0u);
 }
 
 ShipRenderContext::~ShipRenderContext()
@@ -720,13 +804,20 @@ void ShipRenderContext::UploadElementsStart(std::vector<std::size_t> const & con
 
         mConnectedComponents[c].pinnedPointElementOffset = 0;
         mConnectedComponents[c].pinnedPointElementCount = 0;
+
+        //
+        // Prepare bomb elements
+        //
+
+        mConnectedComponents[c].bombElementOffset = 0;
+        mConnectedComponents[c].bombElementInfos.clear();
     }
 }
 
 void ShipRenderContext::UploadElementsEnd()
 {
     //
-    // Upload all elements, except for stressed springs and pinned points
+    // Upload all elements, except for stressed springs, pinned points, and bombs
     //
 
     for (size_t c = 0; c < mConnectedComponents.size(); ++c)
@@ -793,6 +884,30 @@ void ShipRenderContext::UploadElementPinnedPointsEnd()
 
     glBindBuffer(GL_ARRAY_BUFFER, *mPinnedPointVBO);
     glBufferData(GL_ARRAY_BUFFER, mPinnedPointElementBuffer.size() * sizeof(PinnedPointElement), mPinnedPointElementBuffer.data(), GL_STATIC_DRAW);
+}
+
+void ShipRenderContext::UploadElementBombsStart(size_t count)
+{
+    // Clear per-connected component metadata
+    for (auto c = 0; c < mConnectedComponents.size(); ++c)
+    {
+        mConnectedComponents[c].bombElementOffset = 0;
+        mConnectedComponents[c].bombElementInfos.clear();
+    }
+
+    // Clear bomb buffer
+    mBombElementBuffer.clear();
+    mBombElementBuffer.reserve(count);
+}
+
+void ShipRenderContext::UploadElementBombsEnd()
+{
+    //
+    // Upload bombs
+    //
+
+    glBindBuffer(GL_ARRAY_BUFFER, *mBombVBO);
+    glBufferData(GL_ARRAY_BUFFER, mBombElementBuffer.size() * sizeof(BombElement), mBombElementBuffer.data(), GL_STATIC_DRAW);
 }
 
 void ShipRenderContext::UploadLampsStart(size_t connectedComponents)
@@ -912,6 +1027,16 @@ void ShipRenderContext::Render(
                 canvasToVisibleWorldHeightRatio,
                 orthoMatrix);
         }
+
+
+        //
+        // Draw bombs
+        //
+
+        RenderBombElements(
+            mConnectedComponents[c],
+            ambientLightIntensity,
+            orthoMatrix);
 
 
         //
@@ -1101,6 +1226,48 @@ void ShipRenderContext::RenderStressedSpringElements(
     glUseProgram(0);
 }
 
+void ShipRenderContext::RenderBombElements(
+    ConnectedComponentData const & connectedComponent,
+    float ambientLightIntensity,
+    float(&orthoMatrix)[4][4])
+{
+    // Use program
+    glUseProgram(*mElementBombShaderProgram);
+
+    // Set parameters
+    glUniformMatrix4fv(mElementBombShaderOrthoMatrixParameter, 1, GL_FALSE, &(orthoMatrix[0][0]));
+    glUniform1f(mElementBombShaderAmbientLightIntensityParameter, ambientLightIntensity);
+
+    // Bind VBO
+    glBindBuffer(GL_ARRAY_BUFFER, *mBombVBO);
+
+    for (size_t b = 0; b < connectedComponent.bombElementInfos.size(); ++b)
+    {
+        // Bind texture
+        switch (connectedComponent.bombElementInfos[b].bombType)
+        {
+            case BombType::RCBomb:
+            {
+                glBindTexture(GL_TEXTURE_2D, mElementRCBombTextures[connectedComponent.bombElementInfos[b].frameIndex]);
+            }
+
+            case BombType::TimerBomb:
+            {
+                glBindTexture(GL_TEXTURE_2D, mElementTimerBombTextures[connectedComponent.bombElementInfos[b].frameIndex]);
+            }
+        }
+        
+        // Draw
+        glDrawArrays(GL_TRIANGLE_STRIP, static_cast<GLint>(4 * (connectedComponent.bombElementOffset + b)), 4);
+
+        // Unbind texture
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    // Stop using program
+    glUseProgram(0);
+}
+
 void ShipRenderContext::RenderPinnedPointElements(
     ConnectedComponentData const & connectedComponent,
     float ambientLightIntensity,
@@ -1120,9 +1287,9 @@ void ShipRenderContext::RenderPinnedPointElements(
     glBindBuffer(GL_ARRAY_BUFFER, *mPinnedPointVBO);
 
     // Draw
-    for (size_t c = 0; c < connectedComponent.pinnedPointElementCount; ++c)
+    for (size_t p = 0; p < connectedComponent.pinnedPointElementCount; ++p)
     {
-        glDrawArrays(GL_TRIANGLE_STRIP, static_cast<GLint>(4 * (connectedComponent.pinnedPointElementOffset + c)), 4);
+        glDrawArrays(GL_TRIANGLE_STRIP, static_cast<GLint>(4 * (connectedComponent.pinnedPointElementOffset + p)), 4);
     }
 
     // Unbind texture

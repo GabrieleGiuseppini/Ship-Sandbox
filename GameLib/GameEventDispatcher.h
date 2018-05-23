@@ -23,6 +23,8 @@ public:
         , mStressEvents()
         , mBreakEvents()
         , mSinkingBeginEvents()
+        , mBombExplosionEvents()
+        , mRCBombPingEvents()
         , mSinks()
     {
     }
@@ -93,6 +95,50 @@ public:
         }
     }
 
+    //
+    // Bombs
+    //
+
+    virtual void OnBombPlaced(
+        BombType bombType,
+        bool isUnderwater) override
+    {
+        // No need to aggregate this one
+        for (auto sink : mSinks)
+        {
+            sink->OnBombPlaced(
+                bombType,
+                isUnderwater);
+        }
+    }
+
+    virtual void OnBombRemoved(
+        BombType bombType,
+        bool isUnderwater) override
+    {
+        // No need to aggregate this one
+        for (auto sink : mSinks)
+        {
+            sink->OnBombRemoved(
+                bombType,
+                isUnderwater);
+        }
+    }
+
+    virtual void OnBombExplosion(
+        bool isUnderwater,
+        unsigned int size) override
+    {
+        mBombExplosionEvents[std::make_tuple(isUnderwater)] += size;
+    }
+
+    virtual void OnRCBombPing(
+        bool isUnderwater,
+        unsigned int size) override
+    {
+        mRCBombPingEvents[std::make_tuple(isUnderwater)] += size;
+    }
+
 public:
 
     /*
@@ -132,6 +178,16 @@ public:
             {
                 sink->OnSinkingBegin(shipId);
             }
+
+            for (auto const & entry : mBombExplosionEvents)
+            {
+                sink->OnBombExplosion(std::get<0>(entry.first), entry.second);
+            }
+
+            for (auto const & entry : mRCBombPingEvents)
+            {
+                sink->OnRCBombPing(std::get<0>(entry.first), entry.second);
+            }
         }
 
         // Clear collections
@@ -141,6 +197,8 @@ public:
         mStressEvents.clear();
         mBreakEvents.clear();
         mSinkingBeginEvents.clear();
+        mBombExplosionEvents.clear();
+        mRCBombPingEvents.clear();
     }
 
     void RegisterSink(IGameEventHandler * sink)
@@ -157,6 +215,8 @@ private:
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mStressEvents;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mBreakEvents;
     std::vector<unsigned int> mSinkingBeginEvents;
+    unordered_tuple_map<std::tuple<bool>, unsigned int> mBombExplosionEvents;
+    unordered_tuple_map<std::tuple<bool>, unsigned int> mRCBombPingEvents;
 
     // The registered sinks
     std::vector<IGameEventHandler *> mSinks;

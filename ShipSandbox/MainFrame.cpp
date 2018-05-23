@@ -50,6 +50,9 @@ const long ID_RESET_VIEW_MENUITEM = wxNewId();
 const long ID_SMASH_MENUITEM = wxNewId();
 const long ID_GRAB_MENUITEM = wxNewId();
 const long ID_PIN_MENUITEM = wxNewId();
+const long ID_TIMERBOMB_MENUITEM = wxNewId();
+const long ID_RCBOMB_MENUITEM = wxNewId();
+const long ID_RCBOMBDETONATE_MENUITEM = wxNewId();
 
 const long ID_OPEN_SETTINGS_WINDOW_MENUITEM = wxNewId();
 const long ID_OPEN_LOG_WINDOW_MENUITEM = wxNewId();
@@ -73,6 +76,7 @@ MainFrame::MainFrame(wxApp * mainApp)
 	, mGameController()
     , mSoundController()
     , mCurrentShipNames()
+    , mCurrentRCBombCount(0u)
     , mTotalFrameCount(0u)
     , mLastFrameCount(0u)
     , mFrameCountStatsOriginTimestamp(std::chrono::steady_clock::time_point::min())
@@ -209,21 +213,37 @@ MainFrame::MainFrame(wxApp * mainApp)
 
 	wxMenu * toolsMenu = new wxMenu();
 
-	wxMenuItem * smashMenuItem = new wxMenuItem(toolsMenu, ID_SMASH_MENUITEM, _("Smash\tS"), wxEmptyString, wxITEM_RADIO);		
+	wxMenuItem * smashMenuItem = new wxMenuItem(toolsMenu, ID_SMASH_MENUITEM, _("&Smash\tS"), wxEmptyString, wxITEM_RADIO);		
 	toolsMenu->Append(smashMenuItem);		
 	Connect(ID_SMASH_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnSmashMenuItemSelected);
 
-	wxMenuItem * grabMenuItem = new wxMenuItem(toolsMenu, ID_GRAB_MENUITEM, _("Grab\tG"), wxEmptyString, wxITEM_RADIO);	
+	wxMenuItem * grabMenuItem = new wxMenuItem(toolsMenu, ID_GRAB_MENUITEM, _("&Grab\tG"), wxEmptyString, wxITEM_RADIO);	
 	toolsMenu->Append(grabMenuItem);	
 	Connect(ID_GRAB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnGrabMenuItemSelected);
 
-    wxMenuItem * pinMenuItem = new wxMenuItem(toolsMenu, ID_PIN_MENUITEM, _("Pin\tN"), wxEmptyString, wxITEM_RADIO);
+    wxMenuItem * pinMenuItem = new wxMenuItem(toolsMenu, ID_PIN_MENUITEM, _("&Pin\tP"), wxEmptyString, wxITEM_RADIO);
     toolsMenu->Append(pinMenuItem);
     Connect(ID_PIN_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnPinMenuItemSelected);
 
+    wxMenuItem * timerBombMenuItem = new wxMenuItem(toolsMenu, ID_TIMERBOMB_MENUITEM, _("Place &Timer Bomb\tT"), wxEmptyString, wxITEM_RADIO);
+    toolsMenu->Append(timerBombMenuItem);
+    Connect(ID_TIMERBOMB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnTimerBombMenuItemSelected);
+
+    wxMenuItem * rcBombMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMB_MENUITEM, _("Place &RC Bomb\tR"), wxEmptyString, wxITEM_RADIO);
+    toolsMenu->Append(rcBombMenuItem);
+    Connect(ID_RCBOMB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnRCBombMenuItemSelected);
+
+    // Set initial tool
     assert(mCurrentToolType == ToolType::Smash);
 	toolsMenu->Check(ID_SMASH_MENUITEM, true);
 
+    toolsMenu->Append(new wxMenuItem(toolsMenu, wxID_SEPARATOR));
+
+    wxMenuItem * rcBombDetonateMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMBDETONATE_MENUITEM, _("&Detonate RC Bomb\tD"), wxEmptyString, wxITEM_NORMAL);
+    toolsMenu->Append(rcBombDetonateMenuItem);
+    Connect(ID_RCBOMBDETONATE_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnRCBombDetonateMenuItemSelected);
+    rcBombDetonateMenuItem->Enable(false);
+    
 	mainMenuBar->Append(toolsMenu, _("Tools"));
 
 	
@@ -246,7 +266,7 @@ MainFrame::MainFrame(wxApp * mainApp)
 
     optionsMenu->Append(new wxMenuItem(optionsMenu, wxID_SEPARATOR));
 
-    mMuteMenuItem = new wxMenuItem(optionsMenu, ID_MUTE_MENUITEM, _("Mute\tM"), wxEmptyString, wxITEM_CHECK);
+    mMuteMenuItem = new wxMenuItem(optionsMenu, ID_MUTE_MENUITEM, _("Mute\tCtrl+M"), wxEmptyString, wxITEM_CHECK);
     optionsMenu->Append(mMuteMenuItem);
     mMuteMenuItem->Check(false);
     Connect(ID_MUTE_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnMuteMenuItemSelected);
@@ -295,6 +315,8 @@ MainFrame::MainFrame(wxApp * mainApp)
     mSmashCursors = MakeCursors("smash_cursor", 1, 16);
     mMoveCursor = MakeCursor("move_cursor", 15, 15);
     mPinCursor = MakeCursor("pin_up_cursor", 4, 27);
+    mTimerBombCursor = MakeCursor("timer_bomb_cursor", 15, 15); 
+    mRCBombCursor = MakeCursor("rc_bomb_cursor", 15, 15); 
 
     SwitchCursor();
 
@@ -611,6 +633,22 @@ void MainFrame::OnMainGLCanvasLeftDown(wxMouseEvent & /*event*/)
 
             break;
         }
+
+        case ToolType::TimerBomb:
+        {
+            // Toggle pin
+            mGameController->ToggleTimerBombAt(vec2(mMouseInfo.x, mMouseInfo.y));
+
+            break;
+        }
+
+        case ToolType::RCBomb:
+        {
+            // Toggle pin
+            mGameController->ToggleRCBombAt(vec2(mMouseInfo.x, mMouseInfo.y));
+
+            break;
+        }
     }
 
     // Change cursor
@@ -787,6 +825,27 @@ void MainFrame::OnPinMenuItemSelected(wxCommandEvent & /*event*/)
     SwitchCursor();
 }
 
+void MainFrame::OnTimerBombMenuItemSelected(wxCommandEvent & /*event*/)
+{
+    mCurrentToolType = ToolType::TimerBomb;
+
+    SwitchCursor();
+}
+
+void MainFrame::OnRCBombMenuItemSelected(wxCommandEvent & /*event*/)
+{
+    mCurrentToolType = ToolType::RCBomb;
+
+    SwitchCursor();
+}
+
+void MainFrame::OnRCBombDetonateMenuItemSelected(wxCommandEvent & /*event*/)
+{
+    assert(!!mGameController);
+
+    mGameController->DetonateRCBombs();
+}
+
 void MainFrame::OnOpenSettingsWindowMenuItemSelected(wxCommandEvent & /*event*/)
 {
 	if (!mSettingsDialog)
@@ -951,6 +1010,18 @@ void MainFrame::SwitchCursor()
                 this->SetCursor(*mPinCursor);
                 break;
             }
+
+            case ToolType::TimerBomb:
+            {
+                this->SetCursor(*mTimerBombCursor);
+                break;
+            }
+
+            case ToolType::RCBomb:
+            {
+                this->SetCursor(*mRCBombCursor);
+                break;
+            }
         }
     }
 }
@@ -1077,6 +1148,8 @@ void MainFrame::UpdateContinuousTool()
 		    }
 
             case ToolType::Pin:
+            case ToolType::TimerBomb:
+            case ToolType::RCBomb:
             {
                 // Not continuous
                 break;

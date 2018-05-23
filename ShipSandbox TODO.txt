@@ -47,6 +47,11 @@ Prev perf (before point et al destructuring)
 	- RenderContext::RenderCloudsEnd: 1.69%
 =================================================
 
+- Code:
+	- Textures are json files with world sizes as well
+		- In TextureData
+	- CircularList::Erase unit test: complete verification of returned iterator
+
 - Optimizations:	
 	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
 	- UpdatePointForces:
@@ -164,55 +169,63 @@ Prev perf (before point et al destructuring)
 	+ Is Verlet implemented right?
 	+ Review parallel calculation, it suffers from races
 		+ Also See if can continue queueing tasks without waiting for all blocks of chunks
-	- Bombs:
-		- Spec:
-			- Placed and removed with similar tool as Point Pinning
-			- Two types of bombs: timer and remote controlled
+	= Bombs:
+		= Spec:
+			= Placed and removed with similar tool as Point Pinning
+			= Two types of bombs: timer and remote controlled
 			- A bomb explodes when:
 				- Its timer times out or the remote control is triggered
 				- The point it's attached to is destroyed 
-				- A spring connected to the point it's attached to is destroyed (includes nearby explosion)
-			- When one or more bombs are detonated, ship needs to know only position and radius, not even point index
+				- A point or spring in a separate, small radius is destroyed (includes nearby explosion)
+			- When one or more bombs are detonated, ship needs to know only position, connected component ID, and blast radius, 
+			  not even point index
 				- Thus (exploded) bombs are independent from lifetime of point that they were attached to,
 				  allowing ship to destroy point immediately at first step of detonation, for example
 				  if we have multiple-step detonations
 				- By not using point index we allow explosions to affect multiple connected components (of same ship though)
 			- Bomb decides for itself when it's to be deleted, and Bombs consequently removes it from
-			  collection and from point (if the point still exists)
+			  collection (and from point indirectly via Bomb::Destroy which, if attached to point, calls Points::Detach)
 				 
-		- Impl:
-			- BombBase class, w/type enum
+		= Impl:
+			= Bomb base class, w/type enum
 				- Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
-					- Runs state machine with local clock
-						- Advances animations (textures of bombs, sounds via events)
-					- Invokes handler for each explosion step
-					- Returns false when needs to be deleted
-				- GetRenderFrameIndex() -> size_t
-					- via protected mRenderFrameIndex, set by subclasses
+					+ Runs state machine with local clock
+						+ Advances animations (textures of bombs, sounds via events)
+					+ Invokes handler for each explosion step
+					+ Returns false when needs to be deleted
+				+ GetRenderFrameIndex() -> size_t
+					+ via protected mRenderFrameIndex, set by subclasses
 				- "ProximityDisturbed"() = 0: input to state machine
 					- TimerBomb: only if state machine duration < own time left
-					- TODO: should have OnPointDestroyed(pointIdx) & OnAttachedSpringDestroyed(pointIdx) instead?
+					- TODO: should have OnNeighborhoodDestroyed(pointIdx or position) (for both points and springs) instead?
+						- Change spec may be? "Explode bomb if point or spring destroyed within a radius"
+				- OnAttachPointDestroyed(TODO) override
+					- Detaches itself
+					- Immediatey detonates, unless already detonated
 			- Two subclasses - TimerBomb and RCBomb
 				- RCBomb::Detonate(): input to state machine
-			- Bombs class
-				- Not ElementContainer, just manager
-				- cctor takes shared_ptr<IGameEventHandler> and Points &
-				- Update(OnBombExplosion(position, radius)) -> void
-					- Runs through all bombs and invokes ::Update() on each
-					- Removes a bomb if its Update() returns false
-				- ToggleTimer/RCBombAt(position) 
-					- same logic as pinned points
-					- returns boolean
+				- When they detonate, no need to detach themselves from the point - ship will eventually destroy point and
+				  OnAttachPointDestroyed(...) will detach
+			= Bombs class
+				+ Not ElementContainer, just manager
+				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &
+				+ Update(OnBombExplosion(position, radius)) -> void
+					+ Runs through all bombs and invokes ::Update() on each
+					+ Removes a bomb if its Update() returns false
+				+ ToggleTimer/RCBombAt(position) 
+					+ same logic as pinned points
+					+ returns boolean
 				- DetonateRCBombs()
 					- Calls Detonate() at each RCBomb
 				- Upload(RenderContext)
 					- Always upload all bombs, each w/current render frame index
+				- OnAttachPointDestroyed(TODO)
 
-			- Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
-				- Also changes mass (just at point, for gravity only...)				
-				- Flag and mass change is done at Points::AttachBomb()/Points::DetachBomb() 
+			+ Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
+				+ Also changes mass (just at point, for gravity only...)				
+				+ Flag and mass change is done at Points::AttachBomb()/Points::DetachBomb() 
 
-			- Events:
+			= Events:
 				- OnRCBombPlaced/Removed(size, underwater): used by MainFrame to enable/disable detonation menu item
 				- OnTimerBombPlaced/Removed(size, underwater): used by SoundController to start/stop and set volume
 				  of RC bomb sound
@@ -220,24 +233,61 @@ Prev perf (before point et al destructuring)
 				- OnBombDetonated(size): used by SoundController 
 				- OnRCBombPing(size): used by SoundController 
 
-			- Ship implements:
-				- ToggleTimer/RCBombAt(position)
-					- FW to Bombs
-				- DetonateRCBombs()
-					- FW to Bombs
-				- @Update(): invokes Bombs::Update() w/handler
-					- After spring stress check, so explosion is visible before it breaks things up
-				- @Render(): invokes Bombs::Upload(RenderContext)
+			= Ship implements:
+				+ ToggleTimer/RCBombAt(position)
+					+ FW to Bombs
+				+ DetonateRCBombs()
+					+ FW to Bombs
+				+ @Update(): invokes Bombs::Update() w/handler
+					+ After spring stress check, so explosion is visible before it breaks things up
+				+ @Render(): invokes Bombs::Upload(RenderContext)
 				
-				- Ship::PointDestroyHandler: check if bomb attached, just like pinned points
-					- TODOHERE: If so Find bomb index via CircularList::find()
-				- Ship::SpringDestroyHandler: check if bomb attached
-					- TODOHERE: Find bomb index via CircularList::find()
+				- Ship::PointDestroyHandler: 
+					- Check if bomb attached (via mPoints); if so mBombs->OnAttachPointDestroyed(TODO)
+					- TODOHERE: proximity
+				- Ship::SpringDestroyHandler: 
+					- TODOHERE: proximity
 
-			- MainFrame/Tool:
-				- Register for events and process OnRCBombPlaced/Removed() to enable
+			= RenderContext:
+				= RenderContext:
+					= Load textures
+						+ RC bomb
+						- Timer bomb
+					+ Forward calls
+				+ ShipRenderContext
+					+ Buffers just like pinned points
+					+ Render
+			+ MainFrame/Tool:
+				+ Register for events and process OnRCBombPlaced/Removed() to enable
 				  Detonate menu item
+				+ Load 2 cursors
+					+ Set hotspot
+
+			- SoundController:
+				- TBD
+
+			- Media:
+				+ TimerBomb cursor
+				- RCBomb cursor
+				- TimerBomb textures:
+					- TODO
+				- RCBomb textures:
+					- lights_off
+					- lights_on
+				- Bomb explosion textures:
+					- N random animations, M frames each
+				- Bomb explosion sounds
+					- N1 normal, N2 underwater
+				- RCBomb ping sounds
+					- 1 normal, 1 underwater
+				- TimerBomb sounds
+					- 1 normal, 1 underwater (continuous)
+				- Bomb placed sounds
+					- N1 normal, N2 underwater
+				- Bomb removed sounds
+					- N1 normal, N2 underwater
 		
+		- SettingsDialog: bomb blast radius
 		- Then see of also pinned points should move to a PinnedPoints class
 
 - Controls:

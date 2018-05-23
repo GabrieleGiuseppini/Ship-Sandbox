@@ -184,7 +184,45 @@ void GameController::TogglePinAt(vec2 const & screenCoordinates)
     assert(!!mWorld);
     mWorld->TogglePinAt(
         worldCoordinates,
-        mGameParameters.PinSearchRadius);
+        mGameParameters);
+
+    // Flush events
+    mGameEventDispatcher->Flush();
+}
+
+void GameController::ToggleTimerBombAt(vec2f const & screenCoordinates)
+{
+    vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);
+
+    // Apply action
+    assert(!!mWorld);
+    mWorld->ToggleTimerBombAt(
+        worldCoordinates,
+        mGameParameters);
+
+    // Flush events
+    mGameEventDispatcher->Flush();
+}
+
+void GameController::ToggleRCBombAt(vec2f const & screenCoordinates)
+{
+    vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);
+
+    // Apply action
+    assert(!!mWorld);
+    mWorld->ToggleRCBombAt(
+        worldCoordinates,
+        mGameParameters);
+
+    // Flush events
+    mGameEventDispatcher->Flush();
+}
+
+void GameController::DetonateRCBombs()
+{
+    // Apply action
+    assert(!!mWorld);
+    mWorld->DetonateRCBombs();
 
     // Flush events
     mGameEventDispatcher->Flush();

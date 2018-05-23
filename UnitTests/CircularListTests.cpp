@@ -312,28 +312,32 @@ TEST(CircularListTests, Erase_TailHead_Head)
     EXPECT_FALSE(cl.empty());
     EXPECT_EQ(40, *(cl.begin()));
 
-    cl.erase(cl.begin());
+    auto it = cl.erase(cl.begin());
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
     EXPECT_EQ(30, *(cl.begin()));
+    EXPECT_EQ(30, *(it));
 
-    cl.erase(cl.begin());
+    it = cl.erase(cl.begin());
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
     EXPECT_EQ(20, *(cl.begin()));
+    EXPECT_EQ(20, *(it));
 
-    cl.erase(cl.begin());
+    it = cl.erase(cl.begin());
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
     EXPECT_EQ(10, *(cl.begin()));
+    EXPECT_EQ(10, *(it));
 
-    cl.erase(cl.begin());
+    it = cl.erase(cl.begin());
 
     EXPECT_EQ(0u, cl.size());
     EXPECT_TRUE(cl.empty());
+    EXPECT_EQ(it, cl.end());
 }
 
 TEST(CircularListTests, Erase_TailHead_HeadMinusOne)
@@ -351,10 +355,11 @@ TEST(CircularListTests, Erase_TailHead_HeadMinusOne)
     EXPECT_FALSE(cl.empty());
     EXPECT_EQ(40, *(cl.begin()));
 
-    cl.erase(std::next(cl.begin()));
+    it = cl.erase(std::next(cl.begin()));
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(20, *it);
 
     vals.clear();
     for (auto i : cl)
@@ -367,10 +372,11 @@ TEST(CircularListTests, Erase_TailHead_HeadMinusOne)
     EXPECT_EQ(20, vals[1]);
     EXPECT_EQ(10, vals[2]);
 
-    cl.erase(std::next(cl.begin()));
+    it = cl.erase(std::next(cl.begin()));
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(10, *it);
 
     vals.clear();
     for (auto i : cl)
@@ -382,10 +388,11 @@ TEST(CircularListTests, Erase_TailHead_HeadMinusOne)
     EXPECT_EQ(40, vals[0]);
     EXPECT_EQ(10, vals[1]);
 
-    cl.erase(std::next(cl.begin()));
+    it = cl.erase(std::next(cl.begin()));
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(cl.end(), *it);
 
     vals.clear();
     for (auto i : cl)

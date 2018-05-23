@@ -30,7 +30,7 @@ namespace Physics {
 
 Ship::Ship(
     int id,
-    World * parentWorld,
+    World & parentWorld,
     std::shared_ptr<IGameEventHandler> gameEventHandler,
     Points && points,
     Springs && springs,
@@ -50,6 +50,14 @@ Ship::Ship(
     , mTotalWater(0.0)
     , mCurrentPinnedPoints()
     , mArePinnedPointsDirty(false)
+    , mBombs(
+        mParentWorld,
+        mGameEventHandler,
+        [this](vec2f const & position, ConnectedComponentId connectedComponentId, float blastRadius)
+        {
+            this->BombBlastHandler(position, connectedComponentId, blastRadius);
+        },        
+        mPoints)
     , mCurrentDrawForce(std::nullopt)
 {
     // Set destroy handlers
@@ -97,9 +105,9 @@ void Ship::DrawTo(
 
 bool Ship::TogglePinAt(
     vec2f const & targetPos,
-    float searchRadius)
+    GameParameters const & gameParameters)
 {
-    float const squareSearchRadius = searchRadius * searchRadius;
+    float const squareSearchRadius = gameParameters.ToolPointSearchRadius * gameParameters.ToolPointSearchRadius;
 
     //
     // See first if there's a pinned point within the search radius, most recent first;
@@ -128,7 +136,7 @@ bool Ship::TogglePinAt(
             // Notify
             mGameEventHandler->OnPinToggled(
                 false,
-                mParentWorld->IsUnderwater(mPoints.GetPosition(*it)));
+                mParentWorld.IsUnderwater(mPoints.GetPosition(*it)));
 
             // We're done
             return true;
@@ -185,7 +193,7 @@ bool Ship::TogglePinAt(
         // Notify
         mGameEventHandler->OnPinToggled(
             true,
-            mParentWorld->IsUnderwater(mPoints.GetPosition(nearestUnpinnedPointIndex)));
+            mParentWorld.IsUnderwater(mPoints.GetPosition(nearestUnpinnedPointIndex)));
 
         // We're done
         return true;
@@ -193,6 +201,29 @@ bool Ship::TogglePinAt(
 
     // No point found on this ship
     return false;
+}
+
+bool Ship::ToggleTimerBombAt(
+    vec2 const & targetPos,
+    GameParameters const & gameParameters)
+{
+    return mBombs.ToggleTimerBombAt(
+        targetPos,
+        gameParameters);
+}
+
+bool Ship::ToggleRCBombAt(
+    vec2 const & targetPos,
+    GameParameters const & gameParameters)
+{
+    return mBombs.ToggleRCBombAt(
+        targetPos,
+        gameParameters);
+}
+
+void Ship::DetonateRCBombs()
+{
+    mBombs.DetonateRCBombs();
 }
 
 ElementContainer::ElementIndex Ship::GetNearestPointIndexAt(
@@ -241,13 +272,23 @@ void Ship::Update(
 
 
     //
+    // Update bombs
+    //
+    // Might cause explosions; might cause points to be destroyed
+    // (which would flag our elements as dirty)
+    //
+
+    mBombs.Update();
+
+
+    //
     // Update strain for all springs; might cause springs to break
     // (which would flag our elements as dirty)
     //
 
     mSprings.UpdateStrains(
         gameParameters,
-        *mParentWorld,
+        mParentWorld,
         *mGameEventHandler,
         mPoints);
 
@@ -392,6 +433,13 @@ void Ship::Render(
     }        
 
 
+    //
+    // Upload bombs
+    //
+
+    mBombs.Upload(
+        mId,
+        renderContext);
 
     //
     // Render ship
@@ -458,7 +506,7 @@ void Ship::UpdatePointForces(GameParameters const & gameParameters)
     for (auto pointIndex : mPoints)
     {
         // Get height of water at this point
-        float const waterHeightAtThisPoint = mParentWorld->GetWaterHeightAt(mPoints.GetPosition(pointIndex).x);
+        float const waterHeightAtThisPoint = mParentWorld.GetWaterHeightAt(mPoints.GetPosition(pointIndex).x);
 
 
         //
@@ -581,12 +629,12 @@ void Ship::HandleCollisionsWithSeaFloor()
     for (auto pointIndex : mPoints)
     {
         // Check if point is now below the sea floor
-        float const floorheight = mParentWorld->GetOceanFloorHeightAt(mPoints.GetPosition(pointIndex).x);
+        float const floorheight = mParentWorld.GetOceanFloorHeightAt(mPoints.GetPosition(pointIndex).x);
         if (mPoints.GetPosition(pointIndex).y < floorheight)
         {
             // Calculate normal to sea floor
             vec2f seaFloorNormal = vec2f(
-                floorheight - mParentWorld->GetOceanFloorHeightAt(mPoints.GetPosition(pointIndex).x + 0.01f),
+                floorheight - mParentWorld.GetOceanFloorHeightAt(mPoints.GetPosition(pointIndex).x + 0.01f),
                 0.01f).normalise();
 
             // Calculate displacement to move point back to sea floor, along the normal to the floor
@@ -603,7 +651,7 @@ void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)
 {
     mConnectedComponentSizes.clear();
 
-    uint32_t currentConnectedComponentId = 0;
+    ConnectedComponentId currentConnectedComponentId = 0;
     std::queue<ElementContainer::ElementIndex> pointsToVisitForConnectedComponents;    
 
     // Visit all points
@@ -677,7 +725,7 @@ void Ship::LeakWater(GameParameters const & gameParameters)
 
         if (mPoints.IsLeaking(pointIndex))
         {
-            float waterLevel = mParentWorld->GetWaterHeightAt(mPoints.GetPosition(pointIndex).x);
+            float waterLevel = mParentWorld.GetWaterHeightAt(mPoints.GetPosition(pointIndex).x);
 
             float const externalWaterPressure = mPoints.GetExternalWaterPressure(
                 pointIndex,
@@ -827,6 +875,16 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
 // Private helpers
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
+void Ship::BombBlastHandler(
+    vec2f const & position,
+    ConnectedComponentId connectedComponentId,
+    float blastRadius)
+{
+    // Note: eventua events have already been fired
+
+    // TODOHERE
+}
+
 void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)
 {
     //
@@ -896,7 +954,7 @@ void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)
 
     mGameEventHandler->OnDestroy(
         mPoints.GetMaterial(pointElementIndex),
-        mParentWorld->IsUnderwater(mPoints.GetPosition(pointElementIndex)),
+        mParentWorld.IsUnderwater(mPoints.GetPosition(pointElementIndex)),
         1u);
 
 

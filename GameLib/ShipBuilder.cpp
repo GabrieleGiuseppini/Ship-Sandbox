@@ -44,7 +44,7 @@ namespace /* anonymous */ {
 
 std::unique_ptr<Ship> ShipBuilder::Create(
     int shipId,
-    World * parentWorld,
+    World & parentWorld,
     std::shared_ptr<IGameEventHandler> gameEventHandler,
     ShipDefinition const & shipDefinition,
     MaterialDatabase const & materials,

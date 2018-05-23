@@ -6,8 +6,8 @@
 #pragma once
 
 #include "GameOpenGL.h"
+#include "GameTypes.h"
 #include "ImageData.h"
-#include "RenderTypes.h"
 #include "SysSpecifics.h"
 #include "Vectors.h"
 
@@ -26,7 +26,8 @@ public:
         std::optional<ImageData> texture,
         vec3f const & ropeColour,
         GLuint pinnedPointTexture,
-        ImageSize pinnedPointTextureSize);
+        std::vector<GLuint> rcBombTextures,
+        std::vector<GLuint> timerBombTextures);
     
     ~ShipRenderContext();
 
@@ -56,7 +57,7 @@ public:
 
     inline void UploadElementPoint(
         int pointIndex,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -73,7 +74,7 @@ public:
     inline void UploadElementSpring(
         int pointIndex1,
         int pointIndex2,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -91,7 +92,7 @@ public:
     inline void UploadElementRope(
         int pointIndex1,
         int pointIndex2,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -110,7 +111,7 @@ public:
         int pointIndex1,
         int pointIndex2,
         int pointIndex3,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -134,7 +135,7 @@ public:
     inline void UploadElementStressedSpring(
         int pointIndex1,
         int pointIndex2,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -157,13 +158,13 @@ public:
     inline void UploadElementPinnedPoint(
         float pinnedPointX,
         float pinnedPointY,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
         assert(connectedComponentIndex < mConnectedComponents.size());
 
-        // Insert at end of this connected component's points
+        // Insert at end of this connected component's pinned points
         auto insertedIt = mPinnedPointElementBuffer.emplace(
             mPinnedPointElementBuffer.begin()
             + mConnectedComponents[connectedComponentIndex].pinnedPointElementOffset
@@ -215,6 +216,85 @@ public:
 
     void UploadElementPinnedPointsEnd();
 
+
+    void UploadElementBombsStart(size_t count);
+
+    inline void UploadElementBomb(
+        float bombX,
+        float bombY,
+        float scale,
+        BombType bombType,
+        uint32_t frameIndex,
+        ConnectedComponentId connectedComponentId)
+    {
+        size_t const connectedComponentIndex = connectedComponentId - 1;
+
+        assert(connectedComponentIndex < mConnectedComponents.size());
+
+        //
+        // Store bomb element
+        //
+
+        // Insert at end of this connected component's bombs
+        auto insertedIt = mBombElementBuffer.emplace(
+            mBombElementBuffer.begin()
+            + mConnectedComponents[connectedComponentIndex].bombElementOffset
+            + mConnectedComponents[connectedComponentIndex].bombElementInfos.size());
+
+        BombElement & bombElement = *insertedIt;
+       
+        // World size that the texture should be scaled to
+        static constexpr float textureTileW = 6.0f;
+        static constexpr float textureTileH = 6.0f;
+
+        float leftX = bombX - textureTileW * scale / 2.0f;
+        float rightX = bombX + textureTileW * scale / 2.0f;
+        float topY = bombY - textureTileH * scale / 2.0f;
+        float bottomY = bombY + textureTileH * scale / 2.0f;
+
+        bombElement.xTopLeft = leftX;
+        bombElement.yTopLeft = topY;
+        bombElement.textureXTopLeft = 0.0f;
+        bombElement.textureYTopLeft = 0.0f;
+
+        bombElement.xBottomLeft = leftX;
+        bombElement.yBottomLeft = bottomY;
+        bombElement.textureXBottomLeft = 0.0f;
+        bombElement.textureYBottomLeft = 1.0f;
+
+        bombElement.xTopRight = rightX;
+        bombElement.yTopRight = topY;
+        bombElement.textureXTopRight = 1.0f;
+        bombElement.textureYTopRight = 0.0f;
+
+        bombElement.xBottomRight = rightX;
+        bombElement.yBottomRight = bottomY;
+        bombElement.textureXBottomRight = 1.0f;
+        bombElement.textureYBottomRight = 1.0f;
+
+
+        //
+        // Store bomb info
+        //
+
+        mConnectedComponents[connectedComponentIndex].bombElementInfos.emplace_back(
+            bombType,
+            frameIndex);
+       
+
+        //
+        // Adjust connected components
+        //
+
+        for (auto c = connectedComponentIndex + 1; c < mConnectedComponents.size(); ++c)
+        {
+            ++(mConnectedComponents[c].bombElementOffset);
+        }
+    }
+
+    void UploadElementBombsEnd();
+
+
     //
     // Lamps
     //
@@ -225,7 +305,7 @@ public:
         float x,
         float y,
         float lightIntensity,
-        uint32_t connectedComponentId)
+        ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
 
@@ -284,6 +364,11 @@ private:
         float canvasToVisibleWorldHeightRatio,
         float(&orthoMatrix)[4][4]);
 
+    void RenderBombElements(
+        ConnectedComponentData const & connectedComponent,
+        float ambientLightIntensity,
+        float(&orthoMatrix)[4][4]);
+
     void RenderPinnedPointElements(
         ConnectedComponentData const & connectedComponent,
         float ambientLightIntensity,
@@ -299,6 +384,8 @@ private:
     static constexpr GLuint PointTextureCoordinatesVertexAttribute = 4;
     static constexpr GLuint PinnedPointPosVertexAttribute = 5;
     static constexpr GLuint PinnedPointTextureCoordinatesVertexAttribute = 6;
+    static constexpr GLuint BombPosVertexAttribute = 7;
+    static constexpr GLuint BombTextureCoordinatesVertexAttribute = 8;
 
 private:
 
@@ -315,7 +402,7 @@ private:
     GameOpenGLVBO mPointElementTextureCoordinatesVBO;
     
     //
-    // Elements (points, springs, ropes, triangles, stressed springs, pinned points)
+    // Elements (points, springs, ropes, triangles, stressed springs, pinned points, bombs)
     //
 
     GameOpenGLShaderProgram mElementColorShaderProgram;
@@ -336,6 +423,10 @@ private:
     GameOpenGLShaderProgram mElementPinnedPointShaderProgram;
     GLint mElementPinnedPointShaderOrthoMatrixParameter;
     GLint mElementPinnedPointShaderAmbientLightIntensityParameter;
+
+    GameOpenGLShaderProgram mElementBombShaderProgram;
+    GLint mElementBombShaderOrthoMatrixParameter;
+    GLint mElementBombShaderAmbientLightIntensityParameter;
 
 #pragma pack(push)
     struct PointElement
@@ -402,6 +493,44 @@ private:
     };
 #pragma pack(pop)
 
+#pragma pack(push)
+    struct BombElement
+    {
+        float xTopLeft;
+        float yTopLeft;
+        float textureXTopLeft;
+        float textureYTopLeft;
+
+        float xBottomLeft;
+        float yBottomLeft;
+        float textureXBottomLeft;
+        float textureYBottomLeft;
+
+        float xTopRight;
+        float yTopRight;
+        float textureXTopRight;
+        float textureYTopRight;
+
+        float xBottomRight;
+        float yBottomRight;
+        float textureXBottomRight;
+        float textureYBottomRight;
+    };
+#pragma pack(pop)
+
+    struct BombElementInfo
+    {
+        BombType bombType;
+        uint32_t frameIndex;
+
+        BombElementInfo(
+            BombType _bombType,
+            uint32_t _frameIndex)
+            : bombType(_bombType)
+            , frameIndex(_frameIndex)
+        {}
+    };
+
     //
     // All the data that belongs to a single connected component.
     //
@@ -435,7 +564,10 @@ private:
 
         size_t pinnedPointElementOffset;
         size_t pinnedPointElementCount;
-        
+
+        size_t bombElementOffset;
+        std::vector<BombElementInfo> bombElementInfos;
+
         ConnectedComponentData()
             : pointElementCount(0)
             , pointElementMaxCount(0)
@@ -459,6 +591,8 @@ private:
             , stressedSpringElementVBO()
             , pinnedPointElementOffset(0)
             , pinnedPointElementCount(0)
+            , bombElementOffset(0)
+            , bombElementInfos()
         {}
     };
 
@@ -472,13 +606,21 @@ private:
     GameOpenGLVBO mPinnedPointVBO;
 
     //
+    // Bomb point data, stored globally once across all connected components.
+    //
+
+    std::vector<BombElement> mBombElementBuffer;
+    GameOpenGLVBO mBombVBO;
+
+    //
     // Textures
     //
 
     GameOpenGLTexture mElementTexture;
     GameOpenGLTexture mElementStressedSpringTexture;
     GLuint const mElementPinnedPointTexture;
-    ImageSize const mElementPinnedPointTextureSize;
+    std::vector<GLuint> const mElementRCBombTextures;
+    std::vector<GLuint> const mElementTimerBombTextures;
 
     //
     // Lamps

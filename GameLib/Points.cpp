@@ -40,6 +40,8 @@ void Points::Add(
 
     mIsPinnedBuffer.emplace_back(false);
 
+    mIsBombAttachedBuffer.emplace_back(false);
+
     mColorBuffer.emplace_back(color);
     mTextureCoordinatesBuffer.emplace_back(textureCoordinates);
 }

@@ -46,6 +46,10 @@ RenderContext::RenderContext(
     , mRopeColour(ropeColour)
     , mPinnedPointTextureSize(0, 0)
     , mPinnedPointTexture()
+    , mRCBombTextureSizes()
+    , mRCBombTextures()
+    , mTimerBombTextureSizes()
+    , mTimerBombTextures()
     // Multi-purpose shaders
     , mMatteNdcShaderProgram()
     , mMatteNdcShaderColorParameter(0)
@@ -87,23 +91,39 @@ RenderContext::RenderContext(
         [&progressCallback](float progress, std::string const &)
         {
             if (progressCallback)
-                progressCallback(progress / 4.0f, "Loading textures...");
+                progressCallback(progress / 6.0f, "Loading textures...");
         });
 
     if (progressCallback)
-        progressCallback(0.5f, "Loading textures...");
+        progressCallback(2.0f/6.0f, "Loading textures...");
 
     auto landTextureData = resourceLoader.LoadTextureRgba(std::string("sand_1.jpg"));
 
     if (progressCallback)
-        progressCallback(0.75, "Loading textures...");
+        progressCallback(3.0f / 6.0f, "Loading textures...");
 
     auto waterTextureData = resourceLoader.LoadTextureRgba(std::string("water_1.jpg"));
 
     if (progressCallback)
-        progressCallback(1.0, "Loading textures...");
+        progressCallback(4.0f / 6.0f, "Loading textures...");
 
     auto pinnedPointTextureData = resourceLoader.LoadTextureRgba(std::string("pin_down_1.png"));
+
+    auto rcBombTextureDatas = resourceLoader.LoadTexturesRgba(
+        "rc_bomb",
+        [&progressCallback](float progress, std::string const &)
+        {
+            if (progressCallback)
+                progressCallback((4.0f + progress) / 6.0f, "Loading textures...");
+        });
+
+    auto timerBombTextureDatas = resourceLoader.LoadTexturesRgba(
+        "timer_bomb",
+        [&progressCallback](float progress, std::string const &)
+    {
+        if (progressCallback)
+            progressCallback((5.0f + progress) / 6.0f, "Loading textures...");
+    });
 
 
     //
@@ -439,6 +459,44 @@ RenderContext::RenderContext(
 
 
     //
+    // RC Bomb
+    //
+
+    // Create textures
+    for (size_t i = 0; i < rcBombTextureDatas.size(); ++i)
+    {
+        // Store size
+        mRCBombTextureSizes.push_back(rcBombTextureDatas[i].Size);
+
+        // Create texture name
+        glGenTextures(1, &tmpGLuint);
+        mRCBombTextures.emplace_back(tmpGLuint);
+
+        // Bind texture
+        glBindTexture(GL_TEXTURE_2D, *mRCBombTextures.back());
+
+        // Upload texture
+        GameOpenGL::UploadMipmappedTexture(std::move(rcBombTextureDatas[i]));
+
+        // Set repeat mode
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        // Set texture filtering parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        // Unbind texture
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    //
+    // Timer Bomb
+    //
+
+    // TODO
+
+    //
     // Multi-purpose Matte NDC shader
     //
 
@@ -576,13 +634,28 @@ void RenderContext::AddShip(
 {   
     assert(shipId == mShips.size());
 
+    // Prepare RC bomb texture data
+    std::vector<GLuint> rcBombTextures;
+    for (size_t i = 0; i < mRCBombTextures.size(); ++i)
+    {
+        rcBombTextures.push_back(*mRCBombTextures[i]);
+    }
+
+    // Prepare Timer bomb texture data
+    std::vector<GLuint> timerBombTextures;
+    for (size_t i = 0; i < mTimerBombTextures.size(); ++i)
+    {
+        timerBombTextures.push_back(*mTimerBombTextures[i]);
+    }
+
     // Add the ship    
     mShips.emplace_back(
         new ShipRenderContext(
             std::move(texture), 
             mRopeColour,
             *mPinnedPointTexture,
-            mPinnedPointTextureSize));
+            rcBombTextures,
+            timerBombTextures));
 }
 
 //////////////////////////////////////////////////////////////////////////////////

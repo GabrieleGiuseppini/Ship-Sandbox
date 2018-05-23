@@ -9,6 +9,7 @@
 
 #include "CircularList.h"
 #include "GameParameters.h"
+#include "GameTypes.h"
 #include "MaterialDatabase.h"
 #include "Physics.h"
 #include "RenderContext.h"
@@ -27,7 +28,7 @@ public:
 
     Ship(
         int id,
-        World * parentWorld,
+        World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         Points && points,
         Springs && springs,
@@ -39,8 +40,8 @@ public:
 
     unsigned int GetId() const { return mId; }
 
-    World const * GetParentWorld() const { return mParentWorld; }
-    World * GetParentWorld() { return mParentWorld; }
+    World const & GetParentWorld() const { return mParentWorld; }
+    World & GetParentWorld() { return mParentWorld; }
 
     auto const & GetPoints() const { return mPoints; }
     auto & GetPoints() { return mPoints; }
@@ -64,7 +65,17 @@ public:
 
     bool TogglePinAt(
         vec2 const & targetPos,
-        float searchRadius);
+        GameParameters const & gameParameters);
+
+    bool ToggleTimerBombAt(
+        vec2 const & targetPos,
+        GameParameters const & gameParameters);
+
+    bool ToggleRCBombAt(
+        vec2 const & targetPos,
+        GameParameters const & gameParameters);
+
+    void DetonateRCBombs();
 
     ElementContainer::ElementIndex GetNearestPointIndexAt(
         vec2 const & targetPos,
@@ -110,6 +121,11 @@ public:
 
 private:
 
+    void BombBlastHandler(
+        vec2f const & position,
+        ConnectedComponentId connectedComponentId,
+        float blastRadius);
+
     void PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex);
 
     void SpringDestroyHandler(ElementContainer::ElementIndex springElementIndex);
@@ -121,7 +137,7 @@ private:
 private:
 
     unsigned int const mId;
-    World * const mParentWorld;
+    World & mParentWorld;
     std::shared_ptr<IGameEventHandler> mGameEventHandler;
 
     // All the ship elements - never removed, the repositories maintain their own size forever
@@ -153,6 +169,13 @@ private:
 
     // Flag remembering whether the set of pinned points has changed since the last step
     bool mutable mArePinnedPointsDirty;
+
+
+    //
+    // Bombs
+    //
+
+    Bombs mBombs;
 
 
     //

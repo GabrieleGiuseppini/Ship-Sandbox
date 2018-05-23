@@ -11,6 +11,7 @@ namespace Physics
     class Cloud;
     class ElectricalElement;
     class ElectricalElements;
+    class Bombs;
     class Generator;
     class Lamp;
     class OceanFloor;
@@ -37,4 +38,10 @@ namespace Physics
 #include "Cloud.h"
 #include "Generator.h"
 #include "Lamp.h"
+
+#include "Bomb.h"
+#include "TimerBomb.h"
+#include "RCBomb.h"
+#include "Bombs.h"
+
 #include "Ship.h"

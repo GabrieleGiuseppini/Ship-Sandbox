@@ -63,7 +63,17 @@ public:
 
     void TogglePinAt(
         vec2 const & targetPos,
-        float searchRadius);
+        GameParameters const & gameParameters);
+
+    void ToggleTimerBombAt(
+        vec2 const & targetPos,
+        GameParameters const & gameParameters);
+
+    void ToggleRCBombAt(
+        vec2 const & targetPos,
+        GameParameters const & gameParameters);
+
+    void DetonateRCBombs();
 
     ElementContainer::ElementIndex GetNearestPointAt(
         vec2 const & targetPos,

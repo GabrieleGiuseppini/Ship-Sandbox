@@ -5,6 +5,7 @@
 ***************************************************************************************/
 #pragma once
 
+#include "GameTypes.h"
 #include "Material.h"
 
 /*
@@ -73,4 +74,37 @@ public:
     {
         // Default-implemented
     }
+
+    //
+    // Bombs
+    //
+
+    virtual void OnBombPlaced(
+        BombType /*bombType*/,
+        bool /*isUnderwater*/)
+    {
+        // Default-implemented
+    }
+
+    virtual void OnBombRemoved(
+        BombType /*bombType*/,
+        bool /*isUnderwater*/)
+    {
+        // Default-implemented
+    }
+
+    virtual void OnBombExplosion(
+        bool /*isUnderwater*/,
+        unsigned int /*size*/)
+    {
+        // Default-implemented
+    }
+
+    virtual void OnRCBombPing(
+        bool /*isUnderwater*/,
+        unsigned int /*size*/)
+    {
+        // Default-implemented
+    }
+
 };

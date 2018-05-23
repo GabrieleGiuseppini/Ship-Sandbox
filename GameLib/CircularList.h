@@ -182,7 +182,7 @@ public:
     }
 
     template <typename Iterator>
-    void erase(Iterator const & it)
+    Iterator erase(Iterator const & it)
     {
         //
         // it.mCurrentHead points to one after the to-be-deleted point
@@ -191,7 +191,7 @@ public:
         assert((mTail < mHead && (mTail < it.mCurrentHead && it.mCurrentHead <= mHead))
             || (mHead < mTail && (it.mCurrentHead <= mHead || mTail < it.mCurrentHead)));
 
-        // Shift all elements left
+        // Shift all elements towards tail
         for (size_t i = it.mCurrentHead; i != mHead; i = (i + 1) % (MaxSize + 1))
         {
             if (i == 0)
@@ -205,6 +205,11 @@ public:
             mHead = MaxSize;
         else
             --mHead;
+
+        // Return iterator to prev element
+        return iterator(
+            it.mCurrentHead == 0 ? MaxSize : it.mCurrentHead - 1,
+            this);
     }
 
     void erase(TElement const & element)

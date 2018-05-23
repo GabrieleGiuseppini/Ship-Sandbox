@@ -53,11 +53,6 @@ public:
         return mOceanFloor.GetFloorHeightAt(x);
     }
 
-    IGameEventHandler * GetGameEventHandler()
-    {
-        return mGameEventHandler.get();
-    }
-
 	void DestroyAt(
 		vec2 const & targetPos, 
 		float radius);

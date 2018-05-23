@@ -28,6 +28,7 @@ public:
     static std::unique_ptr<Physics::Ship> Create(
         int shipId,        
         Physics::World * parentWorld,
+        std::shared_ptr<IGameEventHandler> gameEventHandler,
         ShipDefinition const & shipDefinition,
         MaterialDatabase const & materials,
         GameParameters const & gameParameters,

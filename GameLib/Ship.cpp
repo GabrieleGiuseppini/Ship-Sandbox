@@ -31,6 +31,7 @@ namespace Physics {
 Ship::Ship(
     int id,
     World * parentWorld,
+    std::shared_ptr<IGameEventHandler> gameEventHandler,
     Points && points,
     Springs && springs,
     Triangles && triangles,
@@ -38,6 +39,7 @@ Ship::Ship(
     uint64_t currentStepSequenceNumber)
     : mId(id)
     , mParentWorld(parentWorld)    
+    , mGameEventHandler(std::move(gameEventHandler))
     , mPoints(std::move(points))
     , mSprings(std::move(springs))
     , mTriangles(std::move(triangles))
@@ -124,7 +126,7 @@ bool Ship::TogglePinAt(
             mArePinnedPointsDirty = true;
 
             // Notify
-            mParentWorld->GetGameEventHandler()->OnPinToggled(
+            mGameEventHandler->OnPinToggled(
                 false,
                 mParentWorld->IsUnderwater(mPoints.GetPosition(*it)));
 
@@ -181,7 +183,7 @@ bool Ship::TogglePinAt(
         mArePinnedPointsDirty = true;
 
         // Notify
-        mParentWorld->GetGameEventHandler()->OnPinToggled(
+        mGameEventHandler->OnPinToggled(
             true,
             mParentWorld->IsUnderwater(mPoints.GetPosition(nearestUnpinnedPointIndex)));
 
@@ -222,8 +224,6 @@ void Ship::Update(
     uint64_t currentStepSequenceNumber,
     GameParameters const & gameParameters)
 {
-    IGameEventHandler * const gameEventHandler = mParentWorld->GetGameEventHandler();
-
     //
     // Process eventual parameter changes
     //
@@ -248,7 +248,7 @@ void Ship::Update(
     mSprings.UpdateStrains(
         gameParameters,
         *mParentWorld,
-        *gameEventHandler,
+        *mGameEventHandler,
         mPoints);
 
 
@@ -701,7 +701,7 @@ void Ship::LeakWater(GameParameters const & gameParameters)
         && mTotalWater > static_cast<float>(mPoints.GetElementCount()) / 2.0f)
     {
         // Started sinking
-        mParentWorld->GetGameEventHandler()->OnSinkingBegin(mId);
+        mGameEventHandler->OnSinkingBegin(mId);
         mIsSinking = true;
     }
 }
@@ -894,7 +894,7 @@ void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)
     // Notify point destruction
     //
 
-    mParentWorld->GetGameEventHandler()->OnDestroy(
+    mGameEventHandler->OnDestroy(
         mPoints.GetMaterial(pointElementIndex),
         mParentWorld->IsUnderwater(mPoints.GetPosition(pointElementIndex)),
         1u);

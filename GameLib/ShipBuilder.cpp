@@ -45,6 +45,7 @@ namespace /* anonymous */ {
 std::unique_ptr<Ship> ShipBuilder::Create(
     int shipId,
     World * parentWorld,
+    std::shared_ptr<IGameEventHandler> gameEventHandler,
     ShipDefinition const & shipDefinition,
     MaterialDatabase const & materials,
     GameParameters const & /*gameParameters*/,
@@ -241,6 +242,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     return std::make_unique<Ship>(
         shipId, 
         parentWorld,
+        std::move(gameEventHandler),
         std::move(points),
         std::move(springs),
         std::move(triangles),

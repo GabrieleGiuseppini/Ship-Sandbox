@@ -1,9 +1,9 @@
 ﻿/***************************************************************************************
-* Original Author:		Luke Wren (wren6991@gmail.com)
-* Created:				2013-04-30
-* Modified By:			Gabriele Giuseppini
-* Copyright:			Luke Wren (http://github.com/Wren6991),
-*						Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
+* Original Author:      Luke Wren (wren6991@gmail.com)
+* Created:              2013-04-30
+* Modified By:          Gabriele Giuseppini
+* Copyright:            Luke Wren (http://github.com/Wren6991),
+*                       Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
 ***************************************************************************************/
 #include "Physics.h"
 
@@ -57,6 +57,7 @@ int World::AddShip(
     auto newShip = ShipBuilder::Create(
         shipId,
         this,
+        mGameEventHandler,
         shipDefinition,
         materials,
         gameParameters,
@@ -160,7 +161,7 @@ void World::Update(GameParameters const & gameParameters)
     UpdateClouds(gameParameters);
 }
 
-void World::Render(	
+void World::Render( 
     GameParameters const & gameParameters,
     RenderContext & renderContext) const
 {

@@ -28,6 +28,7 @@ public:
     Ship(
         int id,
         World * parentWorld,
+        std::shared_ptr<IGameEventHandler> gameEventHandler,
         Points && points,
         Springs && springs,
         Triangles && triangles,
@@ -121,6 +122,7 @@ private:
 
     unsigned int const mId;
     World * const mParentWorld;
+    std::shared_ptr<IGameEventHandler> mGameEventHandler;
 
     // All the ship elements - never removed, the repositories maintain their own size forever
     Points mPoints;

@@ -41,7 +41,7 @@ public:
     {
     }
 
-    void Update();
+    void Update(GameParameters const & gameParameters);
 
     bool ToggleTimerBombAt(
         vec2 const & targetPos,
@@ -88,10 +88,10 @@ private:
             {
                 // Found a bomb
 
-                // Detach it from the point
-                (*it)->DetachFromPoint(gameParameters);
+                // Detach it from the point, if it's attached
+                (*it)->DetachFromPointIfAttached(gameParameters);
 
-                // Remove from set of bombs
+                // Remove from set of bombs - forget about it
                 mCurrentBombs.erase(it);
 
                 // Notify
@@ -162,8 +162,8 @@ private:
             mCurrentBombs.emplace(
                 [this, &gameParameters](std::unique_ptr<Bomb> const & purgedBomb)
                 {
-                    // Detach bomb
-                    purgedBomb->DetachFromPoint(gameParameters);
+                    // Detach bomb from its point, if it's attached
+                    purgedBomb->DetachFromPointIfAttached(gameParameters);
 
                     // Notify
                     mGameEventHandler->OnBombRemoved(

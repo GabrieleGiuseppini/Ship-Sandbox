@@ -239,10 +239,10 @@ MainFrame::MainFrame(wxApp * mainApp)
 
     toolsMenu->Append(new wxMenuItem(toolsMenu, wxID_SEPARATOR));
 
-    wxMenuItem * rcBombDetonateMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMBDETONATE_MENUITEM, _("&Detonate RC Bomb\tD"), wxEmptyString, wxITEM_NORMAL);
-    toolsMenu->Append(rcBombDetonateMenuItem);
+    mRCBombsDetonateMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMBDETONATE_MENUITEM, _("&Detonate RC Bomb\tD"), wxEmptyString, wxITEM_NORMAL);
+    toolsMenu->Append(mRCBombsDetonateMenuItem);
     Connect(ID_RCBOMBDETONATE_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnRCBombDetonateMenuItemSelected);
-    rcBombDetonateMenuItem->Enable(false);
+    mRCBombsDetonateMenuItem->Enable(false);
     
 	mainMenuBar->Append(toolsMenu, _("Tools"));
 
@@ -636,7 +636,7 @@ void MainFrame::OnMainGLCanvasLeftDown(wxMouseEvent & /*event*/)
 
         case ToolType::TimerBomb:
         {
-            // Toggle pin
+            // Toggle bomb
             mGameController->ToggleTimerBombAt(vec2(mMouseInfo.x, mMouseInfo.y));
 
             break;
@@ -644,7 +644,7 @@ void MainFrame::OnMainGLCanvasLeftDown(wxMouseEvent & /*event*/)
 
         case ToolType::RCBomb:
         {
-            // Toggle pin
+            // Toggle bomb
             mGameController->ToggleRCBombAt(vec2(mMouseInfo.x, mMouseInfo.y));
 
             break;

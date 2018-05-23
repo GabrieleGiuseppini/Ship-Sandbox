@@ -205,13 +205,14 @@ Prev perf (before point et al destructuring)
 			- Two subclasses - TimerBomb and RCBomb
 				- RCBomb::Detonate(): input to state machine
 				- When they detonate, no need to detach themselves from the point - ship will eventually destroy point and
-				  OnAttachPointDestroyed(...) will detach
+				  OnAttachPointDestroyed(...) will detach, or Bombs will detach before expiring it
 			= Bombs class
 				+ Not ElementContainer, just manager
 				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &
-				+ Update(OnBombExplosion(position, radius)) -> void
+				= Update(OnBombExplosion(position, radius)) -> void
 					+ Runs through all bombs and invokes ::Update() on each
-					+ Removes a bomb if its Update() returns false
+					= Removes a bomb if its Update() returns false
+						- Detach it if attached
 				+ ToggleTimer/RCBombAt(position) 
 					+ same logic as pinned points
 					+ returns boolean

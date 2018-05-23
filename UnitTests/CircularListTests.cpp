@@ -355,7 +355,7 @@ TEST(CircularListTests, Erase_TailHead_HeadMinusOne)
     EXPECT_FALSE(cl.empty());
     EXPECT_EQ(40, *(cl.begin()));
 
-    it = cl.erase(std::next(cl.begin()));
+    auto it = cl.erase(std::next(cl.begin()));
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
@@ -392,7 +392,7 @@ TEST(CircularListTests, Erase_TailHead_HeadMinusOne)
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
-    EXPECT_EQ(cl.end(), *it);
+    EXPECT_EQ(cl.end(), it);
 
     vals.clear();
     for (auto i : cl)

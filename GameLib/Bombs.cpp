@@ -7,7 +7,7 @@
 
 namespace Physics {
 
-void Bombs::Update()
+void Bombs::Update(GameParameters const & gameParameters)
 {
     // Run through all bombs and invoke Update() on each;
     // remove those bombs that have expired
@@ -16,6 +16,10 @@ void Bombs::Update()
         bool hasExpired = (*it)->Update();
         if (hasExpired)
         {
+            // Detach it
+            (*it)->DetachFromPointIfAttached(gameParameters);
+
+            // Remove it
             it = mCurrentBombs.erase(it);
         }
         else

@@ -84,17 +84,25 @@ public:
     }
 
     /*
-     * Saves its current position and detaches itself from the Points container.
+     * If the point is attached, saves its current position and detaches itself from the Points container;
+     * otherwise, it's a nop.
      */
-    void DetachFromPoint(GameParameters const & gameParameters)
+    void DetachFromPointIfAttached(GameParameters const & gameParameters)
     {
-        assert(!!mPointIndex);
-        assert(mPoints.IsBombAttached(*mPointIndex));
+        if (!!mPointIndex)
+        {
+            assert(mPoints.IsBombAttached(*mPointIndex));
 
-        mPoints.DetachBomb(*mPointIndex, gameParameters);
-        mPosition = mPoints.GetPosition(*mPointIndex);
-        mConnectedComponentId = mPoints.GetConnectedComponentId(*mPointIndex);
-        mPointIndex.reset();
+            mPoints.DetachBomb(*mPointIndex, gameParameters);
+            mPosition = mPoints.GetPosition(*mPointIndex);
+            mConnectedComponentId = mPoints.GetConnectedComponentId(*mPointIndex);
+            mPointIndex.reset();
+        }
+        else
+        {
+            assert(!!mPosition);
+            assert(!!mConnectedComponentId);
+        }
     }
 
 protected:

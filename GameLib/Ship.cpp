@@ -278,7 +278,7 @@ void Ship::Update(
     // (which would flag our elements as dirty)
     //
 
-    mBombs.Update();
+    mBombs.Update(gameParameters);
 
 
     //

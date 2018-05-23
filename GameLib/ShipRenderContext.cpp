@@ -1249,11 +1249,13 @@ void ShipRenderContext::RenderBombElements(
             case BombType::RCBomb:
             {
                 glBindTexture(GL_TEXTURE_2D, mElementRCBombTextures[connectedComponent.bombElementInfos[b].frameIndex]);
+                break;
             }
 
             case BombType::TimerBomb:
             {
                 glBindTexture(GL_TEXTURE_2D, mElementTimerBombTextures[connectedComponent.bombElementInfos[b].frameIndex]);
+                break;
             }
         }
         

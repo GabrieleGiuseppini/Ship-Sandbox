@@ -417,17 +417,19 @@ TEST(CircularListTests, Erase_TailHead_Tail)
     EXPECT_EQ(40, *(cl.begin()));
 
     int i = 0;
+    auto itRes = cl.begin();
     for (auto it = cl.begin(); it != cl.end(); ++it, ++i)
     {
         if (i == 3)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(itRes, cl.end());
 
     i = 40;
     for (auto it = cl.begin(); it != cl.end(); ++it, i -= 10)
@@ -440,13 +442,14 @@ TEST(CircularListTests, Erase_TailHead_Tail)
     {
         if (i == 2)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(itRes, cl.end());
 
     i = 40;
     for (auto it = cl.begin(); it != cl.end(); ++it, i -= 10)
@@ -459,13 +462,14 @@ TEST(CircularListTests, Erase_TailHead_Tail)
     {
         if (i == 1)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(itRes, cl.end());
 
     i = 40;
     for (auto it = cl.begin(); it != cl.end(); ++it, i -= 10)
@@ -478,13 +482,14 @@ TEST(CircularListTests, Erase_TailHead_Tail)
     {
         if (i == 0)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(0u, cl.size());
     EXPECT_TRUE(cl.empty());
+    EXPECT_EQ(itRes, cl.end());
 }
 
 TEST(CircularListTests, Erase_TailHead_TailPlusOne)
@@ -502,17 +507,19 @@ TEST(CircularListTests, Erase_TailHead_TailPlusOne)
     EXPECT_EQ(40, *(cl.begin()));
 
     int iCheck = 0;
+    auto itRes = cl.begin();
     for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
         if (iCheck == 2)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(10, *itRes);
 
     vals.clear();
     for (auto i : cl)
@@ -530,13 +537,14 @@ TEST(CircularListTests, Erase_TailHead_TailPlusOne)
     {
         if (iCheck == 1)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(10, *itRes);
 
     vals.clear();
     for (auto i : cl)
@@ -553,13 +561,14 @@ TEST(CircularListTests, Erase_TailHead_TailPlusOne)
     {
         if (iCheck == 0)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(10, *itRes);
 
     vals.clear();
     for (auto i : cl)
@@ -587,10 +596,11 @@ TEST(CircularListTests, Erase_HeadTail_Head)
     EXPECT_EQ(4u, cl.size());
     EXPECT_EQ(60, *(cl.begin()));
 
-    cl.erase(cl.begin());
+    auto it = cl.erase(cl.begin());
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(50, *it);
 
     vals.clear();
     for (auto i : cl)
@@ -603,10 +613,11 @@ TEST(CircularListTests, Erase_HeadTail_Head)
     EXPECT_EQ(40, vals[1]);
     EXPECT_EQ(30, vals[2]);
 
-    cl.erase(cl.begin());
+    it = cl.erase(cl.begin());
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(40, *it);
 
     vals.clear();
     for (auto i : cl)
@@ -618,11 +629,11 @@ TEST(CircularListTests, Erase_HeadTail_Head)
     EXPECT_EQ(40, vals[0]);
     EXPECT_EQ(30, vals[1]);
 
-
-    cl.erase(cl.begin());
+    it = cl.erase(cl.begin());
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(30, *it);
 
     vals.clear();
     for (auto i : cl)
@@ -633,10 +644,11 @@ TEST(CircularListTests, Erase_HeadTail_Head)
     ASSERT_EQ(1u, vals.size());
     EXPECT_EQ(30, vals[0]);
 
-    cl.erase(cl.begin());
+    it = cl.erase(cl.begin());
 
     EXPECT_EQ(0u, cl.size());
     EXPECT_TRUE(cl.empty());
+    EXPECT_EQ(cl.end(), it);
 }
 
 TEST(CircularListTests, Erase_HeadTail_HeadMinusOne)
@@ -655,10 +667,11 @@ TEST(CircularListTests, Erase_HeadTail_HeadMinusOne)
     EXPECT_EQ(4u, cl.size());
     EXPECT_EQ(60, *(cl.begin()));
 
-    cl.erase(std::next(cl.begin()));
+    auto it = cl.erase(std::next(cl.begin()));
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(40, *it);
 
     vals.clear();
     for (auto i : cl)
@@ -671,10 +684,11 @@ TEST(CircularListTests, Erase_HeadTail_HeadMinusOne)
     EXPECT_EQ(40, vals[1]);
     EXPECT_EQ(30, vals[2]);
 
-    cl.erase(std::next(cl.begin()));
+    it = cl.erase(std::next(cl.begin()));
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(30, *it);
 
     vals.clear();
     for (auto i : cl)
@@ -686,10 +700,11 @@ TEST(CircularListTests, Erase_HeadTail_HeadMinusOne)
     EXPECT_EQ(60, vals[0]);
     EXPECT_EQ(30, vals[1]);
 
-    cl.erase(std::next(cl.begin()));
+    it = cl.erase(std::next(cl.begin()));
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(cl.end(), it);
 
     vals.clear();
     for (auto i : cl)
@@ -718,17 +733,19 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
     EXPECT_EQ(60, *(cl.begin()));
 
     int iCheck = 0;
+    auto itRes = cl.begin();
     for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
         if (iCheck == 3)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(itRes, cl.end());
 
     vals.clear();
     for (auto i : cl)
@@ -746,13 +763,14 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
     {
         if (iCheck == 2)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(itRes, cl.end());
 
     vals.clear();
     for (auto i : cl)
@@ -769,13 +787,14 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
     {
         if (iCheck == 1)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(itRes, cl.end());
 
     vals.clear();
     for (auto i : cl)
@@ -791,13 +810,14 @@ TEST(CircularListTests, Erase_HeadTail_Tail)
     {
         if (iCheck == 0)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(0u, cl.size());
     EXPECT_TRUE(cl.empty());
+    EXPECT_EQ(itRes, cl.end());
 }
 
 TEST(CircularListTests, Erase_HeadTail_TailPlusOne)
@@ -817,17 +837,19 @@ TEST(CircularListTests, Erase_HeadTail_TailPlusOne)
     EXPECT_EQ(60, *(cl.begin()));
 
     int iCheck = 0;
+    auto itRes = cl.begin();
     for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
     {
         if (iCheck == 2)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(3u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(30, *itRes);
 
     vals.clear();
     for (auto i : cl)
@@ -845,13 +867,14 @@ TEST(CircularListTests, Erase_HeadTail_TailPlusOne)
     {
         if (iCheck == 1)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(2u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(30, *itRes);
 
     vals.clear();
     for (auto i : cl)
@@ -868,13 +891,14 @@ TEST(CircularListTests, Erase_HeadTail_TailPlusOne)
     {
         if (iCheck == 0)
         {
-            cl.erase(it);
+            itRes = cl.erase(it);
             break;
         }
     }
 
     EXPECT_EQ(1u, cl.size());
     EXPECT_FALSE(cl.empty());
+    EXPECT_EQ(30, *itRes);
 
     vals.clear();
     for (auto i : cl)
@@ -884,19 +908,6 @@ TEST(CircularListTests, Erase_HeadTail_TailPlusOne)
 
     ASSERT_EQ(1u, vals.size());
     EXPECT_EQ(30, vals[0]);
-
-    iCheck = 0;
-    for (auto it = cl.begin(); it != cl.end(); ++it, ++iCheck)
-    {
-        if (iCheck == 0)
-        {
-            cl.erase(it);
-            break;
-        }
-    }
-
-    EXPECT_EQ(0u, cl.size());
-    EXPECT_TRUE(cl.empty());
 }
 
 TEST(CircularListTests, Erase_ByElement)

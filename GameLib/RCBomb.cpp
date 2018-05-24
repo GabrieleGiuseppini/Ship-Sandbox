@@ -7,7 +7,7 @@
 
 namespace Physics {
 
-bool RCBomb::Update()
+bool RCBomb::Update(GameWallClock::time_point now)
 {
     // TODO
     return false;

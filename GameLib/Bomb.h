@@ -6,6 +6,7 @@
 #pragma once
 
 #include "GameTypes.h"
+#include "GameWallClock.h"
 #include "IGameEventHandler.h"
 #include "Physics.h"
 #include "Vectors.h"
@@ -35,7 +36,7 @@ public:
      *
      * Returns false when the bomb has "expired" and thus can be deleted.
      */
-    virtual bool Update() = 0;
+    virtual bool Update(GameWallClock::time_point now) = 0;
 
     /*
     * Returns the scale to use for the next render step.

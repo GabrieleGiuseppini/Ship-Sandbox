@@ -14,6 +14,7 @@
 #include "SoundController.h"
 
 #include <GameLib/GameController.h>
+#include <GameLib/GameWallClock.h>
 #include <GameLib/IGameEventHandler.h>
 #include <GameLib/ResourceLoader.h>
 
@@ -276,6 +277,7 @@ private:
 
 	uint64_t mTotalFrameCount;	
     uint64_t mLastFrameCount;
-    std::chrono::steady_clock::time_point mFrameCountStatsOriginTimestamp;
-    std::chrono::steady_clock::time_point mFrameCountStatsLastTimestamp;
+    std::chrono::steady_clock::time_point mStatsOriginTimestampReal;
+    std::chrono::steady_clock::time_point mStatsLastTimestampReal;
+    GameWallClock::time_point mStatsOriginTimestampGame;
 };

@@ -48,9 +48,10 @@ Prev perf (before point et al destructuring)
 =================================================
 
 - Code:
+	- Move definition of ElementIndex et al into GameTypes.h
 	- Textures are json files with world sizes as well
 		- In TextureData
-	- CircularList::Erase unit test: complete verification of returned iterator
+	+ CircularList::Erase unit test: complete verification of returned iterator
 
 - Optimizations:	
 	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
@@ -188,7 +189,7 @@ Prev perf (before point et al destructuring)
 				 
 		= Impl:
 			= Bomb base class, w/type enum
-				- Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
+				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
 					+ Runs state machine with local clock
 						+ Advances animations (textures of bombs, sounds via events)
 					+ Invokes handler for each explosion step
@@ -199,8 +200,10 @@ Prev perf (before point et al destructuring)
 					- TimerBomb: only if state machine duration < own time left
 					- TODO: should have OnNeighborhoodDestroyed(pointIdx or position) (for both points and springs) instead?
 						- Change spec may be? "Explode bomb if point or spring destroyed within a radius"
+						- Implemented by specialization
 				- OnAttachPointDestroyed(TODO) override
-					- Detaches itself
+					- Implemented by specialization
+					- First, detaches itself - REALLY?
 					- Immediatey detonates, unless already detonated
 			- Two subclasses - TimerBomb and RCBomb
 				- RCBomb::Detonate(): input to state machine
@@ -272,20 +275,20 @@ Prev perf (before point et al destructuring)
 				- RCBomb cursor
 				- TimerBomb textures:
 					- TODO
-				- RCBomb textures:
-					- lights_off
-					- lights_on
+				+ RCBomb textures:
+					+ Base
+					+ Pings
 				- Bomb explosion textures:
 					- N random animations, M frames each
 				- Bomb explosion sounds
 					- N1 normal, N2 underwater
-				- RCBomb ping sounds
+				= RCBomb ping sounds
 					- 1 normal, 1 underwater
-				- TimerBomb sounds
-					- 1 normal, 1 underwater (continuous)
-				- Bomb placed sounds
+				- TimerBomb sounds 
+					- 1 normal, 1 underwater (fuse burning, continuous)
+				= Bomb placed sounds
 					- N1 normal, N2 underwater
-				- Bomb removed sounds
+				= Bomb removed sounds
 					- N1 normal, N2 underwater
 		
 		- SettingsDialog: bomb blast radius

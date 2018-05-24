@@ -9,11 +9,13 @@ namespace Physics {
 
 void Bombs::Update(GameParameters const & gameParameters)
 {
+    auto now = GameWallClock::GetInstance().Now();
+
     // Run through all bombs and invoke Update() on each;
     // remove those bombs that have expired
     for (auto it = mCurrentBombs.begin(); it != mCurrentBombs.end(); /* incremented in loop */)
     {
-        bool hasExpired = (*it)->Update();
+        bool hasExpired = (*it)->Update(now);
         if (hasExpired)
         {
             // Detach it

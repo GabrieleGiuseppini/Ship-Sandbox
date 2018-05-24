@@ -7,7 +7,7 @@
 
 namespace Physics {
 
-bool TimerBomb::Update()
+bool TimerBomb::Update(GameWallClock::time_point now)
 {
     // TODO
     return false;

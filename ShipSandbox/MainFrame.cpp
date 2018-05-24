@@ -79,8 +79,9 @@ MainFrame::MainFrame(wxApp * mainApp)
     , mCurrentRCBombCount(0u)
     , mTotalFrameCount(0u)
     , mLastFrameCount(0u)
-    , mFrameCountStatsOriginTimestamp(std::chrono::steady_clock::time_point::min())
-    , mFrameCountStatsLastTimestamp(std::chrono::steady_clock::time_point::min())
+    , mStatsOriginTimestampReal(std::chrono::steady_clock::time_point::min())
+    , mStatsLastTimestampReal(std::chrono::steady_clock::time_point::min())
+    , mStatsOriginTimestampGame(GameWallClock::time_point::min())
 {
 	Create(
 		nullptr, 
@@ -557,13 +558,16 @@ void MainFrame::OnKeyDown(wxKeyEvent & event)
 void MainFrame::OnGameTimerTrigger(wxTimerEvent & /*event*/)
 {
     // Initialize stats, if needed
-    if (mFrameCountStatsOriginTimestamp == std::chrono::steady_clock::time_point::min())
+    if (mStatsOriginTimestampReal == std::chrono::steady_clock::time_point::min())
     { 
-        assert(mFrameCountStatsLastTimestamp == std::chrono::steady_clock::time_point::min());
+        assert(mStatsLastTimestampReal == std::chrono::steady_clock::time_point::min());
+        assert(mStatsOriginTimestampGame == GameWallClock::time_point::min());
 
-        std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-        mFrameCountStatsOriginTimestamp = now;
-        mFrameCountStatsLastTimestamp = now;
+        std::chrono::steady_clock::time_point nowReal = std::chrono::steady_clock::now();
+        mStatsOriginTimestampReal = nowReal;
+        mStatsLastTimestampReal = nowReal;
+        mStatsOriginTimestampGame = GameWallClock::GetInstance().Now();
+
         mTotalFrameCount = 0u;
         mLastFrameCount = 0u;
     }
@@ -763,8 +767,20 @@ void MainFrame::OnReloadLastShipMenuItemSelected(wxCommandEvent & /*event*/)
 
 void MainFrame::OnPauseMenuItemSelected(wxCommandEvent & /*event*/)
 {
-    if (!!mSoundController)
-        mSoundController->SetPaused(IsPaused());
+    if (IsPaused())
+    {
+        GameWallClock::GetInstance().Pause();
+
+        if (!!mSoundController)
+            mSoundController->SetPaused(true);
+    }
+    else
+    { 
+        GameWallClock::GetInstance().Resume();
+
+        if (!!mSoundController)
+            mSoundController->SetPaused(false);
+    }
 }
 
 void MainFrame::OnResetViewMenuItemSelected(wxCommandEvent & /*event*/)
@@ -1161,20 +1177,23 @@ void MainFrame::UpdateContinuousTool()
 void MainFrame::SetFrameTitle()
 {
     //
-    // Update fps
+    // Update fps and total (game) duration
     //
 
-    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point nowReal = std::chrono::steady_clock::now();
 
-    auto totalElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - mFrameCountStatsOriginTimestamp);
-    auto lastElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - mFrameCountStatsLastTimestamp);
+    auto totalElapsedReal = std::chrono::duration<float>(nowReal - mStatsOriginTimestampReal);
+    auto lastElapsedReal = std::chrono::duration<float>(nowReal - mStatsLastTimestampReal);
 
-    float totalFps = static_cast<float>(mTotalFrameCount) * 1000.0f / static_cast<float>(totalElapsed.count());
-    float lastFps = static_cast<float>(mLastFrameCount) * 1000 / static_cast<float>(lastElapsed.count());
 
-    auto minutes = std::chrono::duration_cast<std::chrono::minutes>(totalElapsed);
-    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(totalElapsed - minutes);
-    auto seconds = static_cast<int>(roundf(static_cast<float>(milliseconds.count()) / 1000.0f));
+    float totalFps = static_cast<float>(mTotalFrameCount) / totalElapsedReal.count();
+    float lastFps = static_cast<float>(mLastFrameCount) / lastElapsedReal.count();
+
+
+    auto totalElapsedGame = std::chrono::duration<float>(GameWallClock::GetInstance().Now() - mStatsOriginTimestampGame);
+
+    int minutesGame = static_cast<int>(floorf(totalElapsedGame.count() / 60.0f));
+    int secondsGame = static_cast<int>(floorf(totalElapsedGame.count() - minutesGame * 60.0f));
 
     //
     // Build title
@@ -1186,7 +1205,7 @@ void MainFrame::SetFrameTitle()
 
     ss << GetWindowTitle()
         << "  FPS: " << std::fixed << std::setprecision(2) << totalFps << " (" << lastFps << ")"
-        << " " << std::setw(2) << minutes.count() << ":" << std::setw(2) << seconds;
+        << " " << std::setw(2) << minutesGame << ":" << std::setw(2) << secondsGame;
 
     if (!mCurrentShipNames.empty())
     {
@@ -1197,7 +1216,7 @@ void MainFrame::SetFrameTitle()
     SetTitle(ss.str());
 
     mLastFrameCount = 0u;
-    mFrameCountStatsLastTimestamp = now;
+    mStatsLastTimestampReal = nowReal;
 }
 
 bool MainFrame::IsPaused()

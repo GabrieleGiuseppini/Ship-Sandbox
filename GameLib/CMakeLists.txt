@@ -18,8 +18,9 @@ set  (GAME_SOURCES
 	GameOpenGL.cpp
 	GameOpenGL.h
 	GameParameters.cpp
-	GameParameters.h
+	GameParameters.h	
 	GameTypes.h
+	GameWallClock.h
 	IGameEventHandler.h
 	ImageData.h
 	ImageSize.h

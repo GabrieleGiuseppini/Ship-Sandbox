@@ -244,8 +244,8 @@ public:
         BombElement & bombElement = *insertedIt;
        
         // World size that the texture should be scaled to
-        static constexpr float textureTileW = 6.0f;
-        static constexpr float textureTileH = 6.0f;
+        static constexpr float textureTileW = 12.0f;
+        static constexpr float textureTileH = 12.0f;
 
         float leftX = bombX - textureTileW * scale / 2.0f;
         float rightX = bombX + textureTileW * scale / 2.0f;

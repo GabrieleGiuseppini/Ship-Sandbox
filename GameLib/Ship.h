@@ -124,7 +124,7 @@ private:
     void BombBlastHandler(
         vec2f const & position,
         ConnectedComponentId connectedComponentId,
-        float blastRadius);
+        float blastRadiusAdjustment);
 
     void PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex);
 

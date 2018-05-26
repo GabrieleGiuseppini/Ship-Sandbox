@@ -214,23 +214,23 @@ MainFrame::MainFrame(wxApp * mainApp)
 
 	wxMenu * toolsMenu = new wxMenu();
 
-	wxMenuItem * smashMenuItem = new wxMenuItem(toolsMenu, ID_SMASH_MENUITEM, _("&Smash\tS"), wxEmptyString, wxITEM_RADIO);		
+	wxMenuItem * smashMenuItem = new wxMenuItem(toolsMenu, ID_SMASH_MENUITEM, _("Smash\tS"), wxEmptyString, wxITEM_RADIO);		
 	toolsMenu->Append(smashMenuItem);		
 	Connect(ID_SMASH_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnSmashMenuItemSelected);
 
-	wxMenuItem * grabMenuItem = new wxMenuItem(toolsMenu, ID_GRAB_MENUITEM, _("&Grab\tG"), wxEmptyString, wxITEM_RADIO);	
+	wxMenuItem * grabMenuItem = new wxMenuItem(toolsMenu, ID_GRAB_MENUITEM, _("Grab\tG"), wxEmptyString, wxITEM_RADIO);	
 	toolsMenu->Append(grabMenuItem);	
 	Connect(ID_GRAB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnGrabMenuItemSelected);
 
-    wxMenuItem * pinMenuItem = new wxMenuItem(toolsMenu, ID_PIN_MENUITEM, _("&Pin\tP"), wxEmptyString, wxITEM_RADIO);
+    wxMenuItem * pinMenuItem = new wxMenuItem(toolsMenu, ID_PIN_MENUITEM, _("Pin\tP"), wxEmptyString, wxITEM_RADIO);
     toolsMenu->Append(pinMenuItem);
     Connect(ID_PIN_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnPinMenuItemSelected);
 
-    wxMenuItem * timerBombMenuItem = new wxMenuItem(toolsMenu, ID_TIMERBOMB_MENUITEM, _("Place &Timer Bomb\tT"), wxEmptyString, wxITEM_RADIO);
+    wxMenuItem * timerBombMenuItem = new wxMenuItem(toolsMenu, ID_TIMERBOMB_MENUITEM, _("Place Timer Bomb\tT"), wxEmptyString, wxITEM_RADIO);
     toolsMenu->Append(timerBombMenuItem);
     Connect(ID_TIMERBOMB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnTimerBombMenuItemSelected);
 
-    wxMenuItem * rcBombMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMB_MENUITEM, _("Place &RC Bomb\tR"), wxEmptyString, wxITEM_RADIO);
+    wxMenuItem * rcBombMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMB_MENUITEM, _("Place RC Bomb\tR"), wxEmptyString, wxITEM_RADIO);
     toolsMenu->Append(rcBombMenuItem);
     Connect(ID_RCBOMB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnRCBombMenuItemSelected);
 
@@ -240,7 +240,7 @@ MainFrame::MainFrame(wxApp * mainApp)
 
     toolsMenu->Append(new wxMenuItem(toolsMenu, wxID_SEPARATOR));
 
-    mRCBombsDetonateMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMBDETONATE_MENUITEM, _("&Detonate RC Bomb\tD"), wxEmptyString, wxITEM_NORMAL);
+    mRCBombsDetonateMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMBDETONATE_MENUITEM, _("Detonate RC Bombs\tD"), wxEmptyString, wxITEM_NORMAL);
     toolsMenu->Append(mRCBombsDetonateMenuItem);
     Connect(ID_RCBOMBDETONATE_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnRCBombDetonateMenuItemSelected);
     mRCBombsDetonateMenuItem->Enable(false);
@@ -1189,11 +1189,10 @@ void MainFrame::SetFrameTitle()
     float totalFps = static_cast<float>(mTotalFrameCount) / totalElapsedReal.count();
     float lastFps = static_cast<float>(mLastFrameCount) / lastElapsedReal.count();
 
-
     auto totalElapsedGame = std::chrono::duration<float>(GameWallClock::GetInstance().Now() - mStatsOriginTimestampGame);
-
-    int minutesGame = static_cast<int>(floorf(totalElapsedGame.count() / 60.0f));
-    int secondsGame = static_cast<int>(floorf(totalElapsedGame.count() - minutesGame * 60.0f));
+    int totalElapsedSecondsGame = static_cast<int>(roundf(totalElapsedGame.count()));
+    int minutesGame = totalElapsedSecondsGame / 60;
+    int secondsGame = totalElapsedSecondsGame - (minutesGame * 60);
 
     //
     // Build title

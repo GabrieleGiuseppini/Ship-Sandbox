@@ -27,7 +27,10 @@ class Bomb
 {
 public:
 
-    using BlastHandler = std::function<void(vec2f const & position, ConnectedComponentId connectedComponentId, float blastRadius)>;
+    using BlastHandler = std::function<void(
+        vec2f const & position, 
+        ConnectedComponentId connectedComponentId, 
+        float blastRadiusAdjustment)>;
 
 public:
 

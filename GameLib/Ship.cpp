@@ -53,9 +53,9 @@ Ship::Ship(
     , mBombs(
         mParentWorld,
         mGameEventHandler,
-        [this](vec2f const & position, ConnectedComponentId connectedComponentId, float blastRadius)
+        [this](vec2f const & position, ConnectedComponentId connectedComponentId, float blastRadiusAdjustment)
         {
-            this->BombBlastHandler(position, connectedComponentId, blastRadius);
+            this->BombBlastHandler(position, connectedComponentId, blastRadiusAdjustment);
         },        
         mPoints)
     , mCurrentDrawForce(std::nullopt)
@@ -878,9 +878,9 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
 void Ship::BombBlastHandler(
     vec2f const & position,
     ConnectedComponentId connectedComponentId,
-    float blastRadius)
+    float blastRadiusAdjustment)
 {
-    // Note: eventua events have already been fired
+    // Note: eventual events have already been fired
 
     // TODOHERE
 }

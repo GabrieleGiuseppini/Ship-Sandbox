@@ -188,14 +188,19 @@ Prev perf (before point et al destructuring)
 			  collection (and from point indirectly via Bomb::Destroy which, if attached to point, calls Points::Detach)
 				 
 		= Impl:
+			- TEST: bombs are attached to springs instead of points
+				- Move isAttached buffer from Points to Springs
+				- Bomb position becomes positionA and positionB (bomb attached across)
+					- Blast cald's from middle point
+				
 			= Bomb base class, w/type enum
 				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
 					+ Runs state machine with local clock
 						+ Advances animations (textures of bombs, sounds via events)
 					+ Invokes handler for each explosion step
 					+ Returns false when needs to be deleted
-				+ GetRenderFrameIndex() -> size_t
-					+ via protected mRenderFrameIndex, set by subclasses
+				= GetRenderFrameIndex() -> size_t
+					- Specialized for state machines
 				- "ProximityDisturbed"() = 0: input to state machine
 					- TimerBomb: only if state machine duration < own time left
 					- TODO: should have OnNeighborhoodDestroyed(pointIdx or position) (for both points and springs) instead?
@@ -206,9 +211,7 @@ Prev perf (before point et al destructuring)
 					- First, detaches itself - REALLY?
 					- Immediatey detonates, unless already detonated
 			- Two subclasses - TimerBomb and RCBomb
-				- RCBomb::Detonate(): input to state machine
-				- When they detonate, no need to detach themselves from the point - ship will eventually destroy point and
-				  OnAttachPointDestroyed(...) will detach, or Bombs will detach before expiring it
+				+ RCBomb::Detonate(): input to state machine
 			= Bombs class
 				+ Not ElementContainer, just manager
 				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &
@@ -219,8 +222,8 @@ Prev perf (before point et al destructuring)
 				+ ToggleTimer/RCBombAt(position) 
 					+ same logic as pinned points
 					+ returns boolean
-				- DetonateRCBombs()
-					- Calls Detonate() at each RCBomb
+				+ DetonateRCBombs()
+					+ Calls Detonate() at each RCBomb
 				- Upload(RenderContext)
 					- Always upload all bombs, each w/current render frame index
 				- OnAttachPointDestroyed(TODO)
@@ -257,6 +260,8 @@ Prev perf (before point et al destructuring)
 					= Load textures
 						+ RC bomb
 						- Timer bomb
+						+ Make sure textures are sorted by index
+							+ First index for multi-frame is 0 in filename as well
 					+ Forward calls
 				+ ShipRenderContext
 					+ Buffers just like pinned points

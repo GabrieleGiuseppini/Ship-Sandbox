@@ -1,7 +1,7 @@
 /***************************************************************************************
-* Original Author:		Gabriele Giuseppini
-* Created:				2018-02-18
-* Copyright:			Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
+* Original Author:      Gabriele Giuseppini
+* Created:              2018-02-18
+* Copyright:            Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
 ***************************************************************************************/
 #pragma once
 
@@ -16,6 +16,7 @@
 #include <IL/ilu.h>
 
 #include <cstring>
+#include <regex>
 
 ResourceLoader::ResourceLoader()
 {
@@ -144,25 +145,46 @@ std::vector<ImageData> ResourceLoader::LoadTexturesRgba(
     std::string const & prefix,
     ProgressCallback progressCallback)
 {
-    std::vector<std::string> matchingFilepaths;
+    std::regex textureFilenameRegex(R"((.+)_(\d+)\.png)");
+    std::smatch match;
+
+    std::vector<std::pair<int, std::filesystem::path>> matchingEntries;
     for (auto const & entryIt : std::filesystem::directory_iterator(std::filesystem::path("Data") / "Textures"))
     {
+        std::string filename = entryIt.path().filename().string();
+
         if (std::filesystem::is_regular_file(entryIt.path())
-            && entryIt.path().extension().string() == ".png"
-            && 0 == entryIt.path().filename().string().compare(0, prefix.length(), prefix))
+            && std::regex_match(filename, match, textureFilenameRegex))
         {
-            matchingFilepaths.push_back(entryIt.path().string());
+            assert(match.size() == 1 + 2 && match[1].matched && match[2].matched);
+
+            if (match[1].str() == prefix)
+            {
+                int textureIndex = std::stoi(match[2].str());
+
+                matchingEntries.emplace_back(
+                    textureIndex,
+                    entryIt.path());
+            }
         }
     }
 
+    std::sort(
+        matchingEntries.begin(),
+        matchingEntries.end(),
+        [](auto const & entry1, auto const & entry2)
+        {
+            return entry1.first < entry2.first;
+        });
+
     std::vector<ImageData> textures;
-    for (size_t i = 0; i < matchingFilepaths.size(); ++i)
+    for (size_t i = 0; i < matchingEntries.size(); ++i)
     {
         if (progressCallback)
-            progressCallback(static_cast<float>(i + 1) / static_cast<float>(matchingFilepaths.size()), "Loading texture...");
+            progressCallback(static_cast<float>(i + 1) / static_cast<float>(matchingEntries.size()), "Loading texture...");
 
         auto imageData = LoadImage(
-            matchingFilepaths[i],
+            matchingEntries[i].second,
             IL_RGBA,
             IL_ORIGIN_LOWER_LEFT);
 

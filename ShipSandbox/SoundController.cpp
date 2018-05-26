@@ -83,7 +83,13 @@ SoundController::SoundController(
 
         assert(soundTypeMatch.size() == 1 + 1);
         SoundType soundType = StrToSoundType(soundTypeMatch[1].str());
-        if (soundType == SoundType::Break || soundType == SoundType::Destroy || soundType == SoundType::Stress)
+        if (soundType == SoundType::Draw)
+        {
+            mDrawSoundBuffer = std::move(soundBuffer);
+            mDrawSound = std::make_unique<sf::Sound>();
+            mDrawSound->setBuffer(*mDrawSoundBuffer);
+        }
+        else if (soundType == SoundType::Break || soundType == SoundType::Destroy || soundType == SoundType::Stress)
         {
             //
             // MSU sound
@@ -124,7 +130,7 @@ SoundController::SoundController(
             mMSUSoundBuffers[std::make_tuple(soundType, soundElementType, sizeType, isUnderwater)]
                 .SoundBuffers.emplace_back(std::move(soundBuffer));
         }
-        else if (soundType == SoundType::PinPoint || soundType == SoundType::UnpinPoint)
+        else
         {
             //
             // U sound
@@ -158,16 +164,6 @@ SoundController::SoundController(
 
             mUSoundBuffers[std::make_tuple(soundType, isUnderwater)]
                 .SoundBuffers.emplace_back(std::move(soundBuffer));
-        }
-        else if (soundType == SoundType::Draw)
-        {
-            mDrawSoundBuffer= std::move(soundBuffer);
-            mDrawSound = std::make_unique<sf::Sound>();
-            mDrawSound->setBuffer(*mDrawSoundBuffer);
-        }
-        else
-        {
-            throw GameException("Sound type of sound filename \"" + soundName + "\" is not recognized");
         }
     }
 }
@@ -280,7 +276,12 @@ void SoundController::OnDestroy(
 {
     assert(nullptr != material);
 
-    PlayMSUSound(SoundType::Destroy, material, size, isUnderwater);
+    PlayMSUSound(
+        SoundType::Destroy, 
+        material, 
+        size, 
+        isUnderwater,
+        50.0f);
 }
 
 void SoundController::OnDraw()
@@ -302,7 +303,10 @@ void SoundController::OnPinToggled(
     bool isPinned,
     bool isUnderwater)
 {
-    PlayUSound(isPinned ? SoundType::PinPoint : SoundType::UnpinPoint, isUnderwater);
+    PlayUSound(
+        isPinned ? SoundType::PinPoint : SoundType::UnpinPoint, 
+        isUnderwater,
+        100.0f);
 }
 
 void SoundController::OnStress(
@@ -312,7 +316,12 @@ void SoundController::OnStress(
 {
     assert(nullptr != material);
 
-    PlayMSUSound(SoundType::Stress, material, size, isUnderwater);
+    PlayMSUSound(
+        SoundType::Stress, 
+        material, 
+        size, 
+        isUnderwater,
+        50.0f);
 }
 
 void SoundController::OnBreak(
@@ -322,7 +331,12 @@ void SoundController::OnBreak(
 {
     assert(nullptr != material);
 
-    PlayMSUSound(SoundType::Break, material, size, isUnderwater);
+    PlayMSUSound(
+        SoundType::Break, 
+        material, 
+        size, 
+        isUnderwater,
+        50.0f);
 }
 
 void SoundController::OnSinkingBegin(unsigned int /*shipId*/)
@@ -333,13 +347,58 @@ void SoundController::OnSinkingBegin(unsigned int /*shipId*/)
     }
 }
 
+void SoundController::OnBombPlaced(
+    BombType /*bombType*/,
+    bool isUnderwater) 
+{
+    PlayUSound(
+        SoundType::BombAttached, 
+        isUnderwater,
+        100.0f);
+}
+
+void SoundController::OnBombRemoved(
+    BombType /*bombType*/,
+    bool isUnderwater)
+{
+    PlayUSound(
+        SoundType::BombDetached, 
+        isUnderwater,
+        100.0f);
+}
+
+void SoundController::OnBombExplosion(
+    bool isUnderwater,
+    unsigned int size)
+{
+    PlayUSound(
+        SoundType::Explosion, 
+        isUnderwater,
+        std::max(
+            100.0f,
+            30.0f * size));
+}
+
+void SoundController::OnRCBombPing(
+    bool isUnderwater,
+    unsigned int size)
+{
+    PlayUSound(
+        SoundType::RCBombPing, 
+        isUnderwater,
+        std::max(
+            100.0f,
+            30.0f * size));
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 
 void SoundController::PlayMSUSound(
     SoundType soundType,
     Material const * material,
     unsigned int size,
-    bool isUnderwater)
+    bool isUnderwater,
+    float volume)
 {
     assert(nullptr != material);
 
@@ -410,12 +469,14 @@ void SoundController::PlayMSUSound(
 
     ChooseAndPlaySound(
         soundType,
-        it->second);
+        it->second,
+        volume);
 }
 
 void SoundController::PlayUSound(
     SoundType soundType,
-    bool isUnderwater)
+    bool isUnderwater,
+    float volume)
 {
     LogMessage("USound: <",
         static_cast<int>(soundType),
@@ -447,12 +508,14 @@ void SoundController::PlayUSound(
 
     ChooseAndPlaySound(
         soundType,
-        it->second);
+        it->second,
+        volume);
 }
 
 void SoundController::ChooseAndPlaySound(
     SoundType soundType,
-    SoundInfo & soundInfo)
+    SoundInfo & soundInfo,
+    float volume)
 {
     auto const now = std::chrono::steady_clock::now();
 
@@ -489,7 +552,8 @@ void SoundController::ChooseAndPlaySound(
 
     //
     // Make sure there isn't already a sound with this sound buffer that started
-    // playing too recently
+    // playing too recently;
+    // if there is, adjust its volume
     //
 
     for (auto const & currentlyPlayingSound : mCurrentlyPlayingSounds)
@@ -498,6 +562,11 @@ void SoundController::ChooseAndPlaySound(
         if (currentlyPlayingSound.Sound->getBuffer() == chosenSoundBuffer
             && std::chrono::duration_cast<std::chrono::milliseconds>(now - currentlyPlayingSound.StartedTimestamp) < MinDeltaTimeSound)
         {
+            currentlyPlayingSound.Sound->setVolume(
+                std::max(
+                    100.0f,
+                    currentlyPlayingSound.Sound->getVolume() + volume));
+
             return;
         }
     }
@@ -529,7 +598,8 @@ void SoundController::ChooseAndPlaySound(
     std::unique_ptr<sf::Sound> sound = std::make_unique<sf::Sound>();
     sound->setBuffer(*chosenSoundBuffer);
 
-    sound->play();
+    sound->setVolume(volume);
+    sound->play();    
 
     mCurrentlyPlayingSounds.emplace_back(
         soundType,

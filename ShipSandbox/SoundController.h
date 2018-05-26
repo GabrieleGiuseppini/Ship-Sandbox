@@ -42,6 +42,10 @@ public:
 
 public:
 
+    //
+    // Game event handlers
+    //
+
     virtual void OnDestroy(
         Material const * material,
         bool isUnderwater,
@@ -65,6 +69,22 @@ public:
 
     virtual void OnSinkingBegin(unsigned int shipId) override;
 
+    virtual void OnBombPlaced(
+        BombType bombType,
+        bool isUnderwater) override;
+
+    virtual void OnBombRemoved(
+        BombType bombType,
+        bool isUnderwater) override;
+
+    virtual void OnBombExplosion(
+        bool isUnderwater,
+        unsigned int size) override;
+
+    virtual void OnRCBombPing(
+        bool isUnderwater,
+        unsigned int size) override;
+
 private:
 
     enum class SoundType
@@ -75,6 +95,10 @@ private:
         UnpinPoint,
         Draw,
         Stress,
+        BombAttached,
+        BombDetached,
+        RCBombPing,
+        Explosion
     };
 
     static SoundType StrToSoundType(std::string const & str)
@@ -93,6 +117,14 @@ private:
             return SoundType::UnpinPoint;
         else if (lstr == "stress")
             return SoundType::Stress;
+        else if (lstr == "bombattached")
+            return SoundType::BombAttached;
+        else if (lstr == "bombdetached")
+            return SoundType::BombDetached;
+        else if (lstr == "rcbombping")
+            return SoundType::RCBombPing;
+        else if (lstr == "explosion")
+            return SoundType::Explosion;
         else
             throw GameException("Unrecognized SoundType \"" + str + "\"");
     }
@@ -159,15 +191,18 @@ private:
         SoundType soundType,
         Material const * material,
         unsigned int size,
-        bool isUnderwater);
+        bool isUnderwater,
+        float volume);
 
     void PlayUSound(
         SoundType soundType,
-        bool isUnderwater);
+        bool isUnderwater,
+        float volume);
 
     void ChooseAndPlaySound(
         SoundType soundType,
-        SoundInfo & soundInfo);
+        SoundInfo & soundInfo,
+        float volume);
 
     void ScavengeStoppedSounds();
 

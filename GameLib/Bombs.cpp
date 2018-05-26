@@ -15,8 +15,8 @@ void Bombs::Update(GameParameters const & gameParameters)
     // remove those bombs that have expired
     for (auto it = mCurrentBombs.begin(); it != mCurrentBombs.end(); /* incremented in loop */)
     {
-        bool hasExpired = (*it)->Update(now);
-        if (hasExpired)
+        bool isActive = (*it)->Update(now);
+        if (!isActive)
         {
             // Detach it
             (*it)->DetachFromPointIfAttached(gameParameters);
@@ -33,7 +33,14 @@ void Bombs::Update(GameParameters const & gameParameters)
 
 void Bombs::DetonateRCBombs()
 {
-    // TODO
+    for (auto & bomb : mCurrentBombs)
+    {
+        if (BombType::RCBomb == bomb->GetType())
+        {
+            RCBomb * rcb = dynamic_cast<RCBomb *>(bomb.get());
+            rcb->Detonate();
+        }
+    }
 }
 
 void Bombs::Upload(

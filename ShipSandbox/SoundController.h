@@ -14,7 +14,6 @@
 
 #include <chrono>
 #include <memory>
-#include <random>
 #include <string>
 #include <vector>
 
@@ -75,7 +74,7 @@ public:
 
     virtual void OnBombRemoved(
         BombType bombType,
-        bool isUnderwater) override;
+        std::optional<bool> isUnderwater) override;
 
     virtual void OnBombExplosion(
         bool isUnderwater,
@@ -211,8 +210,6 @@ private:
 private:
 
     std::shared_ptr<ResourceLoader> mResourceLoader;
-
-    std::ranlux48_base mRandomEngine;
 
     float mCurrentVolume;
 

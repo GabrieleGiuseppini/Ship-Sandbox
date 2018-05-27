@@ -32,7 +32,9 @@ public:
             points)
     {}
 
-    virtual bool Update(GameWallClock::time_point now) override;
+    virtual bool Update(
+        GameWallClock::time_point now,
+        GameParameters const & gameParameters) override;
 
     virtual float GetRenderScale() const override
     {

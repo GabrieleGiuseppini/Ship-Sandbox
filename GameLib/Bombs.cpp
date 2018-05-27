@@ -15,13 +15,22 @@ void Bombs::Update(GameParameters const & gameParameters)
     // remove those bombs that have expired
     for (auto it = mCurrentBombs.begin(); it != mCurrentBombs.end(); /* incremented in loop */)
     {
-        bool isActive = (*it)->Update(now);
+        bool isActive = (*it)->Update(now, gameParameters);
         if (!isActive)
         {
-            // Detach it
+            //
+            // Bomb has expired
+            //
+
+            // Notify (soundless) removal
+            mGameEventHandler->OnBombRemoved(
+                (*it)->GetType(),
+                std::nullopt);
+
+            // Detach it from its point
             (*it)->DetachFromPointIfAttached(gameParameters);
 
-            // Remove it
+            // Remove it from the container
             it = mCurrentBombs.erase(it);
         }
         else

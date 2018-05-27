@@ -1,7 +1,7 @@
 =================================================
 Current perf
 =================================================
-- fps: 27.1 (Samsung: TBD (Krafting)) (Mattia's: TBD (Krafting))
+- fps: 27.1 (Samsung: TBD (Krafting)) (Mattia's: 27.5 (Krafting))
 - GameController::DoStep: 33.80%
 	- Ship::Update: 32.75% (Incl) 0.00% (Excl)
 		- UpdateDynamics: 25.79%
@@ -177,7 +177,7 @@ Prev perf (before point et al destructuring)
 			- A bomb explodes when:
 				- Its timer times out or the remote control is triggered
 				- The point it's attached to is destroyed 
-				- A point or spring in a separate, small radius is destroyed (includes nearby explosion)
+				- A point or spring in the "neighborhood" (a separate, small radius) is destroyed (includes nearby explosion)
 			- When one or more bombs are detonated, ship needs to know only position, connected component ID, and blast radius, 
 			  not even point index
 				- Thus (exploded) bombs are independent from lifetime of point that they were attached to,
@@ -199,46 +199,54 @@ Prev perf (before point et al destructuring)
 						+ Advances animations (textures of bombs, sounds via events)
 					+ Invokes handler for each explosion step
 					+ Returns false when needs to be deleted
-				= GetRenderFrameIndex() -> size_t
-					- Specialized for state machines
-				- "ProximityDisturbed"() = 0: input to state machine
-					- TimerBomb: only if state machine duration < own time left
-					- TODO: should have OnNeighborhoodDestroyed(pointIdx or position) (for both points and springs) instead?
-						- Change spec may be? "Explode bomb if point or spring destroyed within a radius"
-						- Implemented by specialization
-				- OnAttachPointDestroyed(TODO) override
-					- Implemented by specialization
-					- First, detaches itself - REALLY?
-					- Immediatey detonates, unless already detonated
-			- Two subclasses - TimerBomb and RCBomb
-				+ RCBomb::Detonate(): input to state machine
+				+ GetRenderFrameIndex() -> size_t
+					+ Specialized for state machines
+				- NeighborhoodDisturbed() = 0
+					- Invoked when needs to explode because own or near point is disturbed
+					- TimerBomb: 
+						- Only if state machine duration < own time left
+					- RCBomb:
+						- Equivalent to RCDetonate()
+			= Two subclasses - TimerBomb and RCBomb
+				= RCBomb:
+					+ RCBomb::Detonate(): input to state machine
+					= Update:
+						+ Basics
+						- Explosion
+				- TimerBomb:
+					- Update
 			= Bombs class
 				+ Not ElementContainer, just manager
 				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &
-				= Update(OnBombExplosion(position, radius)) -> void
+				+ Update(OnBombExplosion(position, radius)) -> void
 					+ Runs through all bombs and invokes ::Update() on each
-					= Removes a bomb if its Update() returns false
-						- Detach it if attached
+					+ Removes a bomb if its Update() returns false
+						+ Detach it if attached
 				+ ToggleTimer/RCBombAt(position) 
 					+ same logic as pinned points
 					+ returns boolean
 				+ DetonateRCBombs()
 					+ Calls Detonate() at each RCBomb
-				- Upload(RenderContext)
-					- Always upload all bombs, each w/current render frame index
-				- OnAttachPointDestroyed(TODO)
+				+ Upload(RenderContext)
+					+ Always upload all bombs, each w/current render frame index
+				- OnPointDestroyed(idx)
+					- TODO: spell out the following:
+					- Checks if point has bomb attached; if so detaches bomb from it (and NeighborhoodDisturbed())
+					- Does proximity check
+				- OnSpringDestroyed(idx)
+					- Proximity check
 
 			+ Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
 				+ Also changes mass (just at point, for gravity only...)				
 				+ Flag and mass change is done at Points::AttachBomb()/Points::DetachBomb() 
 
 			= Events:
-				- OnRCBombPlaced/Removed(size, underwater): used by MainFrame to enable/disable detonation menu item
+				+ OnRCBombPlaced/Removed(size, underwater): used by MainFrame to enable/disable detonation menu item
 				- OnTimerBombPlaced/Removed(size, underwater): used by SoundController to start/stop and set volume
 				  of RC bomb sound
 					- Also invoked when explodes
-				- OnBombDetonated(size): used by SoundController 
-				- OnRCBombPing(size): used by SoundController 
+				+ OnBombDetonated(size): used by SoundController 
+				+ OnRCBombPing(size): used by SoundController 
 
 			= Ship implements:
 				+ ToggleTimer/RCBombAt(position)
@@ -250,10 +258,9 @@ Prev perf (before point et al destructuring)
 				+ @Render(): invokes Bombs::Upload(RenderContext)
 				
 				- Ship::PointDestroyHandler: 
-					- Check if bomb attached (via mPoints); if so mBombs->OnAttachPointDestroyed(TODO)
-					- TODOHERE: proximity
+					- Bombs::OnPointDestroyed(idx)
 				- Ship::SpringDestroyHandler: 
-					- TODOHERE: proximity
+					- Bombs::OnSpringDestroyed(idx)
 
 			= RenderContext:
 				= RenderContext:
@@ -271,33 +278,32 @@ Prev perf (before point et al destructuring)
 				  Detonate menu item
 				+ Load 2 cursors
 					+ Set hotspot
-
-			- SoundController:
-				- TBD
+			+ SoundController:
+				+ Event handlers
 
 			- Media:
 				+ TimerBomb cursor
 				- RCBomb cursor
 				- TimerBomb textures:
 					- TODO
-				+ RCBomb textures:
+				- RCBomb textures:
 					+ Base
 					+ Pings
-				- Bomb explosion textures:
-					- N random animations, M frames each
-				- Bomb explosion sounds
-					- N1 normal, N2 underwater
-				= RCBomb ping sounds
-					- 1 normal, 1 underwater
+					- Center
+					- Add explosion frames
+				+ Bomb explosion sounds
+					+ N1 normal, N2 underwater
+				+ RCBomb ping sounds
+					+ 1 normal, 1 underwater
 				- TimerBomb sounds 
 					- 1 normal, 1 underwater (fuse burning, continuous)
-				= Bomb placed sounds
-					- N1 normal, N2 underwater
-				= Bomb removed sounds
-					- N1 normal, N2 underwater
+				+ Bomb placed sounds
+					+ N1 normal, N2 underwater
+				+ Bomb removed sounds
+					+ N1 normal, N2 underwater
 		
 		- SettingsDialog: bomb blast radius
-		- Then see of also pinned points should move to a PinnedPoints class
+		- Then see if also pinned points should move to a PinnedPoints class
 
 - Controls:
 	+ Set max and min zoom (or monsters awaken when you zoom out too much)

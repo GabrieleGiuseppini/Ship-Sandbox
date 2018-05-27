@@ -114,7 +114,7 @@ public:
 
     virtual void OnBombRemoved(
         BombType bombType,
-        bool isUnderwater) override
+        std::optional<bool> isUnderwater) override
     {
         // No need to aggregate this one
         for (auto sink : mSinks)

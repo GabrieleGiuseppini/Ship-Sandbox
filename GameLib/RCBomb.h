@@ -7,7 +7,7 @@
 
 #include "Physics.h"
 
-using namespace std::chrono_literals;
+#include <cstdint>
 
 namespace Physics
 {   
@@ -26,7 +26,9 @@ public:
         BlastHandler blastHandler,
         Points & points);
 
-    virtual bool Update(GameWallClock::time_point now) override;
+    virtual bool Update(
+        GameWallClock::time_point now,
+        GameParameters const & gameParameters) override;
 
     virtual float GetRenderScale() const override
     {
@@ -38,6 +40,12 @@ public:
     {
         return mCurrentFrameIndex;
     }
+
+    virtual vec2f const GetPosition() const override
+    {
+        return Bomb::GetPosition() + mCurrentShakeOffset;
+    }
+
 
     void Detonate();
 
@@ -67,23 +75,33 @@ private:
 
     State mCurrentState;
 
-    // The current frame index
+    // The current texture frame to use when rendering
     uint32_t mCurrentFrameIndex;
 
-    // The current ping phase:
-    // - Even: ping off
-    // - Odd: ping on; mod 8 and then division by two yields frame index
+    // The current ping phase;
+    // - In Idle state:
+    //      - Even: ping off
+    //      - Odd: ping on; mod 8 and then division by two yields frame index
+    // - In DetonationLeadIn: simply the index of the ping on frame
+    //
     // Fine to rollover!
-    std::uint8_t mCurrentPingPhase;
+    uint8_t mCurrentPingPhase;
 
-    // The next timestamp at which we'll ping
-    GameWallClock::time_point mNextPingTimePoint;
+    // The next timestamp at which we'll perform a ping state step
+    GameWallClock::time_point mNextPingProgressTimePoint;
 
     // The timestamp at which we'll detonate while in detonation lead-in
     GameWallClock::time_point mDetonationTimePoint;
 
+    // The current position offset use for shaking during detonation lead-in
+    vec2f mCurrentShakeOffset;
+    uint8_t mCurrentShakeOffsetIndex;
+
     // The current explosion phase
-    std::uint8_t mCurrentExplosionPhase;
+    uint8_t mCurrentExplosionPhase;
+
+    // The next timestamp at which we'll progress the explosion
+    GameWallClock::time_point mNextExplosionProgressTimePoint;
 };
 
 }

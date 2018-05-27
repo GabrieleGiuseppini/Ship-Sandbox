@@ -122,9 +122,11 @@ public:
 private:
 
     void BombBlastHandler(
-        vec2f const & position,
+        vec2f const & blastPosition,
         ConnectedComponentId connectedComponentId,
-        float blastRadiusAdjustment);
+        int blastSequenceNumber,
+        int blastSequenceCount,
+        GameParameters const & gameParameters);
 
     void PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex);
 

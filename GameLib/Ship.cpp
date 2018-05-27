@@ -53,9 +53,19 @@ Ship::Ship(
     , mBombs(
         mParentWorld,
         mGameEventHandler,
-        [this](vec2f const & position, ConnectedComponentId connectedComponentId, float blastRadiusAdjustment)
+        [this](
+            vec2f const & position, 
+            ConnectedComponentId connectedComponentId, 
+            int blastSequenceNumber,
+            int blastSequenceCount,
+            GameParameters const & gameParameters)
         {
-            this->BombBlastHandler(position, connectedComponentId, blastRadiusAdjustment);
+            this->BombBlastHandler(
+                position, 
+                connectedComponentId,
+                blastSequenceNumber,
+                blastSequenceCount,
+                gameParameters);
         },        
         mPoints)
     , mCurrentDrawForce(std::nullopt)
@@ -876,13 +886,60 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 void Ship::BombBlastHandler(
-    vec2f const & position,
+    vec2f const & blastPosition,
     ConnectedComponentId connectedComponentId,
-    float blastRadiusAdjustment)
+    int blastSequenceNumber,
+    int blastSequenceCount,
+    GameParameters const & gameParameters)
 {
-    // Note: eventual events have already been fired
+    // 
+    // Go through all the connected component's points and, for each point in radius:
+    // - Keep closest to blast position, which we'll Destroy later (if this is the fist frame of the 
+    //   bast sequence)
+    // - Flip over the point outside of the radius
+    //
 
-    // TODOHERE
+    float blastRadius = gameParameters.BombBlastRadius * static_cast<float>(blastSequenceNumber + 1) / static_cast<float>(blastSequenceCount);
+    float squareBlastRadius = blastRadius * blastRadius;
+
+    float closestPointSquareDistance = std::numeric_limits<float>::max();
+    ElementContainer::ElementIndex closestPointIndex = ElementContainer::NoneElementIndex;
+
+    for (auto pointIndex : mPoints)
+    {
+        if (!mPoints.IsDeleted(pointIndex)
+            && mPoints.GetConnectedComponentId(pointIndex) == connectedComponentId)
+        {
+            vec2f pointRadius = mPoints.GetPosition(pointIndex) - blastPosition;
+            float squareDistance = pointRadius.squareLength();
+            if (squareDistance < squareBlastRadius)
+            {
+                // Check whether this point is the closest
+                if (squareDistance < closestPointSquareDistance)
+                {
+                    closestPointSquareDistance = squareDistance;
+                    closestPointIndex = pointIndex;
+                }
+
+                // Flip the point
+                vec2f flippedRadius = pointRadius.normalise() * (blastRadius + (blastRadius - pointRadius.length()));
+                vec2f newPosition = blastPosition + flippedRadius;                
+                mPoints.GetVelocity(pointIndex) = (newPosition - mPoints.GetPosition(pointIndex)) / GameParameters::DynamicsSimulationStepTimeDuration<float>;
+                mPoints.GetPosition(pointIndex) = newPosition;
+            }
+        }
+    }
+
+    //
+    // Eventually destroy the closest point
+    //
+
+    if (0 == blastSequenceNumber
+        && ElementContainer::NoneElementIndex != closestPointIndex)
+    {
+        // Destroy point
+        mPoints.Destroy(closestPointIndex);
+    }
 }
 
 void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)

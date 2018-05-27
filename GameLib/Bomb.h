@@ -5,6 +5,7 @@
 ***************************************************************************************/
 #pragma once
 
+#include "GameParameters.h"
 #include "GameTypes.h"
 #include "GameWallClock.h"
 #include "IGameEventHandler.h"
@@ -28,9 +29,11 @@ class Bomb
 public:
 
     using BlastHandler = std::function<void(
-        vec2f const & position, 
+        vec2f const & blastPosition,
         ConnectedComponentId connectedComponentId, 
-        float blastRadiusAdjustment)>;
+        int blastSequenceNumber,
+        int blastSequenceCount,
+        GameParameters const & gameParameters)>;
 
 public:
 
@@ -39,7 +42,9 @@ public:
      *
      * Returns false when the bomb has "expired" and thus can be deleted.
      */
-    virtual bool Update(GameWallClock::time_point now) = 0;
+    virtual bool Update(
+        GameWallClock::time_point now,
+        GameParameters const & gameParameters) = 0;
 
     /*
     * Returns the scale to use for the next render step.
@@ -62,7 +67,7 @@ public:
     /*
      * Returns the position of this bomb.
      */
-    vec2f const & GetPosition() const
+    virtual vec2f const GetPosition() const
     {
         if (!!mPosition)
             return *mPosition;

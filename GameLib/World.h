@@ -18,7 +18,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <random>
 #include <set>
 #include <vector>
 
@@ -109,9 +108,6 @@ private:
     // The current step sequence number; used to avoid zero-ing out things.
     // Guaranteed to never be zero, but expected to rollover
     uint64_t mCurrentStepSequenceNumber;
-
-    // Our random generator
-    std::ranlux48_base mRandomEngine;
 
     // The game event handler
     std::shared_ptr<IGameEventHandler> mGameEventHandler;

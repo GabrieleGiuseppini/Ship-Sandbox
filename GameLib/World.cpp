@@ -7,6 +7,7 @@
 ***************************************************************************************/
 #include "Physics.h"
 
+#include "GameRandomEngine.h"
 #include "ShipBuilder.h"
 
 #include <algorithm>
@@ -35,10 +36,6 @@ World::World(
     , mCurrentStepSequenceNumber(1u)
     , mGameEventHandler(std::move(gameEventHandler))
 {
-    // Initialize random engine
-    std::seed_seq seed_seq({1, 242, 19730528});
-    mRandomEngine = std::ranlux48_base(seed_seq);
-
     // Initialize clouds
     UpdateClouds(gameParameters);
 
@@ -256,21 +253,20 @@ void World::UpdateClouds(GameParameters const & gameParameters)
     }
     else
     {
-        std::uniform_real_distribution<float> dis(0.0f, 1.0f);
         for (size_t c = mAllClouds.size(); c < gameParameters.NumberOfClouds; ++c)
         {
             mAllClouds.emplace_back(
                 new Cloud(
-                    dis(mRandomEngine) * 100.0f,    // OffsetX
-                    dis(mRandomEngine) * 0.01f,      // SpeedX1
-                    dis(mRandomEngine) * 0.04f,     // AmpX
-                    dis(mRandomEngine) * 0.01f,     // SpeedX2
-                    dis(mRandomEngine) * 100.0f,    // OffsetY
-                    dis(mRandomEngine) * 0.001f,    // AmpY
-                    dis(mRandomEngine) * 0.005f,     // SpeedY
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 100.0f,    // OffsetX
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 0.01f,      // SpeedX1
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 0.04f,     // AmpX
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 0.01f,     // SpeedX2
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 100.0f,    // OffsetY
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 0.001f,    // AmpY
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 0.005f,     // SpeedY
                     0.2f + static_cast<float>(c) / static_cast<float>(c + 3), // OffsetScale - the earlier clouds are smaller
-                    dis(mRandomEngine) * 0.05f,     // AmpScale
-                    dis(mRandomEngine) * 0.005f));    // SpeedScale
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 0.05f,     // AmpScale
+                    GameRandomEngine::GetInstance().GenerateRandomNormalReal() * 0.005f));    // SpeedScale
         }
     }
 

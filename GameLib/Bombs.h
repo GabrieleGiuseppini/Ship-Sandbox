@@ -88,17 +88,17 @@ private:
             {
                 // Found a bomb
 
-                // Detach it from the point, if it's attached
-                (*it)->DetachFromPointIfAttached(gameParameters);
-
-                // Remove from set of bombs - forget about it
-                mCurrentBombs.erase(it);
-
-                // Notify
+                // Notify its removal
                 mGameEventHandler->OnBombRemoved(
                     (*it)->GetType(),
                     mParentWorld.IsUnderwater(
                         (*it)->GetPosition()));
+
+                // Detach it from its point, if it's attached
+                (*it)->DetachFromPointIfAttached(gameParameters);
+
+                // Remove from set of bombs - forget about it
+                mCurrentBombs.erase(it);
 
                 // We're done
                 return true;
@@ -162,14 +162,14 @@ private:
             mCurrentBombs.emplace(
                 [this, &gameParameters](std::unique_ptr<Bomb> const & purgedBomb)
                 {
-                    // Detach bomb from its point, if it's attached
-                    purgedBomb->DetachFromPointIfAttached(gameParameters);
-
-                    // Notify
+                    // Notify its removal
                     mGameEventHandler->OnBombRemoved(
                         purgedBomb->GetType(),
                         mParentWorld.IsUnderwater(
                             purgedBomb->GetPosition()));
+
+                    // Detach bomb from its point, if it's attached
+                    purgedBomb->DetachFromPointIfAttached(gameParameters);
                 },
                 std::move(bomb));
 

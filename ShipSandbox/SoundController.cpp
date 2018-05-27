@@ -6,6 +6,7 @@
 #include "SoundController.h"
 
 #include <GameLib/GameException.h>
+#include <GameLib/GameRandomEngine.h>
 #include <GameLib/Log.h>
 #include <GameLib/Material.h>
 
@@ -25,13 +26,6 @@ SoundController::SoundController(
     , mCurrentlyPlayingSounds()
     , mSinkingMusic()
 {    
-    //
-    // Initialize random engine
-    //
-
-    std::seed_seq seed_seq({ 1, 242, 19730528 });
-    mRandomEngine = std::ranlux48_base(seed_seq);
-
     //
     // Initialize Music
     //
@@ -359,12 +353,15 @@ void SoundController::OnBombPlaced(
 
 void SoundController::OnBombRemoved(
     BombType /*bombType*/,
-    bool isUnderwater)
+    std::optional<bool> isUnderwater)
 {
-    PlayUSound(
-        SoundType::BombDetached, 
-        isUnderwater,
-        100.0f);
+    if (!!isUnderwater)
+    {
+        PlayUSound(
+            SoundType::BombDetached,
+            *isUnderwater,
+            100.0f);
+    }
 }
 
 void SoundController::OnBombExplosion(
@@ -535,17 +532,14 @@ void SoundController::ChooseAndPlaySound(
     {
         assert(soundInfo.SoundBuffers.size() >= 2);
 
-        // Avoid choosing the last-chosen sound again
-        std::uniform_int_distribution<size_t> dis(0, soundInfo.SoundBuffers.size() - 2);
-        size_t soundIndex = dis(mRandomEngine);
-        if (soundIndex >= soundInfo.LastPlayedSoundIndex)
-        {
-            ++soundIndex;
-        }
+        // Choose randomly, but avoid choosing the last-chosen sound again
+        size_t chosenSoundIndex = GameRandomEngine::GetInstance().ChooseNew(
+            soundInfo.SoundBuffers.size(), 
+            soundInfo.LastPlayedSoundIndex);
 
-        chosenSoundBuffer = soundInfo.SoundBuffers[soundIndex].get();
+        chosenSoundBuffer = soundInfo.SoundBuffers[chosenSoundIndex].get();
 
-        soundInfo.LastPlayedSoundIndex = soundIndex;
+        soundInfo.LastPlayedSoundIndex = chosenSoundIndex;
     }
 
     assert(nullptr != chosenSoundBuffer);

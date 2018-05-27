@@ -8,6 +8,8 @@
 #include "GameTypes.h"
 #include "Material.h"
 
+#include <optional>
+
 /*
  * This interface defines the methods that game event handlers must implement.
  *
@@ -88,7 +90,7 @@ public:
 
     virtual void OnBombRemoved(
         BombType /*bombType*/,
-        bool /*isUnderwater*/)
+        std::optional<bool> /*isUnderwater*/)
     {
         // Default-implemented
     }

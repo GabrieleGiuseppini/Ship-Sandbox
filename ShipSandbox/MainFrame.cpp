@@ -222,15 +222,15 @@ MainFrame::MainFrame(wxApp * mainApp)
 	toolsMenu->Append(grabMenuItem);	
 	Connect(ID_GRAB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnGrabMenuItemSelected);
 
-    wxMenuItem * pinMenuItem = new wxMenuItem(toolsMenu, ID_PIN_MENUITEM, _("Pin\tP"), wxEmptyString, wxITEM_RADIO);
+    wxMenuItem * pinMenuItem = new wxMenuItem(toolsMenu, ID_PIN_MENUITEM, _("Toggle Pin\tP"), wxEmptyString, wxITEM_RADIO);
     toolsMenu->Append(pinMenuItem);
     Connect(ID_PIN_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnPinMenuItemSelected);
 
-    wxMenuItem * timerBombMenuItem = new wxMenuItem(toolsMenu, ID_TIMERBOMB_MENUITEM, _("Place Timer Bomb\tT"), wxEmptyString, wxITEM_RADIO);
+    wxMenuItem * timerBombMenuItem = new wxMenuItem(toolsMenu, ID_TIMERBOMB_MENUITEM, _("Toggle Timer Bomb\tT"), wxEmptyString, wxITEM_RADIO);
     toolsMenu->Append(timerBombMenuItem);
     Connect(ID_TIMERBOMB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnTimerBombMenuItemSelected);
 
-    wxMenuItem * rcBombMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMB_MENUITEM, _("Place RC Bomb\tR"), wxEmptyString, wxITEM_RADIO);
+    wxMenuItem * rcBombMenuItem = new wxMenuItem(toolsMenu, ID_RCBOMB_MENUITEM, _("Toggle RC Bomb\tR"), wxEmptyString, wxITEM_RADIO);
     toolsMenu->Append(rcBombMenuItem);
     Connect(ID_RCBOMB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnRCBombMenuItemSelected);
 

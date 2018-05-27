@@ -165,7 +165,7 @@ private:
 
     virtual void OnBombRemoved(
         BombType bombType,
-        bool /*isUnderwater*/) override
+        std::optional<bool> /*isUnderwater*/) override
     {
         if (BombType::RCBomb == bombType)
         {

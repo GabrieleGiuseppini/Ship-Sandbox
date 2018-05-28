@@ -19,6 +19,8 @@ static constexpr auto ExplosionProgressInterval = 20ms;
 
 static constexpr uint8_t ExplosionPhaseCount = 8;
 
+static constexpr int PingFramesCount = 4;
+
 RCBomb::RCBomb(
     ElementContainer::ElementIndex pointIndex,
     World & parentWorld,
@@ -69,7 +71,7 @@ bool RCBomb::Update(
                         1);
 
                     // Set frame index
-                    mCurrentFrameIndex = 1 + ((mCurrentPingPhase % 8) / 2);
+                    mCurrentFrameIndex = 1 + ((mCurrentPingPhase % (2 * PingFramesCount)) / 2);
 
                     // Calculate next progress time
                     mNextPingProgressTimePoint = now + SlowPingOnInterval;
@@ -107,6 +109,11 @@ bool RCBomb::Update(
                 // its blast)
                 DetachFromPointIfAttached();
 
+                // Notify explosion
+                mGameEventHandler->OnBombExplosion(
+                    mParentWorld.IsUnderwater(GetPosition()),
+                    1);
+
                 //
                 // Initiate explosion state machine
                 //
@@ -129,7 +136,7 @@ bool RCBomb::Update(
                         1);
 
                     // Set frame index
-                    mCurrentFrameIndex = 1 + (mCurrentPingPhase % 4);
+                    mCurrentFrameIndex = 1 + (mCurrentPingPhase % PingFramesCount);
 
                     // Get to new ping phase
                     ++mCurrentPingPhase;
@@ -162,14 +169,6 @@ bool RCBomb::Update(
         {
             if (now > mNextExplosionProgressTimePoint)
             {
-                if (0 == mCurrentExplosionPhase)
-                {
-                    // Notify explosion
-                    mGameEventHandler->OnBombExplosion(
-                        mParentWorld.IsUnderwater(GetPosition()),
-                        1);
-                }
-
                 // Invoke blast handler
                 mBlastHandler(
                     GetPosition(),
@@ -179,7 +178,7 @@ bool RCBomb::Update(
                     gameParameters);
 
                 // Set frame index
-                mCurrentFrameIndex = 5 + mCurrentExplosionPhase;
+                mCurrentFrameIndex = 1 + PingFramesCount + mCurrentExplosionPhase;
 
                 // Increment explosion phase
                 ++mCurrentExplosionPhase;
@@ -208,6 +207,11 @@ bool RCBomb::Update(
 
     assert(false);
     return true;
+}
+
+float RCBomb::GetRenderScale() const 
+{
+    return 1.0f + static_cast<float>(mCurrentExplosionPhase + 1) / static_cast<float>(ExplosionPhaseCount);
 }
 
 void RCBomb::Detonate()

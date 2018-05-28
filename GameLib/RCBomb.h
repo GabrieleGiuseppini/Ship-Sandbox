@@ -35,12 +35,7 @@ public:
         Detonate();
     }
 
-    virtual float GetRenderScale() const override
-    {
-        // TODOTEST
-        //return 1.0f;
-        return 1.0f + static_cast<float>(mCurrentExplosionPhase + 1) / 8.0f;
-    }
+    virtual float GetRenderScale() const override;
 
     virtual uint32_t GetRenderFrameIndex() const override
     {
@@ -51,7 +46,6 @@ public:
     {
         return Bomb::GetPosition() + mCurrentShakeOffset;
     }
-
 
     void Detonate();
 

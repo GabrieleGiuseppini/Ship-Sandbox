@@ -188,15 +188,18 @@ Prev perf (before point et al destructuring)
 			  collection (and from point indirectly via Bomb::Destroy which, if attached to point, calls Points::Detach)
 				 
 		= Impl:
+			- Todo:
+				- Test underwater explosion sound
+				- Move Upload(RenderContext &) to Bomb, virtual
+					- Get rid of now useless virtual funcs
+					- RenderContext gets bool isExplosion
+						- When set, ambient light parameter is set to 1.0
 			- TEST: bombs are attached to springs instead of points
 				- Move isAttached buffer from Points to Springs
 				- Bomb position becomes positionA and positionB (bomb attached across)
 					- Also BlastHandler argument is positionA and positionB
 					- Blast calculated's by ship from middle point
 				
-			- Misc
-				- Check if current blast radius looks good (3.0 was fine)
-
 			= Bomb base class, w/type enum
 				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
 					+ Runs state machine with local clock
@@ -205,12 +208,12 @@ Prev perf (before point et al destructuring)
 					+ Returns false when needs to be deleted
 				+ GetRenderFrameIndex() -> size_t
 					+ Specialized for state machines
-				- NeighborhoodDisturbed() = 0
-					- Invoked when needs to explode because own or near point is disturbed
+				+ NeighborhoodDisturbed() = 0
+					+ Invoked when needs to explode because own or near point is disturbed
 					- TimerBomb: 
 						- Only if state machine duration < own time left
-					- RCBomb:
-						- Equivalent to RCDetonate()
+					+ RCBomb:
+						+ Equivalent to RCDetonate()
 			= Two subclasses - TimerBomb and RCBomb
 				= RCBomb:
 					+ RCBomb::Detonate(): input to state machine
@@ -218,7 +221,7 @@ Prev perf (before point et al destructuring)
 						+ Basics
 						= Explosion
 							- Decide whether to shake or not
-					- Finalize GetArea(): decide if new enlarged explosion looks good
+					+ Finalize GetArea(): decide if new enlarged explosion looks good
 				- TimerBomb:
 					- Update()
 			= Bombs class

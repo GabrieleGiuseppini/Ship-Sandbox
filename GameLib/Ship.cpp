@@ -59,15 +59,16 @@ Ship::Ship(
             int blastSequenceNumber,
             int blastSequenceCount,
             GameParameters const & gameParameters)
-        {
-            this->BombBlastHandler(
-                position, 
-                connectedComponentId,
-                blastSequenceNumber,
-                blastSequenceCount,
-                gameParameters);
-        },        
-        mPoints)
+            {
+                this->BombBlastHandler(
+                    position, 
+                    connectedComponentId,
+                    blastSequenceNumber,
+                    blastSequenceCount,
+                    gameParameters);
+            },        
+        mPoints,
+        mSprings)
     , mCurrentDrawForce(std::nullopt)
 {
     // Set destroy handlers
@@ -1004,6 +1005,8 @@ void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)
         mArePinnedPointsDirty = true;
     }
 
+    // Notify bombs
+    mBombs.OnPointDestroyed(pointElementIndex);
 
     //
     // Notify point destruction
@@ -1065,6 +1068,9 @@ void Ship::SpringDestroyHandler(ElementContainer::ElementIndex springElementInde
         // Remember we have to re-upload the pinned points
         mArePinnedPointsDirty = true;
     }
+
+    // Notify bombs
+    mBombs.OnSpringDestroyed(springElementIndex);
 
     // Remember our elements are now dirty
     mAreElementsDirty = true;

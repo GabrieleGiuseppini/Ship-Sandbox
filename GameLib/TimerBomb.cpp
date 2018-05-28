@@ -15,4 +15,9 @@ bool TimerBomb::Update(
     return false;
 }
 
+void TimerBomb::OnNeighborhoodDisturbed()
+{
+    // TODO
+}
+
 }

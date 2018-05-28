@@ -431,9 +431,7 @@ public:
         mMassBuffer[pointElementIndex] = mMaterialBuffer[pointElementIndex]->Mass + gameParameters.BombMass;
     }
 
-    void DetachBomb(
-        ElementIndex pointElementIndex,
-        GameParameters const & /*gameParameters*/)
+    void DetachBomb(ElementIndex pointElementIndex)
     {
         assert(pointElementIndex < mElementCount);
         assert(true == mIsBombAttachedBuffer[pointElementIndex]);

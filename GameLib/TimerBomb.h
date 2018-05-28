@@ -22,19 +22,21 @@ public:
         World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         BlastHandler blastHandler,
-        Points & points)
+        Points & shipPoints)
         : Bomb(
             BombType::TimerBomb,
             pointIndex,
             parentWorld,
             std::move(gameEventHandler),
             blastHandler,
-            points)
+            shipPoints)
     {}
 
     virtual bool Update(
         GameWallClock::time_point now,
         GameParameters const & gameParameters) override;
+
+    virtual void OnNeighborhoodDisturbed() override;
 
     virtual float GetRenderScale() const override
     {

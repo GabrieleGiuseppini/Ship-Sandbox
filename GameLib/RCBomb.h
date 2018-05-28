@@ -30,10 +30,16 @@ public:
         GameWallClock::time_point now,
         GameParameters const & gameParameters) override;
 
+    virtual void OnNeighborhoodDisturbed() override
+    {
+        Detonate();
+    }
+
     virtual float GetRenderScale() const override
     {
-        // TODO
-        return 1.0f;
+        // TODOTEST
+        //return 1.0f;
+        return 1.0f + static_cast<float>(mCurrentExplosionPhase + 1) / 8.0f;
     }
 
     virtual uint32_t GetRenderFrameIndex() const override

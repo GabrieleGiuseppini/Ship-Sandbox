@@ -24,14 +24,14 @@ RCBomb::RCBomb(
     World & parentWorld,
     std::shared_ptr<IGameEventHandler> gameEventHandler,
     BlastHandler blastHandler,
-    Points & points)
+    Points & shipPoints)
     : Bomb(
         BombType::RCBomb,
         pointIndex,
         parentWorld,
         std::move(gameEventHandler),
         blastHandler,
-        points)
+        shipPoints)
     , mCurrentState(State::Idle)
     , mCurrentFrameIndex(0)
     , mCurrentPingPhase(0) 
@@ -105,7 +105,7 @@ bool RCBomb::Update(
 
                 // Detach self (or else explosion will move along with ship performing
                 // its blast)
-                DetachFromPointIfAttached(gameParameters);
+                DetachFromPointIfAttached();
 
                 //
                 // Initiate explosion state machine
@@ -179,8 +179,7 @@ bool RCBomb::Update(
                     gameParameters);
 
                 // Set frame index
-                // TODO
-                //mCurrentFrameIndex = 1 + ((mCurrentExplosionPhase % 8) / 2);
+                mCurrentFrameIndex = 5 + mCurrentExplosionPhase;
 
                 // Increment explosion phase
                 ++mCurrentExplosionPhase;

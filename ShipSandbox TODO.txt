@@ -191,8 +191,12 @@ Prev perf (before point et al destructuring)
 			- TEST: bombs are attached to springs instead of points
 				- Move isAttached buffer from Points to Springs
 				- Bomb position becomes positionA and positionB (bomb attached across)
-					- Blast cald's from middle point
+					- Also BlastHandler argument is positionA and positionB
+					- Blast calculated's by ship from middle point
 				
+			- Misc
+				- Check if current blast radius looks good (3.0 was fine)
+
 			= Bomb base class, w/type enum
 				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
 					+ Runs state machine with local clock
@@ -210,11 +214,13 @@ Prev perf (before point et al destructuring)
 			= Two subclasses - TimerBomb and RCBomb
 				= RCBomb:
 					+ RCBomb::Detonate(): input to state machine
-					= Update:
+					= Update():
 						+ Basics
-						- Explosion
+						= Explosion
+							- Decide whether to shake or not
+					- Finalize GetArea(): decide if new enlarged explosion looks good
 				- TimerBomb:
-					- Update
+					- Update()
 			= Bombs class
 				+ Not ElementContainer, just manager
 				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &
@@ -229,12 +235,17 @@ Prev perf (before point et al destructuring)
 					+ Calls Detonate() at each RCBomb
 				+ Upload(RenderContext)
 					+ Always upload all bombs, each w/current render frame index
-				- OnPointDestroyed(idx)
-					- TODO: spell out the following:
-					- Checks if point has bomb attached; if so detaches bomb from it (and NeighborhoodDisturbed())
-					- Does proximity check
-				- OnSpringDestroyed(idx)
-					- Proximity check
+				+ OnPointDestroyed(idx)
+					+ For each bomb:
+						+ If bomb is attached to this point:
+							+ Detach bomb from point
+						+ If bomb within (new, smaller) radius from point:
+							+ Call bomb->NeighborhoodDisturbed()
+				+ OnSpringDestroyed(idx)
+					+ Bombs also takes Springs
+					+ For each bomb:
+						+ If bomb within radius (new GameParameters parameter, smaller) from spring mid-point:
+							+ Call bomb->NeighborhoodDisturbed()
 
 			+ Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
 				+ Also changes mass (just at point, for gravity only...)				
@@ -242,25 +253,25 @@ Prev perf (before point et al destructuring)
 
 			= Events:
 				+ OnRCBombPlaced/Removed(size, underwater): used by MainFrame to enable/disable detonation menu item
+					+ Also invoked when explodes
 				- OnTimerBombPlaced/Removed(size, underwater): used by SoundController to start/stop and set volume
 				  of RC bomb sound
 					- Also invoked when explodes
 				+ OnBombDetonated(size): used by SoundController 
 				+ OnRCBombPing(size): used by SoundController 
 
-			= Ship implements:
+			+ Ship implements:
 				+ ToggleTimer/RCBombAt(position)
 					+ FW to Bombs
 				+ DetonateRCBombs()
 					+ FW to Bombs
 				+ @Update(): invokes Bombs::Update() w/handler
 					+ After spring stress check, so explosion is visible before it breaks things up
-				+ @Render(): invokes Bombs::Upload(RenderContext)
-				
-				- Ship::PointDestroyHandler: 
-					- Bombs::OnPointDestroyed(idx)
-				- Ship::SpringDestroyHandler: 
-					- Bombs::OnSpringDestroyed(idx)
+				+ @Render(): invokes Bombs::Upload(RenderContext)				
+				+ Ship::PointDestroyHandler: 
+					+ Bombs::OnPointDestroyed(idx)
+				+ Ship::SpringDestroyHandler: 
+					+ Bombs::OnSpringDestroyed(idx)
 
 			= RenderContext:
 				= RenderContext:
@@ -283,19 +294,21 @@ Prev perf (before point et al destructuring)
 
 			- Media:
 				+ TimerBomb cursor
-				- RCBomb cursor
+				+ RCBomb cursor
 				- TimerBomb textures:
-					- TODO
-				- RCBomb textures:
+					- Base
+						- With fuse burning
+					- Explosion frames
+				+ RCBomb textures:
 					+ Base
 					+ Pings
-					- Center
-					- Add explosion frames
+					+ Center
+					+ Explosion frames
 				+ Bomb explosion sounds
 					+ N1 normal, N2 underwater
 				+ RCBomb ping sounds
 					+ 1 normal, 1 underwater
-				- TimerBomb sounds 
+				- TimerBomb fuse sound
 					- 1 normal, 1 underwater (fuse burning, continuous)
 				+ Bomb placed sounds
 					+ N1 normal, N2 underwater

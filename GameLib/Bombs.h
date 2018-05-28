@@ -33,15 +33,21 @@ public:
         World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         Bomb::BlastHandler blastHandler,
-        Points & points)
+        Points & shipPoints,
+        Springs & shipSprings)
         : mParentWorld(parentWorld)
         , mGameEventHandler(std::move(gameEventHandler))
         , mBlastHandler(blastHandler)
-        , mPoints(points)
+        , mShipPoints(shipPoints)
+        , mShipSprings(shipSprings)
     {
     }
 
     void Update(GameParameters const & gameParameters);
+
+    void OnPointDestroyed(ElementContainer::ElementIndex pointElementIndex);
+
+    void OnSpringDestroyed(ElementContainer::ElementIndex springElementIndex);
 
     bool ToggleTimerBombAt(
         vec2 const & targetPos,
@@ -95,7 +101,7 @@ private:
                         (*it)->GetPosition()));
 
                 // Detach it from its point, if it's attached
-                (*it)->DetachFromPointIfAttached(gameParameters);
+                (*it)->DetachFromPointIfAttached();
 
                 // Remove from set of bombs - forget about it
                 mCurrentBombs.erase(it);
@@ -115,11 +121,11 @@ private:
         ElementContainer::ElementIndex nearestUnarmedPointIndex = ElementContainer::NoneElementIndex;
         float nearestUnarmedPointDistance = std::numeric_limits<float>::max();
 
-        for (auto pointIndex : mPoints)
+        for (auto pointIndex : mShipPoints)
         {
-            if (!mPoints.IsDeleted(pointIndex) && !mPoints.IsBombAttached(pointIndex))
+            if (!mShipPoints.IsDeleted(pointIndex) && !mShipPoints.IsBombAttached(pointIndex))
             {
-                float squareDistance = (mPoints.GetPosition(pointIndex) - targetPos).squareLength();
+                float squareDistance = (mShipPoints.GetPosition(pointIndex) - targetPos).squareLength();
                 if (squareDistance < squareSearchRadius)
                 {
                     // This point is within the search radius
@@ -145,10 +151,10 @@ private:
                     mParentWorld,
                     mGameEventHandler,
                     mBlastHandler,
-                    mPoints));
+                    mShipPoints));
 
             // Attach bomb to the point
-            mPoints.AttachBomb(
+            mShipPoints.AttachBomb(
                 nearestUnarmedPointIndex,
                 gameParameters);
 
@@ -169,7 +175,7 @@ private:
                             purgedBomb->GetPosition()));
 
                     // Detach bomb from its point, if it's attached
-                    purgedBomb->DetachFromPointIfAttached(gameParameters);
+                    purgedBomb->DetachFromPointIfAttached();
                 },
                 std::move(bomb));
 
@@ -193,7 +199,10 @@ private:
     Bomb::BlastHandler const mBlastHandler;
     
     // The container of all the ship's points
-    Points & mPoints;
+    Points & mShipPoints;
+
+    // The container of all the ship's springs
+    Springs & mShipSprings;
 
     // The current set of bombs
     CircularList<std::unique_ptr<Bomb>, GameParameters::MaxBombs> mCurrentBombs;

@@ -47,6 +47,12 @@ public:
         GameParameters const & gameParameters) = 0;
 
     /*
+     * Invoked when the neighborhood of the point has been disturbed;
+     * includes the point that the bomb is attached to.
+     */
+    virtual void OnNeighborhoodDisturbed() = 0;
+
+    /*
     * Returns the scale to use for the next render step.
     */
     virtual float GetRenderScale() const = 0;
@@ -65,6 +71,15 @@ public:
     }
 
     /*
+     * Gets the point that the bomb is attached to, or none if the bomb is not
+     * attached to any points/
+     */
+    std::optional<ElementContainer::ElementIndex> GetAttachedPointIndex() const
+    {
+        return mPointIndex;
+    }
+
+    /*
      * Returns the position of this bomb.
      */
     virtual vec2f const GetPosition() const
@@ -74,7 +89,7 @@ public:
         else
         {
             assert(!!mPointIndex);
-            return mPoints.GetPosition(*mPointIndex);
+            return mShipPoints.GetPosition(*mPointIndex);
         }
     }
 
@@ -88,7 +103,7 @@ public:
         else
         {
             assert(!!mPointIndex);
-            return mPoints.GetConnectedComponentId(*mPointIndex);
+            return mShipPoints.GetConnectedComponentId(*mPointIndex);
         }
     }
 
@@ -96,15 +111,15 @@ public:
      * If the point is attached, saves its current position and detaches itself from the Points container;
      * otherwise, it's a nop.
      */
-    void DetachFromPointIfAttached(GameParameters const & gameParameters)
+    void DetachFromPointIfAttached()
     {
         if (!!mPointIndex)
         {
             assert(mPoints.IsBombAttached(*mPointIndex));
 
-            mPoints.DetachBomb(*mPointIndex, gameParameters);
-            mPosition = mPoints.GetPosition(*mPointIndex);
-            mConnectedComponentId = mPoints.GetConnectedComponentId(*mPointIndex);
+            mShipPoints.DetachBomb(*mPointIndex);
+            mPosition = mShipPoints.GetPosition(*mPointIndex);
+            mConnectedComponentId = mShipPoints.GetConnectedComponentId(*mPointIndex);
             mPointIndex.reset();
         }
         else
@@ -122,11 +137,11 @@ protected:
         World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         BlastHandler blastHandler,
-        Points & points)
+        Points & shipPoints)
         : mParentWorld(parentWorld)
         , mGameEventHandler(std::move(gameEventHandler))
         , mBlastHandler(blastHandler)
-        , mPoints(points)
+        , mShipPoints(shipPoints)
         , mType(type)
         , mPointIndex(pointIndex)
         , mPosition(std::nullopt)
@@ -144,7 +159,7 @@ protected:
     BlastHandler mBlastHandler;
 
     // The container of all the ship's points
-    Points & mPoints;
+    Points & mShipPoints;
 
 private:
 

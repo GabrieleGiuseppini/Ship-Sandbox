@@ -14,7 +14,7 @@ namespace Physics {
 static constexpr auto SlowPingOffInterval = 750ms;
 static constexpr auto SlowPingOnInterval = 250ms;
 static constexpr auto FastPingInterval = 125ms;
-static constexpr auto DetonationLeadInToDetonationInterval = 2000ms;
+static constexpr auto DetonationLeadInToDetonationInterval = 1500ms;
 static constexpr auto ExplosionProgressInterval = 20ms;
 
 static constexpr uint8_t ExplosionPhaseCount = 8;

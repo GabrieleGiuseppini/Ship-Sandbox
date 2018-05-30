@@ -7,8 +7,6 @@
 
 #include "GameException.h"
 
-#include <cstring>
-
 ShipRenderContext::ShipRenderContext(
     std::optional<ImageData> texture,
     vec3f const & ropeColour,

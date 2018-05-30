@@ -108,16 +108,7 @@ void Bombs::Upload(
 
     for (auto & bomb : mCurrentBombs)
     {
-        auto const & position = bomb->GetPosition();
-
-        renderContext.UploadShipElementBomb(
-            shipId,
-            position.x,
-            position.y,            
-            bomb->GetRenderScale(),
-            bomb->GetType(),            
-            bomb->GetRenderFrameIndex(),            
-            bomb->GetConnectedComponentId());
+        bomb->Upload(shipId, renderContext);
     }
 
     renderContext.UploadShipElementBombsEnd(shipId);

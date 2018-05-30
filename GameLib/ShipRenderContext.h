@@ -8,6 +8,7 @@
 #include "GameOpenGL.h"
 #include "GameTypes.h"
 #include "ImageData.h"
+#include "RotatedTextureFrameRenderInfo.h"
 #include "SysSpecifics.h"
 #include "Vectors.h"
 
@@ -220,11 +221,8 @@ public:
     void UploadElementBombsStart(size_t count);
 
     inline void UploadElementBomb(
-        float bombX,
-        float bombY,
-        float scale,
         BombType bombType,
-        uint32_t frameIndex,
+        RotatedTextureFrameRenderInfo const & frameRenderInfo,
         ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
@@ -247,28 +245,25 @@ public:
         static constexpr float textureTileW = 12.0f;
         static constexpr float textureTileH = 12.0f;
 
-        float leftX = bombX - textureTileW * scale / 2.0f;
-        float rightX = bombX + textureTileW * scale / 2.0f;
-        float topY = bombY - textureTileH * scale / 2.0f;
-        float bottomY = bombY + textureTileH * scale / 2.0f;
-
-        bombElement.xTopLeft = leftX;
-        bombElement.yTopLeft = topY;
+        RotatedRectangle frameRect = frameRenderInfo.CalculateRotatedRectangle(textureTileW, textureTileH);
+        
+        bombElement.xTopLeft = frameRect.TopLeft.x;
+        bombElement.yTopLeft = frameRect.TopLeft.y;
         bombElement.textureXTopLeft = 0.0f;
         bombElement.textureYTopLeft = 0.0f;
 
-        bombElement.xBottomLeft = leftX;
-        bombElement.yBottomLeft = bottomY;
+        bombElement.xBottomLeft = frameRect.BottomLeft.x;
+        bombElement.yBottomLeft = frameRect.BottomLeft.y;
         bombElement.textureXBottomLeft = 0.0f;
         bombElement.textureYBottomLeft = 1.0f;
 
-        bombElement.xTopRight = rightX;
-        bombElement.yTopRight = topY;
+        bombElement.xTopRight = frameRect.TopRight.x;
+        bombElement.yTopRight = frameRect.TopRight.y;
         bombElement.textureXTopRight = 1.0f;
         bombElement.textureYTopRight = 0.0f;
 
-        bombElement.xBottomRight = rightX;
-        bombElement.yBottomRight = bottomY;
+        bombElement.xBottomRight = frameRect.BottomRight.x;
+        bombElement.yBottomRight = frameRect.BottomRight.y;
         bombElement.textureXBottomRight = 1.0f;
         bombElement.textureYBottomRight = 1.0f;
 
@@ -279,7 +274,7 @@ public:
 
         mConnectedComponents[connectedComponentIndex].bombElementInfos.emplace_back(
             bombType,
-            frameIndex);
+            frameRenderInfo.FrameIndex);
        
 
         //

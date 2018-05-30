@@ -38,18 +38,9 @@ public:
 
     virtual void OnNeighborhoodDisturbed() override;
 
-    virtual float GetRenderScale() const override
-    {
-        // TODO
-        return 1.0f;
-    }
-
-    virtual uint32_t GetRenderFrameIndex() const override
-    {
-        // TODO
-        return 0;
-    }
-
+    virtual void Upload(
+        int shipId,
+        RenderContext & renderContext) const override;
 
 private:
 };

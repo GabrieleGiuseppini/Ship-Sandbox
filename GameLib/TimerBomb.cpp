@@ -20,4 +20,11 @@ void TimerBomb::OnNeighborhoodDisturbed()
     // TODO
 }
 
+void TimerBomb::Upload(
+    int shipId,
+    RenderContext & renderContext) const
+{
+    // TODO
+}
+
 }

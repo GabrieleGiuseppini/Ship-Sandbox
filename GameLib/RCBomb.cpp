@@ -7,19 +7,7 @@
 
 #include "GameRandomEngine.h"
 
-using namespace std::chrono_literals;
-
 namespace Physics {
-
-static constexpr auto SlowPingOffInterval = 750ms;
-static constexpr auto SlowPingOnInterval = 250ms;
-static constexpr auto FastPingInterval = 125ms;
-static constexpr auto DetonationLeadInToDetonationInterval = 1500ms;
-static constexpr auto ExplosionProgressInterval = 20ms;
-
-static constexpr uint8_t ExplosionPhaseCount = 8;
-
-static constexpr int PingFramesCount = 4;
 
 RCBomb::RCBomb(
     ElementContainer::ElementIndex pointIndex,
@@ -34,15 +22,12 @@ RCBomb::RCBomb(
         std::move(gameEventHandler),
         blastHandler,
         shipPoints)
-    , mCurrentState(State::Idle)
-    , mCurrentFrameIndex(0)
-    , mCurrentPingPhase(0) 
-    , mNextPingProgressTimePoint(GameWallClock::GetInstance().Now() + SlowPingOffInterval)
-    , mDetonationTimePoint(GameWallClock::time_point::min())
-    , mCurrentShakeOffset(0.0f, 0.0f)
-    , mCurrentShakeOffsetIndex(static_cast<uint8_t>(GameRandomEngine::GetInstance().Choose(4)))
-    , mCurrentExplosionPhase(0)
-    , mNextExplosionProgressTimePoint(GameWallClock::time_point::min())
+    , mState(State::IdlePingOff)
+    , mNextStateTransitionTimePoint(GameWallClock::GetInstance().Now() + SlowPingOffInterval)
+    , mExplosionTimePoint(GameWallClock::time_point::min())
+    , mIdlePingOnStepCounter(0u)
+    , mDetonationLeadInStepCounter(0u)
+    , mExplodingStepCounter(0u)
 {
 }
 
@@ -50,44 +35,43 @@ bool RCBomb::Update(
     GameWallClock::time_point now,
     GameParameters const & gameParameters)
 {
-    switch (mCurrentState)
+    switch (mState)
     {
-        case State::Idle:
+        case State::IdlePingOff:
         {
-            if (now > mNextPingProgressTimePoint)
+            if (now > mNextStateTransitionTimePoint)
             {
-                // Get to new ping phase
-                ++mCurrentPingPhase;
+                //
+                // Transition to PingOn state
+                //
 
-                if (0 != (mCurrentPingPhase % 2))
-                {
-                    //
-                    // Ping on
-                    //
+                mState = State::IdlePingOn;
 
-                    // Notify
-                    mGameEventHandler->OnRCBombPing(
-                        mParentWorld.IsUnderwater(GetPosition()),
-                        1);
+                ++mIdlePingOnStepCounter;
 
-                    // Set frame index
-                    mCurrentFrameIndex = 1 + ((mCurrentPingPhase % (2 * PingFramesCount)) / 2);
+                mGameEventHandler->OnRCBombPing(
+                    mParentWorld.IsUnderwater(GetPosition()),
+                    1);
+               
+                // Schedule next transition
+                mNextStateTransitionTimePoint = now + SlowPingOnInterval;
+            }
 
-                    // Calculate next progress time
-                    mNextPingProgressTimePoint = now + SlowPingOnInterval;
-                }
-                else
-                {
-                    //
-                    // Ping off
-                    //
+            return true;
+        }
 
-                    // Set frame index
-                    mCurrentFrameIndex = 0;
+        case State::IdlePingOn:
+        {
+            if (now > mNextStateTransitionTimePoint)
+            {
+                //
+                // Transition to PingOff state
+                //
 
-                    // Calculate next progress time
-                    mNextPingProgressTimePoint = now + SlowPingOffInterval;
-                }
+                mState = State::IdlePingOff;
+
+                // Schedule next transition
+                mNextStateTransitionTimePoint = now + SlowPingOffInterval;
             }
 
             return true;
@@ -96,14 +80,13 @@ bool RCBomb::Update(
         case State::DetonationLeadIn:
         {
             // Check if time to explode
-            if (now > mDetonationTimePoint)
+            if (now > mExplosionTimePoint)
             {
                 //
-                // Initiate explosion
+                // Transition to Exploding state
                 //
 
-                // Reset shaking
-                mCurrentShakeOffset = vec2f(0.0f, 0.0f);
+                TransitionToExploding(now, gameParameters);
 
                 // Detach self (or else explosion will move along with ship performing
                 // its blast)
@@ -113,86 +96,36 @@ bool RCBomb::Update(
                 mGameEventHandler->OnBombExplosion(
                     mParentWorld.IsUnderwater(GetPosition()),
                     1);
-
-                //
-                // Initiate explosion state machine
-                //
-
-                // Transition state
-                mCurrentState = State::Exploding;
-
-                // Initialize explosion phase
-                mCurrentExplosionPhase = 0;
-
-                // Fall over to next case
             }
-            else 
+            else if (now > mNextStateTransitionTimePoint)
             {
-                if (now > mNextPingProgressTimePoint)
-                {
-                    // Notify
-                    mGameEventHandler->OnRCBombPing(
-                        mParentWorld.IsUnderwater(GetPosition()),
-                        1);
-
-                    // Set frame index
-                    mCurrentFrameIndex = 1 + (mCurrentPingPhase % PingFramesCount);
-
-                    // Get to new ping phase
-                    ++mCurrentPingPhase;
-
-                    // Schedule next ping progress
-                    mNextPingProgressTimePoint = now + FastPingInterval;
-                }
-
                 //
-                // Update shaking
+                // Transition to DetonationLeadIn state
                 //
 
-                static const vec2f ShakeOffsets[] = {
-                    { -0.25f, -0.25f },
-                    { 0.25f, -0.25f },
-                    { -0.25f, 0.25f },
-                    { 0.25f, 0.25f }
-                };
-
-                // TODOTEST
-                //mCurrentShakeOffset = ShakeOffsets[(mCurrentShakeOffsetIndex++) % 4];
-
-                return true;
+                TransitionToDetonationLeadIn(now);
             }
-            
-            // Falling over to next case on purpose
+
+            return true;
         }
 
         case State::Exploding:
         {
-            if (now > mNextExplosionProgressTimePoint)
+            if (now > mNextStateTransitionTimePoint)
             {
-                // Invoke blast handler
-                mBlastHandler(
-                    GetPosition(),
-                    GetConnectedComponentId(),
-                    mCurrentExplosionPhase,
-                    ExplosionPhaseCount,
-                    gameParameters);
-
-                // Set frame index
-                mCurrentFrameIndex = 1 + PingFramesCount + mCurrentExplosionPhase;
-
-                // Increment explosion phase
-                ++mCurrentExplosionPhase;
-
                 // Check whether we're done
-                if (mCurrentExplosionPhase > ExplosionPhaseCount)
+                if (mExplodingStepCounter > ExplosionStepsCount)
                 {
                     // Transition to expired
-                    mCurrentState = State::Expired;
+                    mState = State::Expired;
                 }
                 else
                 {
-                    // Schedule next exposion progress
-                    mNextExplosionProgressTimePoint = now + ExplosionProgressInterval;
+                    //
+                    // Transition to Exploding state
+                    //
+
+                    TransitionToExploding(now, gameParameters);
                 }
             }
 
@@ -209,34 +142,104 @@ bool RCBomb::Update(
     return true;
 }
 
-float RCBomb::GetRenderScale() const 
+void RCBomb::Upload(
+    int shipId,
+    RenderContext & renderContext) const
 {
-    return 1.0f + static_cast<float>(mCurrentExplosionPhase + 1) / static_cast<float>(ExplosionPhaseCount);
+    switch (mState)
+    {
+        case State::IdlePingOff:
+        {
+            renderContext.UploadShipElementBomb(
+                shipId,
+                BombType::RCBomb,
+                RotatedTextureFrameRenderInfo(
+                    0,
+                    GetPosition(),
+                    1.0f,
+                    {1.0f, 1.0f}, // TODO
+                    { 1.0f, 1.0f }), // TODO
+                GetConnectedComponentId());
+
+            break;
+        }
+
+        case State::IdlePingOn:
+        {
+            renderContext.UploadShipElementBomb(
+                shipId,
+                BombType::RCBomb,
+                RotatedTextureFrameRenderInfo(
+                    1 + ((mIdlePingOnStepCounter - 1) % PingFramesCount),
+                    GetPosition(),
+                    1.0f,
+                    { 1.0f, 1.0f }, // TODO
+                    { 1.0f, 1.0f }), // TODO
+                GetConnectedComponentId());
+
+            break;
+        }
+
+        case State::DetonationLeadIn:
+        {
+            renderContext.UploadShipElementBomb(
+                shipId,
+                BombType::RCBomb,
+                RotatedTextureFrameRenderInfo(
+                    1 + ((mDetonationLeadInStepCounter - 1) % PingFramesCount),
+                    GetPosition(),
+                    1.0f,
+                    { 1.0f, 1.0f }, // TODO
+                    { 1.0f, 1.0f }), // TODO
+                GetConnectedComponentId());
+
+            break;
+        }
+
+        case State::Exploding:
+        {
+            assert(mExplodingStepCounter >= 1);
+            assert(mExplodingStepCounter <= ExplosionStepsCount);
+            
+            renderContext.UploadShipElementBomb(
+                shipId,
+                BombType::RCBomb,
+                RotatedTextureFrameRenderInfo(
+                    1 + PingFramesCount + (mExplodingStepCounter - 1),
+                    GetPosition(),
+                    1.0f + static_cast<float>(mExplodingStepCounter) / static_cast<float>(ExplosionStepsCount),
+                    { 1.0f, 1.0f }, // TODO
+                    { 1.0f, 1.0f }), // TODO
+                GetConnectedComponentId());
+
+            break;
+        }
+
+        case State::Expired:
+        {
+            // No drawing
+            break;
+        }
+    }
 }
 
 void RCBomb::Detonate()
 {
-    if (State::Idle == mCurrentState)
+    if (State::IdlePingOff == mState
+        || State::IdlePingOn == mState)
     {
-        // Transition state
-        mCurrentState = State::DetonationLeadIn;
-
-        // Reset ping phase
-        mCurrentPingPhase = 0;
-        
-        // Reset frame index
-        mCurrentFrameIndex = 0;
+        //
+        // Transition to DetonationLeadIn state
+        //
 
         auto now = GameWallClock::GetInstance().Now();
 
-        // Schedule next ping progress for right now
-        mNextPingProgressTimePoint = now;
+        TransitionToDetonationLeadIn(now);
 
-        // Set timeout for detonation
-        mDetonationTimePoint = now + DetonationLeadInToDetonationInterval;
+        // Schedule explosion
+        mExplosionTimePoint = now + DetonationLeadInToExplosionInterval;
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 }

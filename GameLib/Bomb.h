@@ -10,6 +10,7 @@
 #include "GameWallClock.h"
 #include "IGameEventHandler.h"
 #include "Physics.h"
+#include "RenderContext.h"
 #include "Vectors.h"
 
 #include <cassert>
@@ -53,14 +54,33 @@ public:
     virtual void OnNeighborhoodDisturbed() = 0;
 
     /*
-    * Returns the scale to use for the next render step.
-    */
-    virtual float GetRenderScale() const = 0;
+     * Uploads rendering information to the render context.
+     */
+    virtual void Upload(
+        int shipId,
+        RenderContext & renderContext) const = 0;
 
     /*
-     * Returns the frame index to use for the next render step.
+     * If the point is attached, saves its current position and detaches itself from the Points container;
+     * otherwise, it's a nop.
      */
-    virtual uint32_t GetRenderFrameIndex() const = 0;
+    void DetachFromPointIfAttached()
+    {
+        if (!!mPointIndex)
+        {
+            assert(mPoints.IsBombAttached(*mPointIndex));
+
+            mShipPoints.DetachBomb(*mPointIndex);
+            mPosition = mShipPoints.GetPosition(*mPointIndex);
+            mConnectedComponentId = mShipPoints.GetConnectedComponentId(*mPointIndex);
+            mPointIndex.reset();
+        }
+        else
+        {
+            assert(!!mPosition);
+            assert(!!mConnectedComponentId);
+        }
+    }
 
     /*
      * Returns the type of this bomb.
@@ -82,7 +102,7 @@ public:
     /*
      * Returns the position of this bomb.
      */
-    virtual vec2f const GetPosition() const
+    vec2f const GetPosition() const
     {
         if (!!mPosition)
             return *mPosition;
@@ -104,28 +124,6 @@ public:
         {
             assert(!!mPointIndex);
             return mShipPoints.GetConnectedComponentId(*mPointIndex);
-        }
-    }
-
-    /*
-     * If the point is attached, saves its current position and detaches itself from the Points container;
-     * otherwise, it's a nop.
-     */
-    void DetachFromPointIfAttached()
-    {
-        if (!!mPointIndex)
-        {
-            assert(mPoints.IsBombAttached(*mPointIndex));
-
-            mShipPoints.DetachBomb(*mPointIndex);
-            mPosition = mShipPoints.GetPosition(*mPointIndex);
-            mConnectedComponentId = mShipPoints.GetConnectedComponentId(*mPointIndex);
-            mPointIndex.reset();
-        }
-        else
-        {
-            assert(!!mPosition);
-            assert(!!mConnectedComponentId);
         }
     }
 

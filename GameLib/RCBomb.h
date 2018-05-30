@@ -9,6 +9,8 @@
 
 #include <cstdint>
 
+using namespace std::chrono_literals;
+
 namespace Physics
 {   
 
@@ -35,17 +37,9 @@ public:
         Detonate();
     }
 
-    virtual float GetRenderScale() const override;
-
-    virtual uint32_t GetRenderFrameIndex() const override
-    {
-        return mCurrentFrameIndex;
-    }
-
-    virtual vec2f const GetPosition() const override
-    {
-        return Bomb::GetPosition() + mCurrentShakeOffset;
-    }
+    virtual void Upload(
+        int shipId,
+        RenderContext & renderContext) const override;
 
     void Detonate();
 
@@ -57,15 +51,16 @@ private:
 
     enum class State
     {
-        // In this state we wait for remote detonation or disturbance,
+        // In these states we wait for remote detonation or disturbance,
         // and ping regularly at long intervals
-        Idle,
+        IdlePingOff,
+        IdlePingOn,
 
         // In this state we are about to explode; we wait a little time
-        // before exploding, and ping and shake regularly at short intervals
+        // before exploding, and ping regularly at short intervals
         DetonationLeadIn,
 
-        // In this state we are exploding, and change our frame index to
+        // In this state we are exploding, and increment our counter to
         // match the explosion animation until the animation is over
         Exploding,
 
@@ -73,35 +68,61 @@ private:
         Expired
     };
 
-    State mCurrentState;
+    static constexpr auto SlowPingOffInterval = 750ms;
+    static constexpr auto SlowPingOnInterval = 250ms;
+    static constexpr auto FastPingInterval = 100ms;
+    static constexpr auto DetonationLeadInToExplosionInterval = 1500ms;
+    static constexpr auto ExplosionProgressInterval = 20ms;
+    static constexpr uint8_t ExplosionStepsCount = 8;
+    static constexpr int PingFramesCount = 4;
 
-    // The current texture frame to use when rendering
-    uint32_t mCurrentFrameIndex;
+    inline void TransitionToDetonationLeadIn(GameWallClock::time_point now)
+    {
+        mState = State::DetonationLeadIn;
 
-    // The current ping phase;
-    // - In Idle state:
-    //      - Even: ping off
-    //      - Odd: ping on; mod 8 and then division by two yields frame index
-    // - In DetonationLeadIn: simply the index of the ping on frame
-    //
-    // Fine to rollover!
-    uint8_t mCurrentPingPhase;
+        ++mDetonationLeadInStepCounter;
 
-    // The next timestamp at which we'll perform a ping state step
-    GameWallClock::time_point mNextPingProgressTimePoint;
+        mGameEventHandler->OnRCBombPing(
+            mParentWorld.IsUnderwater(GetPosition()),
+            1);
 
-    // The timestamp at which we'll detonate while in detonation lead-in
-    GameWallClock::time_point mDetonationTimePoint;
+        // Schedule next transition
+        mNextStateTransitionTimePoint = now + FastPingInterval;
+    }
 
-    // The current position offset use for shaking during detonation lead-in
-    vec2f mCurrentShakeOffset;
-    uint8_t mCurrentShakeOffsetIndex;
+    inline void TransitionToExploding(
+        GameWallClock::time_point now,
+        GameParameters const & gameParameters)
+    {
+        mState = State::Exploding;
 
-    // The current explosion phase
-    uint8_t mCurrentExplosionPhase;
+        ++mExplodingStepCounter;
 
-    // The next timestamp at which we'll progress the explosion
-    GameWallClock::time_point mNextExplosionProgressTimePoint;
+        // Invoke blast handler
+        mBlastHandler(
+            GetPosition(),
+            GetConnectedComponentId(),
+            mExplodingStepCounter - 1,
+            ExplosionStepsCount,
+            gameParameters);
+
+        // Schedule next transition
+        mNextStateTransitionTimePoint = now + ExplosionProgressInterval;
+    }
+
+    State mState;
+
+    // The next timestamp at which we'll automatically transition state
+    GameWallClock::time_point mNextStateTransitionTimePoint;
+
+    // The timestamp at which we'll explode while in detonation lead-in
+    GameWallClock::time_point mExplosionTimePoint;
+
+    // The counters for the various states; set to one upon
+    // entering the state for the first time. Fine to rollover!
+    uint8_t mIdlePingOnStepCounter;
+    uint8_t mDetonationLeadInStepCounter;
+    uint8_t mExplodingStepCounter;
 };
 
 }

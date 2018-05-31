@@ -60,10 +60,10 @@ struct RotatedTextureFrameRenderInfo
         // Calculate rectangle vertices
         //
         
-        float leftX = CenterPosition.x - textureWidth * Scale / 2.0f;
-        float rightX = CenterPosition.x + textureWidth * Scale / 2.0f;
-        float topY = CenterPosition.y - textureHeight * Scale / 2.0f;
-        float bottomY = CenterPosition.y + textureHeight * Scale / 2.0f;
+        float leftX = -textureWidth * Scale / 2.0f;
+        float rightX = textureWidth * Scale / 2.0f;
+        float topY = -textureHeight * Scale / 2.0f;
+        float bottomY = textureHeight * Scale / 2.0f;
 
         vec2f topLeft{ leftX, topY };
         vec2f topRight{ rightX, topY };
@@ -71,9 +71,9 @@ struct RotatedTextureFrameRenderInfo
         vec2f bottomRight{ rightX, bottomY };
 
         return RotatedRectangle(
-            { topLeft.dot(rotationMatrixX), topLeft.dot(rotationMatrixY) },
-            { topRight.dot(rotationMatrixX), topRight.dot(rotationMatrixY) },
-            { bottomLeft.dot(rotationMatrixX), bottomLeft.dot(rotationMatrixY) },
-            { bottomRight.dot(rotationMatrixX), bottomRight.dot(rotationMatrixY) });
+            { topLeft.dot(rotationMatrixX) + CenterPosition.x, topLeft.dot(rotationMatrixY) + CenterPosition.y },
+            { topRight.dot(rotationMatrixX) + CenterPosition.x, topRight.dot(rotationMatrixY) + CenterPosition.y },
+            { bottomLeft.dot(rotationMatrixX) + CenterPosition.x, bottomLeft.dot(rotationMatrixY) + CenterPosition.y },
+            { bottomRight.dot(rotationMatrixX) + CenterPosition.x, bottomRight.dot(rotationMatrixY) + CenterPosition.y });
     }
 };

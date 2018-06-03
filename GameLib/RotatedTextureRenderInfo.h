@@ -9,29 +9,25 @@
 #include "Vectors.h"
 
 #include <algorithm>
-#include <cstdint>
 #include <cmath>
 #include <limits>
 
 /*
- * Contains all the information necessary to render a rotated frame of a texture.
+ * Contains all the information necessary to render a rotated texture.
  */
-struct RotatedTextureFrameRenderInfo
+struct RotatedTextureRenderInfo
 {
-    uint32_t FrameIndex;
     vec2f CenterPosition;
     float Scale;
     vec2f RotationBaseAxis;
     vec2f RotationOffsetAxis;
 
-    RotatedTextureFrameRenderInfo(
-        uint32_t frameIndex,
+    RotatedTextureRenderInfo(
         vec2f const & centerPosition,
         float scale,
         vec2f const & rotationBaseAxis,
         vec2f const & rotationOffsetAxis)
-        : FrameIndex(frameIndex)
-        , CenterPosition(centerPosition)
+        : CenterPosition(centerPosition)
         , Scale(scale)
         , RotationBaseAxis(rotationBaseAxis)
         , RotationOffsetAxis(rotationOffsetAxis)

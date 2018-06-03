@@ -10,7 +10,7 @@
 #include "ImageData.h"
 #include "ProgressCallback.h"
 #include "ResourceLoader.h"
-#include "RotatedTextureFrameRenderInfo.h"
+#include "RotatedTextureRenderInfo.h"
 #include "ShipRenderContext.h"
 #include "SysSpecifics.h"
 #include "Vectors.h"
@@ -505,14 +505,18 @@ public:
     inline void UploadShipElementBomb(
         int shipId,
         BombType bombType,
-        RotatedTextureFrameRenderInfo const & frameRenderInfo,
+        RotatedTextureRenderInfo const & renderInfo,
+        std::optional<uint32_t> lightedFrameIndex,
+        std::optional<uint32_t> unlightedFrameIndex,
         ConnectedComponentId connectedComponentId)
     {
         assert(shipId < mShips.size());
 
         mShips[shipId]->UploadElementBomb(
             bombType,
-            frameRenderInfo,
+            renderInfo,
+            lightedFrameIndex,
+            unlightedFrameIndex,
             connectedComponentId);
     }
 

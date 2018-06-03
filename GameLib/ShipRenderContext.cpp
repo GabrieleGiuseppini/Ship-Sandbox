@@ -1234,31 +1234,70 @@ void ShipRenderContext::RenderBombElements(
 
     // Set parameters
     glUniformMatrix4fv(mElementBombShaderOrthoMatrixParameter, 1, GL_FALSE, &(orthoMatrix[0][0]));
-    glUniform1f(mElementBombShaderAmbientLightIntensityParameter, ambientLightIntensity);
 
     // Bind VBO
     glBindBuffer(GL_ARRAY_BUFFER, *mBombVBO);
 
+    // Draw all bombs for this connected component
     for (size_t b = 0; b < connectedComponent.bombElementInfos.size(); ++b)
     {
-        // Bind texture
-        switch (connectedComponent.bombElementInfos[b].bombType)
+        if (!!connectedComponent.bombElementInfos[b].lightedFrameIndex)
         {
-            case BombType::RCBomb:
+            //
+            // Lighted element
+            //
+
+            // Set light parameter
+            glUniform1f(mElementBombShaderAmbientLightIntensityParameter, ambientLightIntensity);
+
+            // Bind texture
+            switch (connectedComponent.bombElementInfos[b].bombType)
             {
-                glBindTexture(GL_TEXTURE_2D, mElementRCBombTextures[connectedComponent.bombElementInfos[b].frameIndex]);
-                break;
+                case BombType::RCBomb:
+                {
+                    glBindTexture(GL_TEXTURE_2D, mElementRCBombTextures[*connectedComponent.bombElementInfos[b].lightedFrameIndex]);
+                    break;
+                }
+
+                case BombType::TimerBomb:
+                {
+                    glBindTexture(GL_TEXTURE_2D, mElementTimerBombTextures[*connectedComponent.bombElementInfos[b].lightedFrameIndex]);
+                    break;
+                }
             }
 
-            case BombType::TimerBomb:
-            {
-                glBindTexture(GL_TEXTURE_2D, mElementTimerBombTextures[connectedComponent.bombElementInfos[b].frameIndex]);
-                break;
-            }
+            // Draw
+            glDrawArrays(GL_TRIANGLE_STRIP, static_cast<GLint>(4 * (connectedComponent.bombElementOffset + b)), 4);
         }
-        
-        // Draw
-        glDrawArrays(GL_TRIANGLE_STRIP, static_cast<GLint>(4 * (connectedComponent.bombElementOffset + b)), 4);
+
+        if (!!connectedComponent.bombElementInfos[b].unlightedFrameIndex)
+        {
+            //
+            // Unlighted element
+            //
+
+            // Set light parameter
+            glUniform1f(mElementBombShaderAmbientLightIntensityParameter, 1.0f);
+
+            // Bind texture
+            switch (connectedComponent.bombElementInfos[b].bombType)
+            {
+                case BombType::RCBomb:
+                {
+                    glBindTexture(GL_TEXTURE_2D, mElementRCBombTextures[*connectedComponent.bombElementInfos[b].unlightedFrameIndex]);
+                    break;
+                }
+
+                case BombType::TimerBomb:
+                {
+                    glBindTexture(GL_TEXTURE_2D, mElementTimerBombTextures[*connectedComponent.bombElementInfos[b].unlightedFrameIndex]);
+                    break;
+                }
+            }
+
+            // Draw
+            glDrawArrays(GL_TRIANGLE_STRIP, static_cast<GLint>(4 * (connectedComponent.bombElementOffset + b)), 4);
+        }
 
         // Unbind texture
         glBindTexture(GL_TEXTURE_2D, 0);

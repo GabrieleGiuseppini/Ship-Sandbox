@@ -153,12 +153,13 @@ void RCBomb::Upload(
             renderContext.UploadShipElementBomb(
                 shipId,
                 BombType::RCBomb,
-                RotatedTextureFrameRenderInfo(
-                    0,
+                RotatedTextureRenderInfo(
                     GetPosition(),
                     1.0f,
-                    {1.0f, 1.0f}, // TODO
-                    { 1.0f, 1.0f }), // TODO
+                    {1.0f, 1.0f}, // TODO: take from spring
+                    { 1.0f, 1.0f }), // TODO: take from spring
+                0,
+                std::nullopt,
                 GetConnectedComponentId());
 
             break;
@@ -169,12 +170,13 @@ void RCBomb::Upload(
             renderContext.UploadShipElementBomb(
                 shipId,
                 BombType::RCBomb,
-                RotatedTextureFrameRenderInfo(
-                    1 + ((mIdlePingOnStepCounter - 1) % PingFramesCount),
+                RotatedTextureRenderInfo(
                     GetPosition(),
                     1.0f,
-                    { 1.0f, 1.0f }, // TODO
-                    { 1.0f, 1.0f }), // TODO
+                    { 1.0f, 1.0f }, // TODO: take from spring
+                    { 1.0f, 1.0f }), // TODO: take from spring
+                0,
+                1 + ((mIdlePingOnStepCounter - 1) % PingFramesCount),
                 GetConnectedComponentId());
 
             break;
@@ -185,12 +187,13 @@ void RCBomb::Upload(
             renderContext.UploadShipElementBomb(
                 shipId,
                 BombType::RCBomb,
-                RotatedTextureFrameRenderInfo(
-                    1 + ((mDetonationLeadInStepCounter - 1) % PingFramesCount),
+                RotatedTextureRenderInfo(
                     GetPosition(),
                     1.0f,
-                    { 1.0f, 1.0f }, // TODO
-                    { 1.0f, 1.0f }), // TODO
+                    { 1.0f, 1.0f }, // TODO: take from spring
+                    { 1.0f, 1.0f }), // TODO: take from spring
+                0,
+                1 + ((mDetonationLeadInStepCounter - 1) % PingFramesCount),
                 GetConnectedComponentId());
 
             break;
@@ -204,12 +207,13 @@ void RCBomb::Upload(
             renderContext.UploadShipElementBomb(
                 shipId,
                 BombType::RCBomb,
-                RotatedTextureFrameRenderInfo(
-                    1 + PingFramesCount + (mExplodingStepCounter - 1),
+                RotatedTextureRenderInfo(                    
                     GetPosition(),
                     1.0f + static_cast<float>(mExplodingStepCounter) / static_cast<float>(ExplosionStepsCount),
-                    { 1.0f, 1.0f }, // TODO
-                    { 1.0f, 1.0f }), // TODO
+                    { 1.0f, 1.0f }, // TODO: take from spring
+                    { 1.0f, 1.0f }), // TODO: take from spring
+                std::nullopt,
+                1 + PingFramesCount + (mExplodingStepCounter - 1),
                 GetConnectedComponentId());
 
             break;

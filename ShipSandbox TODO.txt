@@ -50,6 +50,7 @@ Prev perf (before point et al destructuring)
 - Code:
 	- Move definition of ElementIndex et al into GameTypes.h
 	- Textures are json files with world sizes as well
+		- SEE MOLESKINE
 		- In TextureData
 	+ CircularList::Erase unit test: complete verification of returned iterator
 
@@ -192,9 +193,9 @@ Prev perf (before point et al destructuring)
 				+ Test underwater explosion sound
 				= Move Upload(RenderContext &) to Bomb, virtual
 					+ Get rid of now useless virtual funcs
-					- RenderContext gets TODO:CHANGE ON MOLESKINE: also bool isExplosionFrame
-						- When set, ambient light parameter is set to 1.0
-					- Split textures into dark and light
+					+ RenderContext gets two frames, lighted and unlighted
+						+ When set, ambient light parameter is set to 1.0
+					+ Split textures into dark and light
 
 			- TEST: bombs are attached to springs instead of points
 				- Move isAttached buffer from Points to Springs
@@ -301,7 +302,7 @@ Prev perf (before point et al destructuring)
 				+ RCBomb cursor
 				- TimerBomb textures:
 					- Base
-						- With fuse burning
+						- With fuse burning, separate unlighted frame
 					- Explosion frames
 				+ RCBomb textures:
 					+ Base

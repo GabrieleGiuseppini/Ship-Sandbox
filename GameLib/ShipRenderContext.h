@@ -8,7 +8,7 @@
 #include "GameOpenGL.h"
 #include "GameTypes.h"
 #include "ImageData.h"
-#include "RotatedTextureFrameRenderInfo.h"
+#include "RotatedTextureRenderInfo.h"
 #include "SysSpecifics.h"
 #include "Vectors.h"
 
@@ -222,7 +222,9 @@ public:
 
     inline void UploadElementBomb(
         BombType bombType,
-        RotatedTextureFrameRenderInfo const & frameRenderInfo,
+        RotatedTextureRenderInfo const & renderInfo,
+        std::optional<uint32_t> lightedFrameIndex,
+        std::optional<uint32_t> unlightedFrameIndex,
         ConnectedComponentId connectedComponentId)
     {
         size_t const connectedComponentIndex = connectedComponentId - 1;
@@ -245,7 +247,7 @@ public:
         static constexpr float textureTileW = 12.0f;
         static constexpr float textureTileH = 12.0f;
 
-        RotatedRectangle frameRect = frameRenderInfo.CalculateRotatedRectangle(textureTileW, textureTileH);
+        RotatedRectangle frameRect = renderInfo.CalculateRotatedRectangle(textureTileW, textureTileH);
         
         bombElement.xTopLeft = frameRect.TopLeft.x;
         bombElement.yTopLeft = frameRect.TopLeft.y;
@@ -274,7 +276,8 @@ public:
 
         mConnectedComponents[connectedComponentIndex].bombElementInfos.emplace_back(
             bombType,
-            frameRenderInfo.FrameIndex);
+            lightedFrameIndex,
+            unlightedFrameIndex);
        
 
         //
@@ -516,13 +519,16 @@ private:
     struct BombElementInfo
     {
         BombType bombType;
-        uint32_t frameIndex;
+        std::optional<uint32_t> lightedFrameIndex;
+        std::optional<uint32_t> unlightedFrameIndex;
 
         BombElementInfo(
             BombType _bombType,
-            uint32_t _frameIndex)
+            std::optional<uint32_t> _lightedFrameIndex,
+            std::optional<uint32_t> _unlightedFrameIndex)
             : bombType(_bombType)
-            , frameIndex(_frameIndex)
+            , lightedFrameIndex(_lightedFrameIndex)
+            , unlightedFrameIndex(_unlightedFrameIndex)
         {}
     };
 

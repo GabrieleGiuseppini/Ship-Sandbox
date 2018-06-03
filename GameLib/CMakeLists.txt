@@ -36,7 +36,7 @@ set  (GAME_SOURCES
 	ResourceLoader.cpp
 	ResourceLoader.h
 	RotatedRectangle.h
-	RotatedTextureFrameRenderInfo.h
+	RotatedTextureRenderInfo.h
 	ShipBuilder.cpp
 	ShipBuilder.h
 	ShipDefinition.h

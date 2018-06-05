@@ -80,7 +80,7 @@ private:
         vec2 const & targetPos,
         GameParameters const & gameParameters)
     {
-        float const squareSearchRadius = gameParameters.ToolPointSearchRadius * gameParameters.ToolPointSearchRadius;
+        float const squareSearchRadius = gameParameters.ToolSearchRadius * gameParameters.ToolSearchRadius;
 
         //
         // See first if there's a bomb within the search radius, most recent first;
@@ -100,8 +100,8 @@ private:
                     mParentWorld.IsUnderwater(
                         (*it)->GetPosition()));
 
-                // Detach it from its point, if it's attached
-                (*it)->DetachFromPointIfAttached();
+                // Detach it, if it's attached
+                (*it)->DetachIfAttached();
 
                 // Remove from set of bombs - forget about it
                 mCurrentBombs.erase(it);
@@ -113,49 +113,51 @@ private:
 
 
         //
-        // No bombs points in radius...
-        // ...so find closest point with no attached bomb within the search radius, and
+        // No bombs in radius...
+        // ...so find closest spring with no attached bomb within the search radius, and
         // if found, attach bomb to it it
         //
 
-        ElementContainer::ElementIndex nearestUnarmedPointIndex = ElementContainer::NoneElementIndex;
-        float nearestUnarmedPointDistance = std::numeric_limits<float>::max();
+        ElementContainer::ElementIndex nearestUnarmedSpringIndex = ElementContainer::NoneElementIndex;
+        float nearestUnarmedSpringDistance = std::numeric_limits<float>::max();
 
-        for (auto pointIndex : mShipPoints)
+        for (auto springIndex : mShipSprings)
         {
-            if (!mShipPoints.IsDeleted(pointIndex) && !mShipPoints.IsBombAttached(pointIndex))
+            if (!mShipSprings.IsDeleted(springIndex) && !mShipSprings.IsBombAttached(springIndex))
             {
-                float squareDistance = (mShipPoints.GetPosition(pointIndex) - targetPos).squareLength();
+                float squareDistance = (mShipSprings.GetMidpointPosition(springIndex, mShipPoints) - targetPos).squareLength();
                 if (squareDistance < squareSearchRadius)
                 {
-                    // This point is within the search radius
+                    // This spring is within the search radius
 
                     // Keep the nearest
-                    if (squareDistance < squareSearchRadius && squareDistance < nearestUnarmedPointDistance)
+                    if (squareDistance < squareSearchRadius && squareDistance < nearestUnarmedSpringDistance)
                     {
-                        nearestUnarmedPointIndex = pointIndex;
-                        nearestUnarmedPointDistance = squareDistance;
+                        nearestUnarmedSpringIndex = springIndex;
+                        nearestUnarmedSpringDistance = squareDistance;
                     }
                 }
             }
         }
 
-        if (ElementContainer::NoneElementIndex != nearestUnarmedPointIndex)
+        if (ElementContainer::NoneElementIndex != nearestUnarmedSpringIndex)
         {
-            // We have a nearest, unarmed point
+            // We have a nearest, unarmed spring
 
             // Create bomb
             std::unique_ptr<Bomb> bomb(
                 new TBomb(
-                    nearestUnarmedPointIndex,
+                    nearestUnarmedSpringIndex,
                     mParentWorld,
                     mGameEventHandler,
                     mBlastHandler,
-                    mShipPoints));
+                    mShipPoints,
+                    mShipSprings));
 
-            // Attach bomb to the point
-            mShipPoints.AttachBomb(
-                nearestUnarmedPointIndex,
+            // Attach bomb to the spring
+            mShipSprings.AttachBomb(
+                nearestUnarmedSpringIndex,
+                mShipPoints,
                 gameParameters);
 
             // Notify
@@ -174,8 +176,8 @@ private:
                         mParentWorld.IsUnderwater(
                             purgedBomb->GetPosition()));
 
-                    // Detach bomb from its point, if it's attached
-                    purgedBomb->DetachFromPointIfAttached();
+                    // Detach bomb, if it's attached
+                    purgedBomb->DetachIfAttached();
                 },
                 std::move(bomb));
 
@@ -183,7 +185,7 @@ private:
             return true;
         }
 
-        // No point found on this ship
+        // No spring found on this ship
         return false;
     }
 

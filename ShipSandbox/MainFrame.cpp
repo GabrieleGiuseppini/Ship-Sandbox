@@ -734,8 +734,7 @@ void MainFrame::OnLoadShipMenuItemSelected(wxCommandEvent & /*event*/)
 	{
 		std::string filename = mFileOpenDialog->GetPath().ToStdString();
 
-        assert(!!mSoundController);
-        mSoundController->Reset();
+        ResetState();
 
 		assert(!!mGameController);
         try
@@ -751,8 +750,7 @@ void MainFrame::OnLoadShipMenuItemSelected(wxCommandEvent & /*event*/)
 
 void MainFrame::OnReloadLastShipMenuItemSelected(wxCommandEvent & /*event*/)
 {
-    assert(!!mSoundController);
-    mSoundController->Reset();
+    ResetState();
 
 	assert(!!mGameController);
     try
@@ -918,6 +916,14 @@ void MainFrame::OnAboutMenuItemSelected(wxCommandEvent & /*event*/)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+void MainFrame::ResetState()
+{
+    assert(!!mSoundController);
+    mSoundController->Reset();
+
+    mRCBombsDetonateMenuItem->Enable(false);
+}
 
 std::vector<std::unique_ptr<wxCursor>> MainFrame::MakeCursors(std::string const & cursorName, int hotspotX, int hotspotY)
 {

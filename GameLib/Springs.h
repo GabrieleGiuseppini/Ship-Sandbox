@@ -80,6 +80,8 @@ public:
         , mWaterPermeabilityBuffer(elementCount)
         // Stress
         , mIsStressedBuffer(elementCount)
+        // Bombs
+        , mIsBombAttachedBuffer(elementCount)
         // Container state
         , mCurrentStiffnessAdjustment(std::numeric_limits<float>::lowest())
     {
@@ -99,6 +101,20 @@ public:
     void SetStiffnessAdjustment(
         float stiffnessAdjustment,
         Points const & points);
+
+    inline void OnPointMassUpdated(
+        ElementIndex springElementIndex,
+        Points const & points)
+    {
+        assert(springElementIndex < mElementCount);
+
+        CalculateStiffnessCoefficient(
+            mEndpointsBuffer[springElementIndex].PointAIndex,
+            mEndpointsBuffer[springElementIndex].PointBIndex,
+            mMaterialBuffer[springElementIndex]->Stiffness,
+            mCurrentStiffnessAdjustment,
+            points);
+    }
 
     void UploadElements(
         int shipId,
@@ -152,6 +168,34 @@ public:
         return mEndpointsBuffer[springElementIndex].PointBIndex;
     }
 
+    inline vec2f const & GetPointAPosition(
+        ElementIndex springElementIndex,
+        Points const & points) const
+    {
+        assert(springElementIndex < mElementCount);
+
+        return points.GetPosition(mEndpointsBuffer[springElementIndex].PointAIndex);
+    }
+
+    inline vec2f const & GetPointBPosition(
+        ElementIndex springElementIndex,
+        Points const & points) const
+    {
+        assert(springElementIndex < mElementCount);
+
+        return points.GetPosition(mEndpointsBuffer[springElementIndex].PointBIndex);
+    }
+
+    inline vec2f GetMidpointPosition(
+        ElementIndex springElementIndex,
+        Points const & points) const
+    {
+        assert(springElementIndex < mElementCount);
+
+        return (GetPointAPosition(springElementIndex, points)
+            + GetPointBPosition(springElementIndex, points)) / 2.0f;
+    }
+
     //
     // Physical characteristics
     //
@@ -199,6 +243,54 @@ public:
         return mWaterPermeabilityBuffer[springElementIndex];
     }
     
+    //
+    // Bombs
+    //
+
+    inline bool IsBombAttached(ElementIndex springElementIndex) const
+    {
+        assert(springElementIndex < mElementCount);
+
+        return mIsBombAttachedBuffer[springElementIndex];
+    }
+
+    void AttachBomb(
+        ElementIndex springElementIndex,
+        Points & points,
+        GameParameters const & gameParameters)
+    {
+        assert(springElementIndex < mElementCount);
+        assert(false == mIsBombAttachedBuffer[springElementIndex]);
+
+        mIsBombAttachedBuffer[springElementIndex] = true;
+
+        // Augment mass of endpoints due to bomb
+
+        points.SetMassToMaterialOffset(
+            mEndpointsBuffer[springElementIndex].PointAIndex, 
+            gameParameters.BombMass,
+            *this);
+
+        points.SetMassToMaterialOffset(
+            mEndpointsBuffer[springElementIndex].PointBIndex, 
+            gameParameters.BombMass,
+            *this);
+    }
+
+    void DetachBomb(
+        ElementIndex springElementIndex,
+        Points & points)
+    {
+        assert(springElementIndex < mElementCount);
+        assert(true == mIsBombAttachedBuffer[springElementIndex]);
+
+        mIsBombAttachedBuffer[springElementIndex] = false;
+
+        // Reset mass of endpoints 
+        points.SetMassToMaterialOffset(mEndpointsBuffer[springElementIndex].PointAIndex, 0.0f, *this);
+        points.SetMassToMaterialOffset(mEndpointsBuffer[springElementIndex].PointBIndex, 0.0f, *this);
+    }
+
 private:
 
     static float CalculateStiffnessCoefficient(        
@@ -244,6 +336,12 @@ private:
 
     // State variable that tracks when we enter and exit the stressed state
     Buffer<bool> mIsStressedBuffer;
+
+    //
+    // Bombs
+    //
+
+    Buffer<bool> mIsBombAttachedBuffer;
 
     //
     // Container state

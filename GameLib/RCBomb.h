@@ -22,11 +22,12 @@ class RCBomb final : public Bomb
 public:
 
     RCBomb(
-        ElementContainer::ElementIndex pointIndex,
+        ElementContainer::ElementIndex springIndex,
         World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         BlastHandler blastHandler,
-        Points & points);
+        Points & shipPoints,
+        Springs & shipSprings);
 
     virtual bool Update(
         GameWallClock::time_point now,

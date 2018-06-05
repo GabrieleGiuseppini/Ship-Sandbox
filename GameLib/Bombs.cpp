@@ -48,14 +48,6 @@ void Bombs::OnPointDestroyed(ElementContainer::ElementIndex pointElementIndex)
 
     for (auto & bomb : mCurrentBombs)
     {
-        // Check if the bomb is attached to this point
-        auto bombPoint = bomb->GetAttachedPointIndex();
-        if (!!bombPoint && *bombPoint == pointElementIndex)
-        {
-            // Detach bomb
-            bomb->DetachFromPointIfAttached();
-        }
-
         // Check if the bomb is within the neighborhood of the disturbed point
         float squareBombDistance = (bomb->GetPosition() - neighborhoodCenter).squareLength();
         if (squareBombDistance < squareNeighborhoodRadius)
@@ -70,12 +62,18 @@ void Bombs::OnSpringDestroyed(ElementContainer::ElementIndex springElementIndex)
 {
     auto squareNeighborhoodRadius = GameParameters::BombNeighborhoodRadius * GameParameters::BombNeighborhoodRadius;
 
-    auto neighborhoodCenter =
-        (mShipPoints.GetPosition(mShipSprings.GetPointAIndex(springElementIndex)) 
-        + mShipPoints.GetPosition(mShipSprings.GetPointBIndex(springElementIndex))) / 2.0f;
+    auto neighborhoodCenter = mShipSprings.GetMidpointPosition(springElementIndex, mShipPoints);
 
     for (auto & bomb : mCurrentBombs)
     {
+        // Check if the bomb is attached to this spring
+        auto bombSpring = bomb->GetAttachedSpringIndex();
+        if (!!bombSpring && *bombSpring == springElementIndex)
+        {
+            // Detach bomb
+            bomb->DetachIfAttached();
+        }
+
         // Check if the bomb is within the neighborhood of the disturbed center
         float squareBombDistance = (bomb->GetPosition() - neighborhoodCenter).squareLength();
         if (squareBombDistance < squareNeighborhoodRadius)

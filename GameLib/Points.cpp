@@ -40,8 +40,6 @@ void Points::Add(
 
     mIsPinnedBuffer.emplace_back(false);
 
-    mIsBombAttachedBuffer.emplace_back(false);
-
     mColorBuffer.emplace_back(color);
     mTextureCoordinatesBuffer.emplace_back(textureCoordinates);
 }
@@ -127,6 +125,25 @@ void Points::UploadElements(
                 i,
                 mConnectedComponentIdBuffer[i]);
         }
+    }
+}
+
+void Points::SetMassToMaterialOffset(
+    ElementIndex pointElementIndex,
+    float offset,
+    Springs & springs)
+{
+    assert(pointElementIndex < mElementCount);
+
+    mMassBuffer[pointElementIndex] = mMaterialBuffer[pointElementIndex]->Mass + offset;
+
+    // Update integration factor
+    mIntegrationFactorBuffer[pointElementIndex] = CalculateIntegrationFactor(mMassBuffer[pointElementIndex]);
+
+    // Notify all springs
+    for (auto springIndex : mNetworkBuffer[pointElementIndex].ConnectedSprings)
+    {
+        springs.OnPointMassUpdated(springIndex, *this);
     }
 }
 

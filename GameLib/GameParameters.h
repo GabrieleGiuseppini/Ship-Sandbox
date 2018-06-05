@@ -85,13 +85,13 @@ struct GameParameters
     static constexpr float MinBombBlastRadius = 0.1f;
     static constexpr float MaxBombBlastRadius = 20.0f;
 
-    static constexpr float BombNeighborhoodRadius = 3.0f;
+    static constexpr float BombNeighborhoodRadius = 3.5f;
 
     std::chrono::seconds TimerBombInterval;
 
     float BombMass;
 
-    float ToolPointSearchRadius;
+    float ToolSearchRadius;
 
     float LightDiffusionAdjustment;
 

@@ -411,7 +411,7 @@ void SoundController::PlayMSUSound(
     else
         sizeType = SizeType::Large;
 
-    LogMessage("MSUSound: <", 
+    LogDebug("MSUSound: <", 
         static_cast<int>(soundType), 
         ",", 
         static_cast<int>(material->Sound->ElementType), 
@@ -475,7 +475,7 @@ void SoundController::PlayUSound(
     bool isUnderwater,
     float volume)
 {
-    LogMessage("USound: <",
+    LogDebug("USound: <",
         static_cast<int>(soundType),
         ",",
         static_cast<int>(isUnderwater),

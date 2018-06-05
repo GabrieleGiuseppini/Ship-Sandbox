@@ -10,18 +10,20 @@
 namespace Physics {
 
 RCBomb::RCBomb(
-    ElementContainer::ElementIndex pointIndex,
+    ElementContainer::ElementIndex springIndex,
     World & parentWorld,
     std::shared_ptr<IGameEventHandler> gameEventHandler,
     BlastHandler blastHandler,
-    Points & shipPoints)
+    Points & shipPoints,
+    Springs & shipSprings)
     : Bomb(
         BombType::RCBomb,
-        pointIndex,
+        springIndex,
         parentWorld,
         std::move(gameEventHandler),
         blastHandler,
-        shipPoints)
+        shipPoints,
+        shipSprings)
     , mState(State::IdlePingOff)
     , mNextStateTransitionTimePoint(GameWallClock::GetInstance().Now() + SlowPingOffInterval)
     , mExplosionTimePoint(GameWallClock::time_point::min())
@@ -90,7 +92,7 @@ bool RCBomb::Update(
 
                 // Detach self (or else explosion will move along with ship performing
                 // its blast)
-                DetachFromPointIfAttached();
+                DetachIfAttached();
 
                 // Notify explosion
                 mGameEventHandler->OnBombExplosion(
@@ -156,8 +158,8 @@ void RCBomb::Upload(
                 RotatedTextureRenderInfo(
                     GetPosition(),
                     1.0f,
-                    {1.0f, 1.0f}, // TODO: take from spring
-                    { 1.0f, 1.0f }), // TODO: take from spring
+                    mRotationBaseAxis,
+                    GetRotationOffsetAxis()),
                 0,
                 std::nullopt,
                 GetConnectedComponentId());
@@ -173,8 +175,8 @@ void RCBomb::Upload(
                 RotatedTextureRenderInfo(
                     GetPosition(),
                     1.0f,
-                    { 1.0f, 1.0f }, // TODO: take from spring
-                    { 1.0f, 1.0f }), // TODO: take from spring
+                    mRotationBaseAxis,
+                    GetRotationOffsetAxis()),
                 0,
                 1 + ((mIdlePingOnStepCounter - 1) % PingFramesCount),
                 GetConnectedComponentId());
@@ -190,8 +192,8 @@ void RCBomb::Upload(
                 RotatedTextureRenderInfo(
                     GetPosition(),
                     1.0f,
-                    { 1.0f, 1.0f }, // TODO: take from spring
-                    { 1.0f, 1.0f }), // TODO: take from spring
+                    mRotationBaseAxis,
+                    GetRotationOffsetAxis()),
                 0,
                 1 + ((mDetonationLeadInStepCounter - 1) % PingFramesCount),
                 GetConnectedComponentId());
@@ -210,8 +212,8 @@ void RCBomb::Upload(
                 RotatedTextureRenderInfo(                    
                     GetPosition(),
                     1.0f + static_cast<float>(mExplodingStepCounter) / static_cast<float>(ExplosionStepsCount),
-                    { 1.0f, 1.0f }, // TODO: take from spring
-                    { 1.0f, 1.0f }), // TODO: take from spring
+                    mRotationBaseAxis,
+                    GetRotationOffsetAxis()),
                 std::nullopt,
                 1 + PingFramesCount + (mExplodingStepCounter - 1),
                 GetConnectedComponentId());

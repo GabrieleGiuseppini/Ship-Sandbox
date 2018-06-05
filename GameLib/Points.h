@@ -67,8 +67,6 @@ public:
         , mCurrentConnectedComponentDetectionStepSequenceNumberBuffer(elementCount)
         // Pinning
         , mIsPinnedBuffer(elementCount)
-        // Bombs
-        , mIsBombAttachedBuffer(elementCount)
         // Immutable render attributes
         , mColorBuffer(elementCount)
         , mTextureCoordinatesBuffer(elementCount)
@@ -112,7 +110,6 @@ public:
 
         return mIsDeletedBuffer[pointElementIndex];
     }
-
 
     //
     // Material
@@ -204,6 +201,11 @@ public:
 
         return mMassBuffer[pointElementIndex];
     }
+
+    void SetMassToMaterialOffset(
+        ElementIndex pointElementIndex,
+        float offset,
+        Springs & springs);
 
     //
     // Water dynamics
@@ -348,10 +350,6 @@ public:
 
         bool found = mNetworkBuffer[pointElementIndex].ConnectedTriangles.erase_first(triangleElementIndex);
 
-        // TODO
-        if (!found)
-            assert(found);
-
         assert(found);
         (void)found;
     }
@@ -405,41 +403,6 @@ public:
 
         // Re-populate its integration factor, thawing point
         mIntegrationFactorBuffer[pointElementIndex] = CalculateIntegrationFactor(mMassBuffer[pointElementIndex]);
-    }
-
-    //
-    // Bombs
-    //
-
-    inline bool IsBombAttached(ElementIndex pointElementIndex) const
-    {
-        assert(pointElementIndex < mElementCount);
-
-        return mIsBombAttachedBuffer[pointElementIndex];
-    }
-
-    void AttachBomb(
-        ElementIndex pointElementIndex,
-        GameParameters const & gameParameters)
-    {
-        assert(pointElementIndex < mElementCount);
-        assert(false == mIsBombAttachedBuffer[pointElementIndex]);
-
-        mIsBombAttachedBuffer[pointElementIndex] = true;
-
-        // Augment mass due to the bomb
-        mMassBuffer[pointElementIndex] = mMaterialBuffer[pointElementIndex]->Mass + gameParameters.BombMass;
-    }
-
-    void DetachBomb(ElementIndex pointElementIndex)
-    {
-        assert(pointElementIndex < mElementCount);
-        assert(true == mIsBombAttachedBuffer[pointElementIndex]);
-
-        mIsBombAttachedBuffer[pointElementIndex] = false;
-
-        // Reset mass
-        mMassBuffer[pointElementIndex] = mMaterialBuffer[pointElementIndex]->Mass;
     }
 
     //
@@ -537,12 +500,6 @@ private:
     //
 
     Buffer<bool> mIsPinnedBuffer;
-
-    //
-    // Bombs
-    //
-
-    Buffer<bool> mIsBombAttachedBuffer;
 
     //
     // Immutable render attributes

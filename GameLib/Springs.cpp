@@ -30,6 +30,8 @@ void Springs::Add(
     mWaterPermeabilityBuffer.emplace_back(Characteristics::None != (characteristics & Characteristics::Hull) ? 0.0f : 1.0f);
 
     mIsStressedBuffer.emplace_back(false);
+
+    mIsBombAttachedBuffer.emplace_back(false);
 }
 
 void Springs::Destroy(ElementIndex springElementIndex)

@@ -51,8 +51,12 @@ Prev perf (before point et al destructuring)
 	- Move definition of ElementIndex et al into GameTypes.h
 	- Textures are json files with world sizes as well
 		- SEE MOLESKINE
-		- In TextureData
+		- Then, change bomb rendering: takes vector of frame indices, no optionals needed
 	+ CircularList::Erase unit test: complete verification of returned iterator
+
+- Titanic:
+	- Introduce weak metal
+	- Use below funnels
 
 - Optimizations:	
 	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
@@ -189,20 +193,25 @@ Prev perf (before point et al destructuring)
 			  collection (and from point indirectly via Bomb::Destroy which, if attached to point, calls Points::Detach)
 				 
 		= Impl:
-			= Todo:
-				+ Test underwater explosion sound
-				= Move Upload(RenderContext &) to Bomb, virtual
-					+ Get rid of now useless virtual funcs
-					+ RenderContext gets two frames, lighted and unlighted
-						+ When set, ambient light parameter is set to 1.0
-					+ Split textures into dark and light
-
-			- TEST: bombs are attached to springs instead of points
-				- Move isAttached buffer from Points to Springs
-				- Bomb position becomes positionA and positionB (bomb attached across)
-					- Also BlastHandler argument is positionA and positionB
-					- Blast calculated's by ship from middle point
+			= TEST: bombs are attached to springs instead of points
+				+ Move isAttached buffer from Points to Springs
+				+ Move mass trick to springs
+				+ Bomb position becomes positionA and positionB (bomb attached across)
+					+ Also BlastHandler argument is positionA and positionB
+					+ Blast calculated's by ship from middle point
+				+ inline Springs::GetPointA/BPosition(Points const &)
+				+ Points::SetMassToMaterial(float ~offset)
+				+ Restructure positionA and positionB:
+					+ Freeze position and rotation offset, not positionA and positionB
+				+ Fix calculation of alpha - check just zero
+			- TEST: lead-in: continuate ping counter, just different velocity and different translation to frame index
+			= TEST: 360 rotation: DOES NOT WORK, need to calc sine end retest
+			= Fix mass augmentation
+				= Also update springs' coefficients
 				
+			= Bug: fix menu status at load/reset
+				= Have ResetStatus()
+
 			= Bomb base class, w/type enum
 				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
 					+ Runs state machine with local clock
@@ -389,7 +398,7 @@ Prev perf (before point et al destructuring)
 		+ create new generation seq number; if new is 0 => 1
 		- ElectricalElement has SetVisited(curGen), bool IsVisited(curGen)
 		- All of the following @ new ad-hoc update step
-		- visit whole electrical graph, as:
+		- If mAreElementsDirty: Visit whole electrical graph, as:
 			- For each generator point:
 				- if not visited=>flood all connected ElectricalElements from here
 					- for each node: set to visited

@@ -118,7 +118,7 @@ bool Ship::TogglePinAt(
     vec2f const & targetPos,
     GameParameters const & gameParameters)
 {
-    float const squareSearchRadius = gameParameters.ToolPointSearchRadius * gameParameters.ToolPointSearchRadius;
+    float const squareSearchRadius = gameParameters.ToolSearchRadius * gameParameters.ToolSearchRadius;
 
     //
     // See first if there's a pinned point within the search radius, most recent first;

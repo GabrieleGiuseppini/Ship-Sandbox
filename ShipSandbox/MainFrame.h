@@ -177,6 +177,7 @@ private:
 
 private:
 
+    void ResetState();
     std::vector<std::unique_ptr<wxCursor>> MakeCursors(std::string const & cursorName, int hotspotX, int hotspotY);
     std::unique_ptr<wxCursor> MakeCursor(std::string const & cursorName, int hotspotX, int hotspotY);
     void SwitchCursor();

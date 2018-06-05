@@ -48,8 +48,8 @@ public:
         GameParameters const & gameParameters) = 0;
 
     /*
-     * Invoked when the neighborhood of the point has been disturbed;
-     * includes the point that the bomb is attached to.
+     * Invoked when the neighborhood of the spring has been disturbed;
+     * includes the spring that the bomb is attached to.
      */
     virtual void OnNeighborhoodDisturbed() = 0;
 
@@ -61,23 +61,40 @@ public:
         RenderContext & renderContext) const = 0;
 
     /*
-     * If the point is attached, saves its current position and detaches itself from the Points container;
+     * If the bomb is attached, saves its current position and detaches itself from the Springs container;
      * otherwise, it's a nop.
      */
-    void DetachFromPointIfAttached()
+    void DetachIfAttached()
     {
-        if (!!mPointIndex)
+        if (!!mSpringIndex)
         {
-            assert(mPoints.IsBombAttached(*mPointIndex));
+            // Detach bomb
 
-            mShipPoints.DetachBomb(*mPointIndex);
-            mPosition = mShipPoints.GetPosition(*mPointIndex);
-            mConnectedComponentId = mShipPoints.GetConnectedComponentId(*mPointIndex);
-            mPointIndex.reset();
+            assert(mShipSprings.IsBombAttached(*mSpringIndex));
+
+            mShipSprings.DetachBomb(
+                *mSpringIndex,
+                mShipPoints);
+
+            // Freeze current midpoint position, rotation offset, and connected component
+
+            mMidpointPosition = mShipSprings.GetMidpointPosition(*mSpringIndex, mShipPoints);
+
+            mRotationOffsetAxis = mShipSprings.GetPointBPosition(*mSpringIndex, mShipPoints)
+                - mShipSprings.GetPointAPosition(*mSpringIndex, mShipPoints);
+
+            assert(mShipPoints.GetConnectedComponentId(mShipSprings.GetPointAIndex(*mSpringIndex))
+                == mShipPoints.GetConnectedComponentId(mShipSprings.GetPointBIndex(*mSpringIndex)));
+            mConnectedComponentId = mShipPoints.GetConnectedComponentId(mShipSprings.GetPointAIndex(*mSpringIndex));
+
+            // Remember we don't have a spring index anymore
+
+            mSpringIndex.reset();
         }
         else
         {
-            assert(!!mPosition);
+            assert(!!mMidpointPosition);
+            assert(!!mRotationOffsetAxis);
             assert(!!mConnectedComponentId);
         }
     }
@@ -91,25 +108,44 @@ public:
     }
 
     /*
-     * Gets the point that the bomb is attached to, or none if the bomb is not
-     * attached to any points/
+     * Gets the spring that the bomb is attached to, or none if the bomb is not
+     * attached to any springs.
      */
-    std::optional<ElementContainer::ElementIndex> GetAttachedPointIndex() const
+    std::optional<ElementContainer::ElementIndex> GetAttachedSpringIndex() const
     {
-        return mPointIndex;
+        return mSpringIndex;
     }
 
     /*
-     * Returns the position of this bomb.
+     * Returns the midpoint position of the spring to which this bomb is attached.
      */
     vec2f const GetPosition() const
     {
-        if (!!mPosition)
-            return *mPosition;
+        if (!!mMidpointPosition)
+        {
+            return *mMidpointPosition;
+        }
         else
         {
-            assert(!!mPointIndex);
-            return mShipPoints.GetPosition(*mPointIndex);
+            assert(!!mSpringIndex);
+            return mShipSprings.GetMidpointPosition(*mSpringIndex, mShipPoints);
+        }
+    }
+
+    /*
+     * Returns the rotation axis of the spring to which this bomb is attached.
+     */
+    vec2f const GetRotationOffsetAxis() const
+    {
+        if (!!mRotationOffsetAxis)
+        {
+            return *mRotationOffsetAxis;
+        }
+        else
+        {
+            assert(!!mSpringIndex);
+            return mShipSprings.GetPointBPosition(*mSpringIndex, mShipPoints)
+                - mShipSprings.GetPointAPosition(*mSpringIndex, mShipPoints);
         }
     }
 
@@ -119,11 +155,15 @@ public:
     ConnectedComponentId GetConnectedComponentId() const
     {
         if (!!mConnectedComponentId)
+        {
             return *mConnectedComponentId;
+        }
         else
         {
-            assert(!!mPointIndex);
-            return mShipPoints.GetConnectedComponentId(*mPointIndex);
+            assert(!!mSpringIndex);
+            assert(mShipPoints.GetConnectedComponentId(mShipSprings.GetPointAIndex(*mSpringIndex))
+                == mShipPoints.GetConnectedComponentId(mShipSprings.GetPointBIndex(*mSpringIndex)));
+            return mShipPoints.GetConnectedComponentId(mShipSprings.GetPointAIndex(*mSpringIndex));
         }
     }
 
@@ -131,18 +171,22 @@ protected:
 
     Bomb(
         BombType type,
-        ElementContainer::ElementIndex pointIndex,
+        ElementContainer::ElementIndex springIndex,
         World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         BlastHandler blastHandler,
-        Points & shipPoints)
+        Points & shipPoints,
+        Springs & shipSprings)
         : mParentWorld(parentWorld)
         , mGameEventHandler(std::move(gameEventHandler))
         , mBlastHandler(blastHandler)
         , mShipPoints(shipPoints)
+        , mShipSprings(shipSprings)
+        , mRotationBaseAxis(shipPoints.GetPosition(shipSprings.GetPointBIndex(springIndex)) - shipPoints.GetPosition(shipSprings.GetPointAIndex(springIndex)))
         , mType(type)
-        , mPointIndex(pointIndex)
-        , mPosition(std::nullopt)
+        , mSpringIndex(springIndex)
+        , mMidpointPosition(std::nullopt)
+        , mRotationOffsetAxis(std::nullopt)
         , mConnectedComponentId(std::nullopt)
     {
     }
@@ -159,19 +203,30 @@ protected:
     // The container of all the ship's points
     Points & mShipPoints;
 
+    // The container of all the ship's springs
+    Springs & mShipSprings;
+
+    // The basis orientation axis
+    vec2f const mRotationBaseAxis;
+
 private:
 
     // The type of this bomb
     BombType const mType;
 
-    // The index of the point that we're attached to, or none
+    // The index of the spring that we're attached to, or none
     // when the bomb has been detached
-    std::optional<ElementContainer::ElementIndex> mPointIndex;
+    std::optional<ElementContainer::ElementIndex> mSpringIndex;
 
-    // The position of this bomb, if the bomb has been detached from its point; otherwise, none
-    std::optional<vec2f> mPosition;
+    // The position of the midpoint of the spring of this bomb, if the bomb has been detached from its spring; 
+    // otherwise, none
+    std::optional<vec2f> mMidpointPosition;
 
-    // The connected component ID of this bomb, if the bomb has been detached from its point; otherwise, none
+    // The last rotation axis of the spring of this bomb, if the bomb has been detached from its spring; 
+    // otherwise, none
+    std::optional<vec2f> mRotationOffsetAxis;
+
+    // The connected component ID of this bomb, if the bomb has been detached from its spring; otherwise, none
     std::optional<ConnectedComponentId> mConnectedComponentId;
 };
 

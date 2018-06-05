@@ -42,8 +42,12 @@ struct RotatedTextureRenderInfo
         //
 
         float d = sqrtf(RotationBaseAxis.squareLength() * RotationOffsetAxis.squareLength());
-        float cosAlpha = RotationBaseAxis.dot(RotationOffsetAxis) / std::max(d, std::numeric_limits<float>::min());
-        float sinAlpha = sqrtf(1.0f - cosAlpha * cosAlpha);
+        float cosAlpha = d > 0.0f
+            ? RotationBaseAxis.dot(RotationOffsetAxis) / d
+            : 0.0f;
+        float sinAlpha = cosAlpha < 1.0f
+            ? sqrtf(1.0f - cosAlpha * cosAlpha)
+            : 0.0f;
 
         // First column
         vec2f rotationMatrixX(cosAlpha, sinAlpha);

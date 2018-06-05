@@ -18,18 +18,20 @@ class TimerBomb final : public Bomb
 public:
 
     TimerBomb(
-        ElementContainer::ElementIndex pointIndex,
+        ElementContainer::ElementIndex springIndex,
         World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         BlastHandler blastHandler,
-        Points & shipPoints)
+        Points & shipPoints,
+        Springs & shipSprings)
         : Bomb(
             BombType::TimerBomb,
-            pointIndex,
+            springIndex,
             parentWorld,
             std::move(gameEventHandler),
             blastHandler,
-            shipPoints)
+            shipPoints,
+            shipSprings)
     {}
 
     virtual bool Update(

@@ -41,34 +41,33 @@ struct RotatedTextureRenderInfo
         // Calculate rotation matrix, based off cosine of the angle between rotation offset and rotation base
         //
 
-        float d = sqrtf(RotationBaseAxis.squareLength() * RotationOffsetAxis.squareLength());
-        float cosAlpha = d > 0.0f
-            ? RotationBaseAxis.dot(RotationOffsetAxis) / d
-            : 0.0f;
-        float sinAlpha = cosAlpha < 1.0f
-            ? sqrtf(1.0f - cosAlpha * cosAlpha)
-            : 0.0f;
+        float const alpha = -atan2f(
+            RotationBaseAxis.x * RotationOffsetAxis.y - RotationBaseAxis.y * RotationOffsetAxis.x,
+            RotationBaseAxis.x * RotationOffsetAxis.x + RotationBaseAxis.y * RotationOffsetAxis.y);
+
+        float const cosAlpha = cosf(alpha);
+        float const sinAlpha = sinf(alpha);
 
         // First column
-        vec2f rotationMatrixX(cosAlpha, sinAlpha);
+        vec2f const rotationMatrixX(cosAlpha, sinAlpha);
 
         // Second column
-        vec2f rotationMatrixY(-sinAlpha, cosAlpha);
+        vec2f const rotationMatrixY(-sinAlpha, cosAlpha);
 
 
         //
         // Calculate rectangle vertices
         //
         
-        float leftX = -textureWidth * Scale / 2.0f;
-        float rightX = textureWidth * Scale / 2.0f;
-        float topY = -textureHeight * Scale / 2.0f;
-        float bottomY = textureHeight * Scale / 2.0f;
+        float const leftX = -textureWidth * Scale / 2.0f;
+        float const rightX = textureWidth * Scale / 2.0f;
+        float const topY = -textureHeight * Scale / 2.0f;
+        float const bottomY = textureHeight * Scale / 2.0f;
 
-        vec2f topLeft{ leftX, topY };
-        vec2f topRight{ rightX, topY };
-        vec2f bottomLeft{ leftX, bottomY };
-        vec2f bottomRight{ rightX, bottomY };
+        vec2f const topLeft{ leftX, topY };
+        vec2f const topRight{ rightX, topY };
+        vec2f const bottomLeft{ leftX, bottomY };
+        vec2f const bottomRight{ rightX, bottomY };
 
         return RotatedRectangle(
             { topLeft.dot(rotationMatrixX) + CenterPosition.x, topLeft.dot(rotationMatrixY) + CenterPosition.y },

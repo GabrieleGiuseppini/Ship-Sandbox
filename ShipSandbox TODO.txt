@@ -193,7 +193,7 @@ Prev perf (before point et al destructuring)
 			  collection (and from point indirectly via Bomb::Destroy which, if attached to point, calls Points::Detach)
 				 
 		= Impl:
-			= TEST: bombs are attached to springs instead of points
+			+ TEST: bombs are attached to springs instead of points
 				+ Move isAttached buffer from Points to Springs
 				+ Move mass trick to springs
 				+ Bomb position becomes positionA and positionB (bomb attached across)
@@ -205,13 +205,10 @@ Prev perf (before point et al destructuring)
 					+ Freeze position and rotation offset, not positionA and positionB
 				+ Fix calculation of alpha - check just zero
 			- TEST: lead-in: continuate ping counter, just different velocity and different translation to frame index
-			= TEST: 360 rotation: DOES NOT WORK, need to calc sine end retest
-			= Fix mass augmentation
-				= Also update springs' coefficients
+			+ TEST: 360 rotation
+			+ Fix mass augmentation
+				+ Also update springs' coefficients
 				
-			= Bug: fix menu status at load/reset
-				= Have ResetStatus()
-
 			= Bomb base class, w/type enum
 				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
 					+ Runs state machine with local clock

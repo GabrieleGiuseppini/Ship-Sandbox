@@ -317,7 +317,7 @@ MainFrame::MainFrame(wxApp * mainApp)
     mMoveCursor = MakeCursor("move_cursor", 15, 15);
     mPinCursor = MakeCursor("pin_up_cursor", 4, 27);
     mTimerBombCursor = MakeCursor("timer_bomb_cursor", 15, 15); 
-    mRCBombCursor = MakeCursor("rc_bomb_cursor", 15, 15); 
+    mRCBombCursor = MakeCursor("rc_bomb_cursor", 16, 21); 
 
     SwitchCursor();
 

@@ -208,8 +208,8 @@ Prev perf (before point et al destructuring)
 			+ TEST: 360 rotation
 			+ Fix mass augmentation
 				+ Also update springs' coefficients
-			- Fix blast flipping
-			- TEST: run in debug
+			+ Fix blast flipping
+			+ TEST: run in debug
 			+ FIX: first blast handler is so small that it doesn't find point in radius
 				+ Go linearly from 0.6 to BlastRadius
 				+ At end, re-enable texture frame for explosions

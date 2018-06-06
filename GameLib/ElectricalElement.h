@@ -29,7 +29,7 @@ public:
     {
     }
     
-    inline ElementContainer::ElementIndex GetPointIndex() const
+    inline ElementIndex GetPointIndex() const
     {
         return mPointIndex;
     }
@@ -52,10 +52,10 @@ public:
 protected:
 
     ElectricalElement(        
-        ElementContainer::ElementIndex pointIndex,
+        ElementIndex pointIndex,
         Type type);
 
-    ElementContainer::ElementIndex const mPointIndex;
+    ElementIndex const mPointIndex;
     Type const mType;
 
     // The sequence number of the step on which we last graph-visited this element

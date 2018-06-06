@@ -74,7 +74,7 @@ public:
 
     void DetonateRCBombs();
 
-    ElementContainer::ElementIndex GetNearestPointAt(
+    ElementIndex GetNearestPointAt(
         vec2 const & targetPos,
         float radius) const;
 

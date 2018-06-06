@@ -8,7 +8,7 @@
 namespace Physics {
 
 ElectricalElement::ElectricalElement(    
-    ElementContainer::ElementIndex pointIndex,
+    ElementIndex pointIndex,
     Type type)
     : mPointIndex(pointIndex)
     , mType(type)

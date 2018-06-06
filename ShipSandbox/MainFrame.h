@@ -153,6 +153,7 @@ private:
     }
 
     virtual void OnBombPlaced(
+        ObjectId /*bombId*/,
         BombType bombType,
         bool /*isUnderwater*/) override
     {
@@ -164,6 +165,7 @@ private:
     }
 
     virtual void OnBombRemoved(
+        ObjectId /*bombId*/,
         BombType bombType,
         std::optional<bool> /*isUnderwater*/) override
     {

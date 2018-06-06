@@ -100,6 +100,14 @@ public:
     }
 
     /*
+     * Returns the ID of this bomb.
+     */
+    ObjectId GetId() const
+    {
+        return mId;
+    }
+
+    /*
      * Returns the type of this bomb.
      */
     BombType GetType() const
@@ -111,7 +119,7 @@ public:
      * Gets the spring that the bomb is attached to, or none if the bomb is not
      * attached to any springs.
      */
-    std::optional<ElementContainer::ElementIndex> GetAttachedSpringIndex() const
+    std::optional<ElementIndex> GetAttachedSpringIndex() const
     {
         return mSpringIndex;
     }
@@ -170,14 +178,16 @@ public:
 protected:
 
     Bomb(
+        ObjectId id,
         BombType type,
-        ElementContainer::ElementIndex springIndex,
+        ElementIndex springIndex,
         World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         BlastHandler blastHandler,
         Points & shipPoints,
         Springs & shipSprings)
-        : mParentWorld(parentWorld)
+        : mId(id)
+        , mParentWorld(parentWorld)
         , mGameEventHandler(std::move(gameEventHandler))
         , mBlastHandler(blastHandler)
         , mShipPoints(shipPoints)
@@ -190,6 +200,9 @@ protected:
         , mConnectedComponentId(std::nullopt)
     {
     }
+
+    // Our ID
+    ObjectId const mId;
 
     // Our parent world
     World & mParentWorld;
@@ -216,7 +229,7 @@ private:
 
     // The index of the spring that we're attached to, or none
     // when the bomb has been detached
-    std::optional<ElementContainer::ElementIndex> mSpringIndex;
+    std::optional<ElementIndex> mSpringIndex;
 
     // The position of the midpoint of the spring of this bomb, if the bomb has been detached from its spring; 
     // otherwise, none

@@ -55,24 +55,24 @@ private:
 
     struct RopeSegment
     {
-        ElementContainer::ElementIndex PointAIndex;
-        ElementContainer::ElementIndex PointBIndex;
+        ElementIndex PointAIndex;
+        ElementIndex PointBIndex;
 
         RopeSegment()
-            : PointAIndex(ElementContainer::NoneElementIndex)
-            , PointBIndex(ElementContainer::NoneElementIndex)
+            : PointAIndex(NoneElementIndex)
+            , PointBIndex(NoneElementIndex)
         {
         }
     };
 
     struct SpringInfo
     {
-        ElementContainer::ElementIndex PointAIndex;
-        ElementContainer::ElementIndex PointBIndex;
+        ElementIndex PointAIndex;
+        ElementIndex PointBIndex;
 
         SpringInfo(
-            ElementContainer::ElementIndex pointAIndex,
-            ElementContainer::ElementIndex pointBIndex)
+            ElementIndex pointAIndex,
+            ElementIndex pointBIndex)
             : PointAIndex(pointAIndex)
             , PointBIndex(pointBIndex)
         {
@@ -81,14 +81,14 @@ private:
 
     struct TriangleInfo
     {
-        ElementContainer::ElementIndex PointAIndex;
-        ElementContainer::ElementIndex PointBIndex;
-        ElementContainer::ElementIndex PointCIndex;
+        ElementIndex PointAIndex;
+        ElementIndex PointBIndex;
+        ElementIndex PointCIndex;
 
         TriangleInfo(
-            ElementContainer::ElementIndex pointAIndex,
-            ElementContainer::ElementIndex pointBIndex,
-            ElementContainer::ElementIndex pointCIndex)
+            ElementIndex pointAIndex,
+            ElementIndex pointBIndex,
+            ElementIndex pointCIndex)
             : PointAIndex(pointAIndex)
             , PointBIndex(pointBIndex)
             , PointCIndex(pointCIndex)
@@ -113,7 +113,7 @@ private:
         std::vector<PointInfo> const & pointInfos);
 
     static void CreateShipElementInfos(
-        std::unique_ptr<std::unique_ptr<std::optional<ElementContainer::ElementIndex>[]>[]> const & pointIndexMatrix,
+        std::unique_ptr<std::unique_ptr<std::optional<ElementIndex>[]>[]> const & pointIndexMatrix,
         ImageSize const & structureImageSize,
         Physics::Points & points,
         std::vector<SpringInfo> & springInfos,

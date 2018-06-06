@@ -25,6 +25,7 @@ public:
         , mSinkingBeginEvents()
         , mBombExplosionEvents()
         , mRCBombPingEvents()
+        , mTimerBombDefusedEvents()
         , mSinks()
     {
     }
@@ -100,6 +101,7 @@ public:
     //
 
     virtual void OnBombPlaced(
+        ObjectId bombId,
         BombType bombType,
         bool isUnderwater) override
     {
@@ -107,12 +109,14 @@ public:
         for (auto sink : mSinks)
         {
             sink->OnBombPlaced(
+                bombId,
                 bombType,
                 isUnderwater);
         }
     }
 
     virtual void OnBombRemoved(
+        ObjectId bombId,
         BombType bombType,
         std::optional<bool> isUnderwater) override
     {
@@ -120,6 +124,7 @@ public:
         for (auto sink : mSinks)
         {
             sink->OnBombRemoved(
+                bombId,
                 bombType,
                 isUnderwater);
         }
@@ -137,6 +142,50 @@ public:
         unsigned int size) override
     {
         mRCBombPingEvents[std::make_tuple(isUnderwater)] += size;
+    }
+
+    virtual void OnTimerBombSlowFuseStart(
+        ObjectId bombId,
+        bool isUnderwater)
+    {
+        // No need to aggregate this one
+        for (auto sink : mSinks)
+        {
+            sink->OnTimerBombSlowFuseStart(
+                bombId,
+                isUnderwater);
+        }
+    }
+
+    virtual void OnTimerBombFastFuseStart(
+        ObjectId bombId,
+        bool isUnderwater)
+    {
+        // No need to aggregate this one
+        for (auto sink : mSinks)
+        {
+            sink->OnTimerBombFastFuseStart(
+                bombId,
+                isUnderwater);
+        }
+    }
+
+    virtual void OnTimerBombFuseStop(
+        ObjectId bombId)
+    {
+        // No need to aggregate this one
+        for (auto sink : mSinks)
+        {
+            sink->OnTimerBombFuseStop(
+                bombId);
+        }
+    }
+
+    virtual void OnTimerBombDefused(
+        bool isUnderwater,
+        unsigned int size) override
+    {
+        mTimerBombDefusedEvents[std::make_tuple(isUnderwater)] += size;
     }
 
 public:
@@ -188,6 +237,11 @@ public:
             {
                 sink->OnRCBombPing(std::get<0>(entry.first), entry.second);
             }
+
+            for (auto const & entry : mTimerBombDefusedEvents)
+            {
+                sink->OnTimerBombDefused(std::get<0>(entry.first), entry.second);
+            }
         }
 
         // Clear collections
@@ -199,6 +253,7 @@ public:
         mSinkingBeginEvents.clear();
         mBombExplosionEvents.clear();
         mRCBombPingEvents.clear();
+        mTimerBombDefusedEvents.clear();
     }
 
     void RegisterSink(IGameEventHandler * sink)
@@ -217,6 +272,7 @@ private:
     std::vector<unsigned int> mSinkingBeginEvents;
     unordered_tuple_map<std::tuple<bool>, unsigned int> mBombExplosionEvents;
     unordered_tuple_map<std::tuple<bool>, unsigned int> mRCBombPingEvents;
+    unordered_tuple_map<std::tuple<bool>, unsigned int> mTimerBombDefusedEvents;
 
     // The registered sinks
     std::vector<IGameEventHandler *> mSinks;

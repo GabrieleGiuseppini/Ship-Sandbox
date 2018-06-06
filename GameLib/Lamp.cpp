@@ -7,7 +7,7 @@
 
 namespace Physics {
 
-Lamp::Lamp(ElementContainer::ElementIndex pointIndex)
+Lamp::Lamp(ElementIndex pointIndex)
     : ElectricalElement(        
         pointIndex,
         ElectricalElement::Type::Lamp)

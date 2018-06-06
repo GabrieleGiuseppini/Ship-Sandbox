@@ -228,7 +228,7 @@ void GameController::DetonateRCBombs()
     mGameEventDispatcher->Flush();
 }
 
-ElementContainer::ElementIndex GameController::GetNearestPointAt(vec2 const & screenCoordinates) const
+ElementIndex GameController::GetNearestPointAt(vec2 const & screenCoordinates) const
 {
     vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);
 

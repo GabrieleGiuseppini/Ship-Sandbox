@@ -161,7 +161,7 @@ bool Ship::TogglePinAt(
     // if found, pin it
     //
 
-    ElementContainer::ElementIndex nearestUnpinnedPointIndex = ElementContainer::NoneElementIndex;
+    ElementIndex nearestUnpinnedPointIndex = NoneElementIndex;
     float nearestUnpinnedPointDistance = std::numeric_limits<float>::max();
 
     for (auto pointIndex : mPoints)
@@ -183,7 +183,7 @@ bool Ship::TogglePinAt(
         }
     }
 
-    if (ElementContainer::NoneElementIndex != nearestUnpinnedPointIndex)
+    if (NoneElementIndex != nearestUnpinnedPointIndex)
     {
         // We have a nearest, unpinned point
 
@@ -237,13 +237,13 @@ void Ship::DetonateRCBombs()
     mBombs.DetonateRCBombs();
 }
 
-ElementContainer::ElementIndex Ship::GetNearestPointIndexAt(
+ElementIndex Ship::GetNearestPointIndexAt(
     vec2 const & targetPos, 
     float radius) const
 {
     float const squareRadius = radius * radius;
 
-    ElementContainer::ElementIndex bestPointIndex = ElementContainer::NoneElementIndex;
+    ElementIndex bestPointIndex = NoneElementIndex;
     float bestSquareDistance = std::numeric_limits<float>::max();
 
     for (auto pointIndex : mPoints)
@@ -663,7 +663,7 @@ void Ship::DetectConnectedComponents(uint64_t currentStepSequenceNumber)
     mConnectedComponentSizes.clear();
 
     ConnectedComponentId currentConnectedComponentId = 0;
-    std::queue<ElementContainer::ElementIndex> pointsToVisitForConnectedComponents;    
+    std::queue<ElementIndex> pointsToVisitForConnectedComponents;    
 
     // Visit all points
     for (auto pointIndex : mPoints)
@@ -905,7 +905,7 @@ void Ship::BombBlastHandler(
     float squareBlastRadius = blastRadius * blastRadius;
 
     float closestPointSquareDistance = std::numeric_limits<float>::max();
-    ElementContainer::ElementIndex closestPointIndex = ElementContainer::NoneElementIndex;
+    ElementIndex closestPointIndex = NoneElementIndex;
 
     for (auto pointIndex : mPoints)
     {
@@ -937,14 +937,14 @@ void Ship::BombBlastHandler(
     //
 
     if (0 == blastSequenceNumber
-        && ElementContainer::NoneElementIndex != closestPointIndex)
+        && NoneElementIndex != closestPointIndex)
     {
         // Destroy point
         mPoints.Destroy(closestPointIndex);
     }
 }
 
-void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)
+void Ship::PointDestroyHandler(ElementIndex pointElementIndex)
 {
     //
     // Destroy all springs attached to this point
@@ -982,7 +982,7 @@ void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)
     // Destroy the connected electrical element, if any
     //
 
-    if (ElementContainer::NoneElementIndex != mPoints.GetConnectedElectricalElement(pointElementIndex))
+    if (NoneElementIndex != mPoints.GetConnectedElectricalElement(pointElementIndex))
     {
         mElectricalElements.Destroy(mPoints.GetConnectedElectricalElement(pointElementIndex));
     }
@@ -1026,7 +1026,7 @@ void Ship::PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex)
     mAreElementsDirty = true;
 }
 
-void Ship::SpringDestroyHandler(ElementContainer::ElementIndex springElementIndex)
+void Ship::SpringDestroyHandler(ElementIndex springElementIndex)
 {
     auto const pointAIndex = mSprings.GetPointAIndex(springElementIndex);
     auto const pointBIndex = mSprings.GetPointBIndex(springElementIndex);
@@ -1077,7 +1077,7 @@ void Ship::SpringDestroyHandler(ElementContainer::ElementIndex springElementInde
     mAreElementsDirty = true;
 }
 
-void Ship::TriangleDestroyHandler(ElementContainer::ElementIndex triangleElementIndex)
+void Ship::TriangleDestroyHandler(ElementIndex triangleElementIndex)
 {
     // Remove triangle from its endpoints
     mPoints.RemoveConnectedTriangle(mTriangles.GetPointAIndex(triangleElementIndex), triangleElementIndex);
@@ -1088,7 +1088,7 @@ void Ship::TriangleDestroyHandler(ElementContainer::ElementIndex triangleElement
     mAreElementsDirty = true;
 }
 
-void Ship::ElectricalElementDestroyHandler(ElementContainer::ElementIndex /*electricalElementIndex*/)
+void Ship::ElectricalElementDestroyHandler(ElementIndex /*electricalElementIndex*/)
 {
     // Remember our elements are now dirty
     mAreElementsDirty = true;

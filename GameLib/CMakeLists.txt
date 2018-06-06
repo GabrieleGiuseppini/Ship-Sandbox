@@ -30,6 +30,7 @@ set  (GAME_SOURCES
 	Material.cpp
 	Material.h
 	MaterialDatabase.h
+	ObjectIdGenerator.h
 	ProgressCallback.h
 	RenderContext.cpp
 	RenderContext.h	

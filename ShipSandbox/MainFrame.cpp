@@ -540,7 +540,7 @@ void MainFrame::OnKeyDown(wxKeyEvent & event)
         vec2f worldCoordinates = mGameController->ScreenToWorld(screenCoordinates);
 
         auto pointIndex = mGameController->GetNearestPointAt(screenCoordinates);
-        if (ElementContainer::NoneElementIndex != pointIndex)
+        if (NoneElementIndex != pointIndex)
         {
             // TODO: write directly onto window
             LogMessage("@ ", worldCoordinates.toString(), ": point ", pointIndex);

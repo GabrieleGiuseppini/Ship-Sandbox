@@ -20,7 +20,7 @@ using namespace Physics;
 namespace /* anonymous */ {
 
     bool IsConnectedToNonRopePoints(
-        ElementContainer::ElementIndex pointIndex,
+        ElementIndex pointIndex,
         Points const & points,
         Springs const & springs)
     {
@@ -76,10 +76,10 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     //    
 
     // Matrix of points - we allocate 2 extra dummy rows and cols to avoid checking for boundaries
-    std::unique_ptr<std::unique_ptr<std::optional<ElementContainer::ElementIndex>[]>[]> pointIndexMatrix(new std::unique_ptr<std::optional<ElementContainer::ElementIndex>[]>[structureWidth + 2]);
+    std::unique_ptr<std::unique_ptr<std::optional<ElementIndex>[]>[]> pointIndexMatrix(new std::unique_ptr<std::optional<ElementIndex>[]>[structureWidth + 2]);
     for (int c = 0; c < structureWidth + 2; ++c)
     {
-        pointIndexMatrix[c] = std::unique_ptr<std::optional<ElementContainer::ElementIndex>[]>(new std::optional<ElementContainer::ElementIndex>[structureHeight + 2]);
+        pointIndexMatrix[c] = std::unique_ptr<std::optional<ElementIndex>[]>(new std::optional<ElementIndex>[structureHeight + 2]);
     }
 
     // Visit all real columns
@@ -103,13 +103,13 @@ std::unique_ptr<Ship> ShipBuilder::Create(
                 {
                     // Store in RopeSegments
                     RopeSegment & ropeSegment = ropeSegments[rgbColour];
-                    if (ElementContainer::NoneElementIndex == ropeSegment.PointAIndex)
+                    if (NoneElementIndex == ropeSegment.PointAIndex)
                     {
-                        ropeSegment.PointAIndex = static_cast<ElementContainer::ElementIndex>(pointInfos.size());
+                        ropeSegment.PointAIndex = static_cast<ElementIndex>(pointInfos.size());
                     }
-                    else if (ElementContainer::NoneElementIndex == ropeSegment.PointBIndex)
+                    else if (NoneElementIndex == ropeSegment.PointBIndex)
                     {
-                        ropeSegment.PointBIndex = static_cast<ElementContainer::ElementIndex>(pointInfos.size());
+                        ropeSegment.PointBIndex = static_cast<ElementIndex>(pointInfos.size());
                     }
                     else
                     {
@@ -129,7 +129,7 @@ std::unique_ptr<Ship> ShipBuilder::Create(
                 // Make a point
                 //
 
-                pointIndexMatrix[x + 1][y + 1] = static_cast<ElementContainer::ElementIndex>(pointInfos.size());
+                pointIndexMatrix[x + 1][y + 1] = static_cast<ElementIndex>(pointInfos.size());
 
                 pointInfos.emplace_back(
                     vec2f(
@@ -272,8 +272,8 @@ void ShipBuilder::CreateRopeSegments(
         auto const & ropeSegment = ropeSegmentEntry.second;
 
         // Make sure we've got both endpoints
-        assert(ElementContainer::NoneElementIndex != ropeSegment.PointAIndex);
-        if (ElementContainer::NoneElementIndex == ropeSegment.PointBIndex)
+        assert(NoneElementIndex != ropeSegment.PointAIndex);
+        if (NoneElementIndex == ropeSegment.PointBIndex)
         {
             throw GameException(
                 std::string("Only one rope endpoint found with index <")
@@ -339,7 +339,7 @@ void ShipBuilder::CreateRopeSegments(
                 newPosition = vec2f(curN, curW);
             }
 
-            auto nexPointIndex = static_cast<ElementContainer::ElementIndex>(pointInfos.size());
+            auto nexPointIndex = static_cast<ElementIndex>(pointInfos.size());
 
             // Add SpringInfo
             springInfos.emplace_back(curStartPointIndex, nexPointIndex);
@@ -363,7 +363,7 @@ void ShipBuilder::CreateRopeSegments(
 
 Points ShipBuilder::CreatePoints(std::vector<PointInfo> const & pointInfos)
 {
-    Physics::Points points(static_cast<ElementContainer::ElementIndex>(pointInfos.size()));
+    Physics::Points points(static_cast<ElementIndex>(pointInfos.size()));
 
     for (size_t p = 0; p < pointInfos.size(); ++p)
     {
@@ -389,7 +389,7 @@ Points ShipBuilder::CreatePoints(std::vector<PointInfo> const & pointInfos)
 }
 
 void ShipBuilder::CreateShipElementInfos(
-    std::unique_ptr<std::unique_ptr<std::optional<ElementContainer::ElementIndex>[]>[]> const & pointIndexMatrix,
+    std::unique_ptr<std::unique_ptr<std::optional<ElementIndex>[]>[]> const & pointIndexMatrix,
     ImageSize const & structureImageSize,
     Physics::Points & points,
     std::vector<SpringInfo> & springInfos,
@@ -432,7 +432,7 @@ void ShipBuilder::CreateShipElementInfos(
                 // A point exists at these coordinates
                 //
 
-                ElementContainer::ElementIndex pointIndex = *pointIndexMatrix[x][y];
+                ElementIndex pointIndex = *pointIndexMatrix[x][y];
 
                 // If a non-hull node has empty space on one of its four sides, it is automatically leaking.
                 // Check if a is leaking; a is leaking if:
@@ -545,9 +545,9 @@ Physics::Springs ShipBuilder::CreateSprings(
     std::vector<SpringInfo> const & springInfos,
     Physics::Points & points)
 {
-    Physics::Springs springs(static_cast<ElementContainer::ElementIndex>(springInfos.size()));
+    Physics::Springs springs(static_cast<ElementIndex>(springInfos.size()));
 
-    for (ElementContainer::ElementIndex s = 0; s < springInfos.size(); ++s)
+    for (ElementIndex s = 0; s < springInfos.size(); ++s)
     {
         Material const * pointAMaterial = points.GetMaterial(springInfos[s].PointAIndex);
         Material const * pointBMaterial = points.GetMaterial(springInfos[s].PointBIndex);
@@ -593,10 +593,10 @@ Physics::Triangles ShipBuilder::CreateTriangles(
     // First pass: filter out triangles and keep indices of those that need to be created
     //
 
-    std::vector<ElementContainer::ElementIndex> triangleIndices;
+    std::vector<ElementIndex> triangleIndices;
     triangleIndices.reserve(triangleInfos.size());
 
-    for (ElementContainer::ElementIndex t = 0; t < triangleInfos.size(); ++t)
+    for (ElementIndex t = 0; t < triangleInfos.size(); ++t)
     {
         if (points.GetMaterial(triangleInfos[t].PointAIndex)->IsRope
             && points.GetMaterial(triangleInfos[t].PointBIndex)->IsRope
@@ -619,9 +619,9 @@ Physics::Triangles ShipBuilder::CreateTriangles(
     // Second pass: create actual triangles
     //
 
-    Physics::Triangles triangles(static_cast<ElementContainer::ElementIndex>(triangleIndices.size()));
+    Physics::Triangles triangles(static_cast<ElementIndex>(triangleIndices.size()));
 
-    for (ElementContainer::ElementIndex t = 0; t < triangleIndices.size(); ++t)
+    for (ElementIndex t = 0; t < triangleIndices.size(); ++t)
     {
         auto triangleIndex = triangleIndices[t];
 
@@ -643,7 +643,7 @@ Physics::Triangles ShipBuilder::CreateTriangles(
 ElectricalElements ShipBuilder::CreateElectricalElements(
     Physics::Points & points)
 {
-    ElementContainer::ElementIndex electricalElementsCount = 0;
+    ElementIndex electricalElementsCount = 0;
     for (auto pointIndex : points)
     {
         if (!!points.GetMaterial(pointIndex)->Electrical)
@@ -654,7 +654,7 @@ ElectricalElements ShipBuilder::CreateElectricalElements(
 
     ElectricalElements electricalElements(electricalElementsCount);
 
-    ElementContainer::ElementIndex electricalElementIndex = 0;
+    ElementIndex electricalElementIndex = 0;
     for (auto pointIndex : points)
     {
         if (!!points.GetMaterial(pointIndex)->Electrical)

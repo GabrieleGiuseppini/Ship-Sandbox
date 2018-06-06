@@ -18,21 +18,13 @@ class TimerBomb final : public Bomb
 public:
 
     TimerBomb(
-        ElementContainer::ElementIndex springIndex,
+        ObjectId id,
+        ElementIndex springIndex,
         World & parentWorld,
         std::shared_ptr<IGameEventHandler> gameEventHandler,
         BlastHandler blastHandler,
         Points & shipPoints,
-        Springs & shipSprings)
-        : Bomb(
-            BombType::TimerBomb,
-            springIndex,
-            parentWorld,
-            std::move(gameEventHandler),
-            blastHandler,
-            shipPoints,
-            shipSprings)
-    {}
+        Springs & shipSprings);
 
     virtual bool Update(
         GameWallClock::time_point now,
@@ -45,6 +37,29 @@ public:
         RenderContext & renderContext) const override;
 
 private:
+
+    ///////////////////////////////////////////////////////
+    // State machine
+    ///////////////////////////////////////////////////////
+
+    enum class State
+    {
+        // In this state the fuse burns slowly, and after a while the bomb explodes
+        FuseBurning,
+
+        // In this state we are about to explode; we wait a little time
+        // before exploding, and burn the fuse faster
+        DetonationLeadIn,
+
+        // In this state we are exploding, and increment our counter to
+        // match the explosion animation until the animation is over
+        Exploding,
+
+        // This is the final state; once this state is reached, we're expired
+        Expired
+    };
+
+    State mState;
 };
 
 }

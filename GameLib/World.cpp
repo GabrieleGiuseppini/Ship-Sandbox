@@ -151,17 +151,17 @@ void World::DetonateRCBombs()
     }
 }
 
-ElementContainer::ElementIndex World::GetNearestPointAt(
+ElementIndex World::GetNearestPointAt(
     vec2 const & targetPos,
     float radius) const
 {
-    ElementContainer::ElementIndex bestPointIndex = ElementContainer::NoneElementIndex;
+    ElementIndex bestPointIndex = NoneElementIndex;
     float bestSquareDistance = std::numeric_limits<float>::max();
 
     for (auto const & ship : mAllShips)
     {
         auto shipBestPointIndex = ship->GetNearestPointIndexAt(targetPos, radius);
-        if (ElementContainer::NoneElementIndex != shipBestPointIndex)
+        if (NoneElementIndex != shipBestPointIndex)
         {
             float squareDistance = (ship->GetPoints().GetPosition(shipBestPointIndex) - targetPos).squareLength();
             if (squareDistance < bestSquareDistance)

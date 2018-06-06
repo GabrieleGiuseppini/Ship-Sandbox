@@ -7,7 +7,7 @@
 
 namespace Physics {
 
-Cable::Cable(ElementContainer::ElementIndex pointIndex)
+Cable::Cable(ElementIndex pointIndex)
     : ElectricalElement(        
         pointIndex,
         ElectricalElement::Type::Cable)

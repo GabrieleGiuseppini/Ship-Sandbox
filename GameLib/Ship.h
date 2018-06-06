@@ -77,7 +77,7 @@ public:
 
     void DetonateRCBombs();
 
-    ElementContainer::ElementIndex GetNearestPointIndexAt(
+    ElementIndex GetNearestPointIndexAt(
         vec2 const & targetPos,
         float radius) const;
 
@@ -128,13 +128,13 @@ private:
         int blastSequenceCount,
         GameParameters const & gameParameters);
 
-    void PointDestroyHandler(ElementContainer::ElementIndex pointElementIndex);
+    void PointDestroyHandler(ElementIndex pointElementIndex);
 
-    void SpringDestroyHandler(ElementContainer::ElementIndex springElementIndex);
+    void SpringDestroyHandler(ElementIndex springElementIndex);
 
-    void TriangleDestroyHandler(ElementContainer::ElementIndex triangleElementIndex);
+    void TriangleDestroyHandler(ElementIndex triangleElementIndex);
 
-    void ElectricalElementDestroyHandler(ElementContainer::ElementIndex electricalElementIndex);
+    void ElectricalElementDestroyHandler(ElementIndex electricalElementIndex);
 
 private:
 
@@ -167,7 +167,7 @@ private:
     //
 
     // The current set of pinned points
-    CircularList<ElementContainer::ElementIndex, GameParameters::MaxPinnedPoints> mCurrentPinnedPoints;
+    CircularList<ElementIndex, GameParameters::MaxPinnedPoints> mCurrentPinnedPoints;
 
     // Flag remembering whether the set of pinned points has changed since the last step
     bool mutable mArePinnedPointsDirty;

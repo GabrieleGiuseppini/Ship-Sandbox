@@ -27,6 +27,7 @@ void Bombs::Update(GameParameters const & gameParameters)
 
             // Notify (soundless) removal
             mGameEventHandler->OnBombRemoved(
+                (*it)->GetId(),
                 (*it)->GetType(),
                 std::nullopt);
 
@@ -40,7 +41,7 @@ void Bombs::Update(GameParameters const & gameParameters)
     }
 }
 
-void Bombs::OnPointDestroyed(ElementContainer::ElementIndex pointElementIndex)
+void Bombs::OnPointDestroyed(ElementIndex pointElementIndex)
 {
     auto squareNeighborhoodRadius = GameParameters::BombNeighborhoodRadius * GameParameters::BombNeighborhoodRadius;
 
@@ -58,7 +59,7 @@ void Bombs::OnPointDestroyed(ElementContainer::ElementIndex pointElementIndex)
     }
 }
 
-void Bombs::OnSpringDestroyed(ElementContainer::ElementIndex springElementIndex)
+void Bombs::OnSpringDestroyed(ElementIndex springElementIndex)
 {
     auto squareNeighborhoodRadius = GameParameters::BombNeighborhoodRadius * GameParameters::BombNeighborhoodRadius;
 

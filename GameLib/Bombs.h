@@ -8,6 +8,7 @@
 #include "CircularList.h"
 #include "GameParameters.h"
 #include "IGameEventHandler.h"
+#include "ObjectIdGenerator.h"
 #include "Physics.h"
 #include "RenderContext.h"
 #include "Vectors.h"
@@ -45,9 +46,9 @@ public:
 
     void Update(GameParameters const & gameParameters);
 
-    void OnPointDestroyed(ElementContainer::ElementIndex pointElementIndex);
+    void OnPointDestroyed(ElementIndex pointElementIndex);
 
-    void OnSpringDestroyed(ElementContainer::ElementIndex springElementIndex);
+    void OnSpringDestroyed(ElementIndex springElementIndex);
 
     bool ToggleTimerBombAt(
         vec2 const & targetPos,
@@ -96,6 +97,7 @@ private:
 
                 // Notify its removal
                 mGameEventHandler->OnBombRemoved(
+                    (*it)->GetId(),
                     (*it)->GetType(),
                     mParentWorld.IsUnderwater(
                         (*it)->GetPosition()));
@@ -118,7 +120,7 @@ private:
         // if found, attach bomb to it it
         //
 
-        ElementContainer::ElementIndex nearestUnarmedSpringIndex = ElementContainer::NoneElementIndex;
+        ElementIndex nearestUnarmedSpringIndex = NoneElementIndex;
         float nearestUnarmedSpringDistance = std::numeric_limits<float>::max();
 
         for (auto springIndex : mShipSprings)
@@ -140,13 +142,14 @@ private:
             }
         }
 
-        if (ElementContainer::NoneElementIndex != nearestUnarmedSpringIndex)
+        if (NoneElementIndex != nearestUnarmedSpringIndex)
         {
             // We have a nearest, unarmed spring
 
             // Create bomb
             std::unique_ptr<Bomb> bomb(
                 new TBomb(
+                    ObjectIdGenerator::GetInstance().Generate(),
                     nearestUnarmedSpringIndex,
                     mParentWorld,
                     mGameEventHandler,
@@ -162,6 +165,7 @@ private:
 
             // Notify
             mGameEventHandler->OnBombPlaced(
+                bomb->GetId(),
                 bomb->GetType(),
                 mParentWorld.IsUnderwater(
                     bomb->GetPosition()));
@@ -172,6 +176,7 @@ private:
                 {
                     // Notify its removal
                     mGameEventHandler->OnBombRemoved(
+                        purgedBomb->GetId(),
                         purgedBomb->GetType(),
                         mParentWorld.IsUnderwater(
                             purgedBomb->GetPosition()));

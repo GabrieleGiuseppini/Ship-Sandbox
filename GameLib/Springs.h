@@ -358,14 +358,14 @@ constexpr Physics::Springs::Characteristics operator&(Physics::Springs::Characte
     return static_cast<Physics::Springs::Characteristics>(static_cast<int>(a) & static_cast<int>(b));
 }
 
-inline bool Physics::Springs::IsHull(ElementContainer::ElementIndex springElementIndex) const
+inline bool Physics::Springs::IsHull(ElementIndex springElementIndex) const
 {
     assert(springElementIndex < mElementCount);
 
     return Physics::Springs::Characteristics::None != (mCharacteristicsBuffer[springElementIndex] & Physics::Springs::Characteristics::Hull);
 }
 
-inline bool Physics::Springs::IsRope(ElementContainer::ElementIndex springElementIndex) const
+inline bool Physics::Springs::IsRope(ElementIndex springElementIndex) const
 {
     assert(springElementIndex < mElementCount);
 

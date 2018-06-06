@@ -19,11 +19,17 @@ SoundController::SoundController(
     ProgressCallback const & progressCallback)
     : mResourceLoader(std::move(resourceLoader))
     , mCurrentVolume(100.0f)
+    // State
+    , mIsInDraw(false)
+    // One-shot sounds
     , mMSUSoundBuffers()
     , mUSoundBuffers()
-    , mDrawSoundBuffer()
-    , mDrawSound()
     , mCurrentlyPlayingSounds()
+    // Continuous sounds
+    , mDrawSound()
+    , mTimerBombSlowFuseSound()
+    , mTimerBombFastFuseSound()
+    // Music
     , mSinkingMusic()
 {    
     //
@@ -79,9 +85,15 @@ SoundController::SoundController(
         SoundType soundType = StrToSoundType(soundTypeMatch[1].str());
         if (soundType == SoundType::Draw)
         {
-            mDrawSoundBuffer = std::move(soundBuffer);
-            mDrawSound = std::make_unique<sf::Sound>();
-            mDrawSound->setBuffer(*mDrawSoundBuffer);
+            mDrawSound.Initialize(std::move(soundBuffer));
+        }
+        else if (soundType == SoundType::TimerBombSlowFuse)
+        {
+            mTimerBombSlowFuseSound.Initialize(std::move(soundBuffer));
+        }
+        else if (soundType == SoundType::TimerBombFastFuse)
+        {
+            mTimerBombFastFuseSound.Initialize(std::move(soundBuffer));
         }
         else if (soundType == SoundType::Break || soundType == SoundType::Destroy || soundType == SoundType::Stress)
         {
@@ -169,20 +181,6 @@ SoundController::~SoundController()
 
 void SoundController::SetPaused(bool isPaused)
 {
-    if (!!mDrawSound)
-    {
-        if (isPaused)
-        {
-            if (sf::Sound::Status::Playing == mDrawSound->getStatus())
-                mDrawSound->pause();
-        }
-        else
-        {
-            if (sf::Sound::Status::Paused == mDrawSound->getStatus())
-                mDrawSound->play();
-        }
-    }
-
     for (auto const & playingSound : mCurrentlyPlayingSounds)
     {
         if (isPaused)
@@ -196,6 +194,11 @@ void SoundController::SetPaused(bool isPaused)
                 playingSound.Sound->play();
         }
     }
+
+    // We don't pause the draw sound
+
+    mTimerBombSlowFuseSound.SetPaused(isPaused);
+    mTimerBombFastFuseSound.SetPaused(isPaused);
 
     if (isPaused)
     {
@@ -217,6 +220,7 @@ void SoundController::SetMute(bool isMute)
         sf::Listener::setGlobalVolume(mCurrentVolume);
 }
 
+
 void SoundController::SetVolume(float volume)
 {
     mCurrentVolume = volume;
@@ -225,6 +229,16 @@ void SoundController::SetVolume(float volume)
 
 void SoundController::HighFrequencyUpdate()
 {
+    if (!mIsInDraw)
+    {
+        mDrawSound.Stop();
+    }
+    else
+    {
+        // Reset the flag now...
+        // ...if we're doing a Draw, we'll find the flag up next time
+        mIsInDraw = false;
+    }
 }
 
 void SoundController::LowFrequencyUpdate()
@@ -239,13 +253,6 @@ void SoundController::LowFrequencyUpdate()
 void SoundController::Reset()
 {
     //
-    // Stop music
-    //
-
-    mSinkingMusic.stop();
-
-
-    //
     // Stop and clear all sounds
     //
 
@@ -259,6 +266,22 @@ void SoundController::Reset()
     }
 
     mCurrentlyPlayingSounds.clear();
+
+    mDrawSound.Stop();
+    mTimerBombSlowFuseSound.Stop();
+    mTimerBombFastFuseSound.Stop();
+
+    //
+    // Stop music
+    //
+
+    mSinkingMusic.stop();
+
+    //
+    // Reset state
+    //
+
+    mIsInDraw = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -279,18 +302,10 @@ void SoundController::OnDestroy(
 }
 
 void SoundController::OnDraw()
-{
-    if (!!mDrawSound && sf::Sound::Status::Paused != mDrawSound->getStatus())
-    {
-        if (sf::Sound::Status::Playing != mDrawSound->getStatus())
-        {
-            mDrawSound->play();
-        }
-        else if (mDrawSound->getPlayingOffset() > sf::seconds(0.7f))
-        {
-            mDrawSound->setPlayingOffset(sf::seconds(0.1f));
-        }
-    }
+{    
+    mIsInDraw = true;
+
+    mDrawSound.Start();
 }
 
 void SoundController::OnPinToggled(
@@ -342,7 +357,8 @@ void SoundController::OnSinkingBegin(unsigned int /*shipId*/)
 }
 
 void SoundController::OnBombPlaced(
-    BombType /*bombType*/,
+    ObjectId bombId,
+    BombType bombType,
     bool isUnderwater) 
 {
     PlayUSound(
@@ -352,7 +368,8 @@ void SoundController::OnBombPlaced(
 }
 
 void SoundController::OnBombRemoved(
-    BombType /*bombType*/,
+    ObjectId bombId,
+    BombType bombType,
     std::optional<bool> isUnderwater)
 {
     if (!!isUnderwater)
@@ -382,6 +399,51 @@ void SoundController::OnRCBombPing(
 {
     PlayUSound(
         SoundType::RCBombPing, 
+        isUnderwater,
+        std::max(
+            100.0f,
+            30.0f * size));
+}
+
+void SoundController::OnTimerBombSlowFuseStart(
+    ObjectId bombId,
+    bool isUnderwater)
+{
+    // TODO: 
+    // - see if bombId in fast fuse sound; if so:
+    //      - remove it
+    //      - UpdateTimerBombFuseSound(...fast stuff...)
+    // - add bombId to set of timer bombs in slow fuse sound
+    // - UpdateTimerBombFuseSound(...slow stuff...)
+}
+
+void SoundController::OnTimerBombFastFuseStart(
+    ObjectId bombId,
+    bool isUnderwater)
+{
+    // TODO: 
+    // - see if bombId in slow fuse sound; if so:
+    //      - remove it
+    //      - UpdateTimerBombFuseSound(...slow stuff...)
+    // - add bombId to set of timer bombs in fast fuse sound
+    // - UpdateTimerBombFuseSound(...fast stuff...)
+}
+
+void SoundController::OnTimerBombFuseStop(
+    ObjectId bombId)
+{
+    // TODO: 
+    // - see if bombId in slow or fast fuse sound; if so:
+    //      - remove it
+    //      - UpdateTimerBombFuseSound(...slow or fast stuff...)
+}
+
+void SoundController::OnTimerBombDefused(
+    bool isUnderwater,
+    unsigned int size)
+{
+    PlayUSound(
+        SoundType::TimerBombDefused,
         isUnderwater,
         std::max(
             100.0f,
@@ -511,7 +573,7 @@ void SoundController::PlayUSound(
 
 void SoundController::ChooseAndPlaySound(
     SoundType soundType,
-    SoundInfo & soundInfo,
+    MultipleSoundChoiceInfo & multipleSoundChoiceInfo,
     float volume)
 {
     auto const now = std::chrono::steady_clock::now();
@@ -522,24 +584,24 @@ void SoundController::ChooseAndPlaySound(
 
     sf::SoundBuffer * chosenSoundBuffer = nullptr;
 
-    assert(!soundInfo.SoundBuffers.empty());
-    if (1 == soundInfo.SoundBuffers.size())
+    assert(!multipleSoundChoiceInfo.SoundBuffers.empty());
+    if (1 == multipleSoundChoiceInfo.SoundBuffers.size())
     {
         // Nothing to choose
-        chosenSoundBuffer = soundInfo.SoundBuffers[0].get();
+        chosenSoundBuffer = multipleSoundChoiceInfo.SoundBuffers[0].get();
     }
     else
     {
-        assert(soundInfo.SoundBuffers.size() >= 2);
+        assert(multipleChoiceSoundInfo.SoundBuffers.size() >= 2);
 
         // Choose randomly, but avoid choosing the last-chosen sound again
         size_t chosenSoundIndex = GameRandomEngine::GetInstance().ChooseNew(
-            soundInfo.SoundBuffers.size(), 
-            soundInfo.LastPlayedSoundIndex);
+            multipleSoundChoiceInfo.SoundBuffers.size(),
+            multipleSoundChoiceInfo.LastPlayedSoundIndex);
 
-        chosenSoundBuffer = soundInfo.SoundBuffers[chosenSoundIndex].get();
+        chosenSoundBuffer = multipleSoundChoiceInfo.SoundBuffers[chosenSoundIndex].get();
 
-        soundInfo.LastPlayedSoundIndex = chosenSoundIndex;
+        multipleSoundChoiceInfo.LastPlayedSoundIndex = chosenSoundIndex;
     }
 
     assert(nullptr != chosenSoundBuffer);

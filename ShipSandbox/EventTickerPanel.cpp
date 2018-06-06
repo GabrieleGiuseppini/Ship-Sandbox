@@ -144,6 +144,38 @@ void EventTickerPanel::OnSinkingBegin(unsigned int shipId)
     AppendFutureTickerText(ss.str());
 }
 
+void EventTickerPanel::OnBombPlaced(
+    ObjectId /*bombId*/,
+    BombType bombType,
+    bool /*isUnderwater*/)
+{
+    std::stringstream ss;
+    ss << (BombType::RCBomb == bombType ? "Remote-controlled" : "Timer") << " bomb placed!";
+
+    AppendFutureTickerText(ss.str());
+}
+
+void EventTickerPanel::OnBombRemoved(
+    ObjectId /*bombId*/,
+    BombType bombType,
+    std::optional<bool> /*isUnderwater*/)
+{
+    std::stringstream ss;
+    ss << (BombType::RCBomb == bombType ? "Remote-controlled" : "Timer") << " bomb removed";
+
+    AppendFutureTickerText(ss.str());
+}
+
+void EventTickerPanel::OnBombExplosion(
+    bool /*isUnderwater*/,
+    unsigned int size)
+{
+    std::stringstream ss;
+    ss << "Bomb" << (size > 1 ? "s" : "") << " exploded!";
+
+    AppendFutureTickerText(ss.str());
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 
 void EventTickerPanel::OnPaint(wxPaintEvent & /*event*/)

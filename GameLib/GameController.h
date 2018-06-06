@@ -52,7 +52,7 @@ public:
     void ToggleTimerBombAt(vec2f const & screenCoordinates);
     void ToggleRCBombAt(vec2f const & screenCoordinates);
     void DetonateRCBombs();
-    ElementContainer::ElementIndex GetNearestPointAt(vec2 const & screenCoordinates) const;
+    ElementIndex GetNearestPointAt(vec2 const & screenCoordinates) const;
 
     void SetCanvasSize(int width, int height) { mRenderContext->SetCanvasSize(width, height); }
 

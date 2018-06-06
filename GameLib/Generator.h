@@ -14,7 +14,7 @@ class Generator final : public ElectricalElement
 {
 public:
 
-    Generator(ElementContainer::ElementIndex pointIndex);
+    Generator(ElementIndex pointIndex);
 
 private:
 };

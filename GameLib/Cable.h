@@ -14,7 +14,7 @@ class Cable final : public ElectricalElement
 {
 public:
 
-    Cable(ElementContainer::ElementIndex pointIndex);
+    Cable(ElementIndex pointIndex);
 
 private:
 };

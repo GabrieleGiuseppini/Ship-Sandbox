@@ -7,7 +7,7 @@
 
 namespace Physics {
 
-Generator::Generator(ElementContainer::ElementIndex pointIndex)
+Generator::Generator(ElementIndex pointIndex)
     : ElectricalElement(        
         pointIndex,
         ElectricalElement::Type::Generator)

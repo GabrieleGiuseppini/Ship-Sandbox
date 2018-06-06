@@ -5,11 +5,12 @@
 ***************************************************************************************/
 #pragma once
 
+#include "GameTypes.h"
+
 #include <cassert>
 #include <cstdint>
 #include <functional>
 #include <iterator>
-#include <limits>
 
 /*
  * This class is the base class of all containers of core elements.
@@ -22,19 +23,6 @@
 class ElementContainer
 {
 public:
-
-    /*
-     * These types define the cardinality of elements in the container. 
-     * 
-     * Indices are equivalent to pointers in OO terms. Given that we don't believe
-     * we'll ever have more than 4 billion elements, a 32-bit integer suffices. 
-     *
-     * This also implies that where we used to store one pointer, we can now store two indices,
-     * resulting in even better data locality.
-     */
-    using ElementCount = std::uint32_t;
-    using ElementIndex = std::uint32_t;
-    static constexpr ElementIndex NoneElementIndex = std::numeric_limits<ElementIndex>::max();
 
     /*
      * Our iterator, which simply iterates through indices.

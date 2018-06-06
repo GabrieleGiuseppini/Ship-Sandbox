@@ -49,6 +49,20 @@ public:
 
     virtual void OnSinkingBegin(unsigned int shipId) override;
 
+    virtual void OnBombPlaced(
+        ObjectId bombId,
+        BombType bombType,
+        bool isUnderwater) override;
+
+    virtual void OnBombRemoved(
+        ObjectId bombId,
+        BombType bombType,
+        std::optional<bool> isUnderwater) override;
+
+    virtual void OnBombExplosion(
+        bool isUnderwater,
+        unsigned int size) override;
+
 private:
 
     void OnPaint(wxPaintEvent & event);

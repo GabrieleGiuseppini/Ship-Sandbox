@@ -69,10 +69,12 @@ public:
     virtual void OnSinkingBegin(unsigned int shipId) override;
 
     virtual void OnBombPlaced(
+        ObjectId bombId,
         BombType bombType,
         bool isUnderwater) override;
 
     virtual void OnBombRemoved(
+        ObjectId bombId,
         BombType bombType,
         std::optional<bool> isUnderwater) override;
 
@@ -81,6 +83,21 @@ public:
         unsigned int size) override;
 
     virtual void OnRCBombPing(
+        bool isUnderwater,
+        unsigned int size) override;
+
+    virtual void OnTimerBombSlowFuseStart(
+        ObjectId bombId,
+        bool isUnderwater) override;
+
+    virtual void OnTimerBombFastFuseStart(
+        ObjectId bombId,
+        bool isUnderwater) override;
+
+    virtual void OnTimerBombFuseStop(
+        ObjectId bombId) override;
+
+    virtual void OnTimerBombDefused(
         bool isUnderwater,
         unsigned int size) override;
 
@@ -97,6 +114,9 @@ private:
         BombAttached,
         BombDetached,
         RCBombPing,
+        TimerBombSlowFuse,
+        TimerBombFastFuse,
+        TimerBombDefused,
         Explosion
     };
 
@@ -122,6 +142,12 @@ private:
             return SoundType::BombDetached;
         else if (lstr == "rcbombping")
             return SoundType::RCBombPing;
+        else if (lstr == "timerbombslowfuse")
+            return SoundType::TimerBombSlowFuse;
+        else if (lstr == "timerbombfastfuse")
+            return SoundType::TimerBombFastFuse;
+        else if (lstr == "timerbombdefused")
+            return SoundType::TimerBombDefused;
         else if (lstr == "explosion")
             return SoundType::Explosion;
         else
@@ -155,12 +181,12 @@ private:
 
 private:
 
-    struct SoundInfo
+    struct MultipleSoundChoiceInfo
     {
         std::vector<std::unique_ptr<sf::SoundBuffer>> SoundBuffers;
         size_t LastPlayedSoundIndex;
 
-        SoundInfo()
+        MultipleSoundChoiceInfo()
             : SoundBuffers()
             , LastPlayedSoundIndex(0u)
         {
@@ -184,6 +210,63 @@ private:
         }
     };
 
+    struct SingleContinuousSound
+    {
+        std::unique_ptr<sf::SoundBuffer> SoundBuffer;
+        std::unique_ptr<sf::Sound> Sound;
+
+        SingleContinuousSound()
+            : SoundBuffer()
+            , Sound()
+        {
+        }
+
+        void Initialize(std::unique_ptr<sf::SoundBuffer> soundBuffer)
+        {
+            assert(!SoundBuffer && !Sound);
+
+            SoundBuffer = std::move(soundBuffer);
+            Sound = std::make_unique<sf::Sound>();
+            Sound->setBuffer(*SoundBuffer);
+            Sound->setLoop(true);
+        }
+
+        void Start()
+        {
+            if (!!Sound)
+            {
+                if (sf::Sound::Status::Playing != Sound->getStatus())
+                    Sound->play();
+            }
+        }
+
+        void SetPaused(bool isPaused)
+        {
+            if (!!Sound)
+            {
+                if (isPaused)
+                {
+                    if (sf::Sound::Status::Playing == Sound->getStatus())
+                        Sound->pause();
+                }
+                else
+                {
+                    if (sf::Sound::Status::Paused == Sound->getStatus())
+                        Sound->play();
+                }
+            }
+        }
+
+        void Stop()
+        {
+            if (!!Sound)
+            {
+                if (sf::Sound::Status::Stopped != Sound->getStatus())
+                    Sound->stop();
+            }
+        }
+    };
+
 private:
 
     void PlayMSUSound(
@@ -200,12 +283,13 @@ private:
 
     void ChooseAndPlaySound(
         SoundType soundType,
-        SoundInfo & soundInfo,
+        MultipleSoundChoiceInfo & multipleSoundChoiceInfo,
         float volume);
 
     void ScavengeStoppedSounds();
 
     void ScavengeOldestSound(SoundType soundType);    
+
 
 private:
 
@@ -213,8 +297,16 @@ private:
 
     float mCurrentVolume;
 
+
     //
-    // Sounds
+    // State
+    //
+
+    bool mIsInDraw;
+
+
+    //
+    // One-Shot sounds
     //
 
     static constexpr size_t MaxPlayingSounds{ 100 };
@@ -222,16 +314,22 @@ private:
 
     unordered_tuple_map<
         std::tuple<SoundType, Material::SoundProperties::SoundElementType, SizeType, bool>,
-        SoundInfo> mMSUSoundBuffers;
+        MultipleSoundChoiceInfo> mMSUSoundBuffers;
 
     unordered_tuple_map<
         std::tuple<SoundType, bool>,
-        SoundInfo> mUSoundBuffers;
-
-    std::unique_ptr<sf::SoundBuffer> mDrawSoundBuffer;
-    std::unique_ptr<sf::Sound> mDrawSound;
+        MultipleSoundChoiceInfo> mUSoundBuffers;
 
     std::vector<PlayingSound> mCurrentlyPlayingSounds;
+
+    //
+    // Continuous sounds
+    //
+
+    SingleContinuousSound mDrawSound;
+    SingleContinuousSound mTimerBombSlowFuseSound;
+    SingleContinuousSound mTimerBombFastFuseSound;
+
 
     //
     // Music

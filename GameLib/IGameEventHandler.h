@@ -82,6 +82,7 @@ public:
     //
 
     virtual void OnBombPlaced(
+        ObjectId /*bombId*/,
         BombType /*bombType*/,
         bool /*isUnderwater*/)
     {
@@ -89,6 +90,7 @@ public:
     }
 
     virtual void OnBombRemoved(
+        ObjectId /*bombId*/,
         BombType /*bombType*/,
         std::optional<bool> /*isUnderwater*/)
     {
@@ -109,4 +111,30 @@ public:
         // Default-implemented
     }
 
+    virtual void OnTimerBombSlowFuseStart(
+        ObjectId /*bombId*/,
+        bool /*isUnderwater*/)
+    {
+        // Default-implemented
+    }
+
+    virtual void OnTimerBombFastFuseStart(
+        ObjectId /*bombId*/,
+        bool /*isUnderwater*/)
+    {
+        // Default-implemented
+    }
+
+    virtual void OnTimerBombFuseStop(
+        ObjectId /*bombId*/)
+    {
+        // Default-implemented
+    }
+
+    virtual void OnTimerBombDefused(
+        bool /*isUnderwater*/,
+        unsigned int /*size*/)
+    {
+        // Default-implemented
+    }
 };

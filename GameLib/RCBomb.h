@@ -53,7 +53,8 @@ private:
     enum class State
     {
         // In these states we wait for remote detonation or disturbance,
-        // and ping regularly at long intervals
+        // and ping regularly at long intervals, transitioning between
+        // on and off
         IdlePingOff,
         IdlePingOn,
 
@@ -81,8 +82,8 @@ private:
     {
         mState = State::DetonationLeadIn;
 
-        ++mDetonationLeadInStepCounter;
-
+        ++mPingOnStepCounter;
+        
         mGameEventHandler->OnRCBombPing(
             mParentWorld.IsUnderwater(GetPosition()),
             1);
@@ -95,20 +96,31 @@ private:
         GameWallClock::time_point now,
         GameParameters const & gameParameters)
     {
-        mState = State::Exploding;
+        mState = State::Exploding;        
 
-        ++mExplodingStepCounter;
+        assert(mExplodingStepCounter <= ExplosionStepsCount);
 
-        // Invoke blast handler
-        mBlastHandler(
-            GetPosition(),
-            GetConnectedComponentId(),
-            mExplodingStepCounter - 1,
-            ExplosionStepsCount,
-            gameParameters);
+        // Check whether we're done        
+        if (mExplodingStepCounter == ExplosionStepsCount)
+        {
+            // Transition to expired
+            mState = State::Expired;
+        }
+        else
+        {
+            ++mExplodingStepCounter;
 
-        // Schedule next transition
-        mNextStateTransitionTimePoint = now + ExplosionProgressInterval;
+            // Invoke blast handler
+            mBlastHandler(
+                GetPosition(),
+                GetConnectedComponentId(),
+                mExplodingStepCounter - 1,
+                ExplosionStepsCount,
+                gameParameters);
+
+            // Schedule next transition
+            mNextStateTransitionTimePoint = now + ExplosionProgressInterval;
+        }
     }
 
     State mState;
@@ -121,8 +133,7 @@ private:
 
     // The counters for the various states; set to one upon
     // entering the state for the first time. Fine to rollover!
-    uint8_t mIdlePingOnStepCounter;
-    uint8_t mDetonationLeadInStepCounter;
+    uint8_t mPingOnStepCounter;
     uint8_t mExplodingStepCounter;
 };
 

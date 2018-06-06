@@ -27,8 +27,7 @@ RCBomb::RCBomb(
     , mState(State::IdlePingOff)
     , mNextStateTransitionTimePoint(GameWallClock::GetInstance().Now() + SlowPingOffInterval)
     , mExplosionTimePoint(GameWallClock::time_point::min())
-    , mIdlePingOnStepCounter(0u)
-    , mDetonationLeadInStepCounter(0u)
+    , mPingOnStepCounter(0u)
     , mExplodingStepCounter(0u)
 {
 }
@@ -49,7 +48,7 @@ bool RCBomb::Update(
 
                 mState = State::IdlePingOn;
 
-                ++mIdlePingOnStepCounter;
+                ++mPingOnStepCounter;
 
                 mGameEventHandler->OnRCBombPing(
                     mParentWorld.IsUnderwater(GetPosition()),
@@ -88,11 +87,12 @@ bool RCBomb::Update(
                 // Transition to Exploding state
                 //
 
-                TransitionToExploding(now, gameParameters);
-
                 // Detach self (or else explosion will move along with ship performing
                 // its blast)
                 DetachIfAttached();
+
+                // Transition
+                TransitionToExploding(now, gameParameters);
 
                 // Notify explosion
                 mGameEventHandler->OnBombExplosion(
@@ -115,20 +115,11 @@ bool RCBomb::Update(
         {
             if (now > mNextStateTransitionTimePoint)
             {
-                // Check whether we're done
-                if (mExplodingStepCounter > ExplosionStepsCount)
-                {
-                    // Transition to expired
-                    mState = State::Expired;
-                }
-                else
-                {
-                    //
-                    // Transition to Exploding state
-                    //
+                //
+                // Transition to Exploding state
+                //
 
-                    TransitionToExploding(now, gameParameters);
-                }
+                TransitionToExploding(now, gameParameters);
             }
 
             return true;
@@ -178,7 +169,7 @@ void RCBomb::Upload(
                     mRotationBaseAxis,
                     GetRotationOffsetAxis()),
                 0,
-                1 + ((mIdlePingOnStepCounter - 1) % PingFramesCount),
+                1 + ((mPingOnStepCounter - 1) % PingFramesCount),
                 GetConnectedComponentId());
 
             break;
@@ -195,7 +186,7 @@ void RCBomb::Upload(
                     mRotationBaseAxis,
                     GetRotationOffsetAxis()),
                 0,
-                1 + ((mDetonationLeadInStepCounter - 1) % PingFramesCount),
+                1 + ((mPingOnStepCounter - 1) % PingFramesCount),
                 GetConnectedComponentId());
 
             break;

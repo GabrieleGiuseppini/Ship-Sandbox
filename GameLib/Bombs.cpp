@@ -23,7 +23,7 @@ void Bombs::Update(GameParameters const & gameParameters)
             //
 
             // Bomb has been detached already
-            assert(!(*it)->GetAttachedPointIndex());
+            assert(!(*it)->GetAttachedSpringIndex());
 
             // Notify (soundless) removal
             mGameEventHandler->OnBombRemoved(

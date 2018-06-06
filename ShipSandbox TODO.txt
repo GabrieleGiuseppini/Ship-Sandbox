@@ -204,10 +204,15 @@ Prev perf (before point et al destructuring)
 				+ Restructure positionA and positionB:
 					+ Freeze position and rotation offset, not positionA and positionB
 				+ Fix calculation of alpha - check just zero
-			- TEST: lead-in: continuate ping counter, just different velocity and different translation to frame index
+			+ TEST: lead-in: continuate ping counter, just different velocity and different translation to frame index
 			+ TEST: 360 rotation
 			+ Fix mass augmentation
 				+ Also update springs' coefficients
+			- Fix blast flipping
+			- TEST: run in debug
+			+ FIX: first blast handler is so small that it doesn't find point in radius
+				+ Go linearly from 0.6 to BlastRadius
+				+ At end, re-enable texture frame for explosions
 				
 			= Bomb base class, w/type enum
 				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 

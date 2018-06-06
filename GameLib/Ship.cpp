@@ -900,7 +900,8 @@ void Ship::BombBlastHandler(
     // - Flip over the point outside of the radius
     //
 
-    float blastRadius = gameParameters.BombBlastRadius * static_cast<float>(blastSequenceNumber + 1) / static_cast<float>(blastSequenceCount);
+    // Blast radius: lastSequenceNumber makes it from 0.6 to BombBlastRadius
+    float blastRadius = 0.6f + (std::max(gameParameters.BombBlastRadius - 0.6f, 0.0f)) * static_cast<float>(blastSequenceNumber + 1) / static_cast<float>(blastSequenceCount);
     float squareBlastRadius = blastRadius * blastRadius;
 
     float closestPointSquareDistance = std::numeric_limits<float>::max();
@@ -912,13 +913,13 @@ void Ship::BombBlastHandler(
             && mPoints.GetConnectedComponentId(pointIndex) == connectedComponentId)
         {
             vec2f pointRadius = mPoints.GetPosition(pointIndex) - blastPosition;
-            float squareDistance = pointRadius.squareLength();
-            if (squareDistance < squareBlastRadius)
+            float squarePointDistance = pointRadius.squareLength();
+            if (squarePointDistance < squareBlastRadius)
             {
                 // Check whether this point is the closest
-                if (squareDistance < closestPointSquareDistance)
+                if (squarePointDistance < closestPointSquareDistance)
                 {
-                    closestPointSquareDistance = squareDistance;
+                    closestPointSquareDistance = squarePointDistance;
                     closestPointIndex = pointIndex;
                 }
 

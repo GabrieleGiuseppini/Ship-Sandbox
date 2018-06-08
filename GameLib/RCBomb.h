@@ -7,6 +7,7 @@
 
 #include "Physics.h"
 
+#include <chrono>
 #include <cstdint>
 
 using namespace std::chrono_literals;
@@ -33,6 +34,19 @@ public:
     virtual bool Update(
         GameWallClock::time_point now,
         GameParameters const & gameParameters) override;
+
+    virtual void OnBombRemoved() override
+    {
+        // Notify removal
+        mGameEventHandler->OnBombRemoved(
+            mId,
+            BombType::RCBomb,
+            mParentWorld.IsUnderwater(
+                GetPosition()));
+
+        // Detach ourselves, if we're s attached
+        DetachIfAttached();
+    }
 
     virtual void OnNeighborhoodDisturbed() override
     {

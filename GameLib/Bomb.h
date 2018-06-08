@@ -48,6 +48,11 @@ public:
         GameParameters const & gameParameters) = 0;
 
     /*
+     * Invoked when the bomb is removed by the user.
+     */
+    virtual void OnBombRemoved() = 0;
+
+    /*
      * Invoked when the neighborhood of the spring has been disturbed;
      * includes the spring that the bomb is attached to.
      */

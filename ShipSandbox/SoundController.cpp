@@ -21,6 +21,8 @@ SoundController::SoundController(
     , mCurrentVolume(100.0f)
     // State
     , mIsInDraw(false)
+    , mBombsEmittingSlowFuseSounds()
+    , mBombsEmittingFastFuseSounds()
     // One-shot sounds
     , mMSUSoundBuffers()
     , mUSoundBuffers()
@@ -282,6 +284,8 @@ void SoundController::Reset()
     //
 
     mIsInDraw = false;
+    mBombsEmittingSlowFuseSounds.clear();
+    mBombsEmittingFastFuseSounds.clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -357,8 +361,8 @@ void SoundController::OnSinkingBegin(unsigned int /*shipId*/)
 }
 
 void SoundController::OnBombPlaced(
-    ObjectId bombId,
-    BombType bombType,
+    ObjectId /*bombId*/,
+    BombType /*bombType*/,
     bool isUnderwater) 
 {
     PlayUSound(
@@ -368,8 +372,8 @@ void SoundController::OnBombPlaced(
 }
 
 void SoundController::OnBombRemoved(
-    ObjectId bombId,
-    BombType bombType,
+    ObjectId /*bombId*/,
+    BombType /*bombType*/,
     std::optional<bool> isUnderwater)
 {
     if (!!isUnderwater)
@@ -407,35 +411,53 @@ void SoundController::OnRCBombPing(
 
 void SoundController::OnTimerBombSlowFuseStart(
     ObjectId bombId,
-    bool isUnderwater)
+    bool /*isUnderwater*/)
 {
-    // TODO: 
-    // - see if bombId in fast fuse sound; if so:
-    //      - remove it
-    //      - UpdateTimerBombFuseSound(...fast stuff...)
-    // - add bombId to set of timer bombs in slow fuse sound
-    // - UpdateTimerBombFuseSound(...slow stuff...)
+    // See if this bomb is emitting a fast fuse sound; if so, remove it 
+    // and update fast fuse sound
+    if (mBombsEmittingFastFuseSounds.erase(bombId) != 0)
+    {
+        UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
+    }
+
+    // Add bomb to set of timer bombs emitting slow fuse sound, and
+    // update slow fuse sound
+    assert(0 == mBombsEmittingSlowFuseSounds.count(bombId));
+    mBombsEmittingSlowFuseSounds.insert(bombId);
+    UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
 }
 
 void SoundController::OnTimerBombFastFuseStart(
     ObjectId bombId,
-    bool isUnderwater)
+    bool /*isUnderwater*/)
 {
-    // TODO: 
-    // - see if bombId in slow fuse sound; if so:
-    //      - remove it
-    //      - UpdateTimerBombFuseSound(...slow stuff...)
-    // - add bombId to set of timer bombs in fast fuse sound
-    // - UpdateTimerBombFuseSound(...fast stuff...)
+    // See if this bomb is emitting a slow fuse sound; if so, remove it 
+    // and update slow fuse sound
+    if (mBombsEmittingSlowFuseSounds.erase(bombId) != 0)
+    {
+        UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
+    }
+
+    // Add bomb to set of timer bombs emitting fast fuse sound, and
+    // update fast fuse sound
+    assert(0 == mBombsEmittingFastFuseSounds.count(bombId));
+    mBombsEmittingFastFuseSounds.insert(bombId);
+    UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
 }
 
-void SoundController::OnTimerBombFuseStop(
-    ObjectId bombId)
+void SoundController::OnTimerBombFuseStop(ObjectId bombId)
 {
-    // TODO: 
-    // - see if bombId in slow or fast fuse sound; if so:
-    //      - remove it
-    //      - UpdateTimerBombFuseSound(...slow or fast stuff...)
+    if (mBombsEmittingSlowFuseSounds.erase(bombId) != 0)
+    {
+        UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
+    }
+    else
+    {
+        if (mBombsEmittingFastFuseSounds.erase(bombId) != 0)
+        {
+            UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
+        }
+    }
 }
 
 void SoundController::OnTimerBombDefused(
@@ -718,4 +740,21 @@ void SoundController::ScavengeOldestSound(SoundType soundType)
     assert(!!mCurrentlyPlayingSounds[iStop].Sound);
     mCurrentlyPlayingSounds[iStop].Sound->stop();
     mCurrentlyPlayingSounds.erase(mCurrentlyPlayingSounds.begin() + iStop);
+}
+
+void SoundController::UpdateContinuousSound(
+    size_t count,
+    SingleContinuousSound & sound)
+{
+    if (count == 0)
+    {
+        // Stop it
+        sound.Stop();
+    }
+    else
+    {
+        float volume = 100.0f * (1.0f - exp(-0.3f * static_cast<float>(count)));
+        sound.SetVolume(volume);
+        sound.Start();        
+    }
 }

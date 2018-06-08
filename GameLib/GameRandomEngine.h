@@ -27,17 +27,19 @@ public:
         return *instance;
     }
 
-    inline size_t Choose(size_t count)
+    template <typename T>
+    inline T Choose(T count)
     {
-        return GenerateRandomInteger<size_t>(0, count - 1);
+        return GenerateRandomInteger<T>(0, count - 1);
     }
 
-    inline size_t ChooseNew(
-        size_t count,
-        size_t last)
+    template <typename T>
+    inline T ChooseNew(
+        T count,
+        T last)
     {
         // Choose randomly, but avoid choosing the last-chosen again
-        size_t chosen = GenerateRandomInteger<size_t>(0, count - 2);
+        T chosen = GenerateRandomInteger<T>(0, count - 2);
         if (chosen >= last)
         {
             ++chosen;

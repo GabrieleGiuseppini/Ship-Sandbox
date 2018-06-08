@@ -490,11 +490,39 @@ RenderContext::RenderContext(
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
+
     //
     // Timer Bomb
     //
 
-    // TODO
+    // Create textures
+    for (size_t i = 0; i < timerBombTextureDatas.size(); ++i)
+    {
+        // Store size
+        mTimerBombTextureSizes.push_back(timerBombTextureDatas[i].Size);
+
+        // Create texture name
+        glGenTextures(1, &tmpGLuint);
+        mTimerBombTextures.emplace_back(tmpGLuint);
+
+        // Bind texture
+        glBindTexture(GL_TEXTURE_2D, *mTimerBombTextures.back());
+
+        // Upload texture
+        GameOpenGL::UploadMipmappedTexture(std::move(timerBombTextureDatas[i]));
+
+        // Set repeat mode
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        // Set texture filtering parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        // Unbind texture
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
 
     //
     // Multi-purpose Matte NDC shader

@@ -14,6 +14,7 @@
 
 #include <chrono>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -94,8 +95,7 @@ public:
         ObjectId bombId,
         bool isUnderwater) override;
 
-    virtual void OnTimerBombFuseStop(
-        ObjectId bombId) override;
+    virtual void OnTimerBombFuseStop(ObjectId bombId) override;
 
     virtual void OnTimerBombDefused(
         bool isUnderwater,
@@ -212,59 +212,92 @@ private:
 
     struct SingleContinuousSound
     {
-        std::unique_ptr<sf::SoundBuffer> SoundBuffer;
-        std::unique_ptr<sf::Sound> Sound;
-
         SingleContinuousSound()
-            : SoundBuffer()
-            , Sound()
+            : mSoundBuffer()
+            , mSound()
+            , mCurrentPauseState(false)
+            , mDesiredPlayingState(false)
         {
         }
 
         void Initialize(std::unique_ptr<sf::SoundBuffer> soundBuffer)
         {
-            assert(!SoundBuffer && !Sound);
+            assert(!mSoundBuffer && !mSound);
 
-            SoundBuffer = std::move(soundBuffer);
-            Sound = std::make_unique<sf::Sound>();
-            Sound->setBuffer(*SoundBuffer);
-            Sound->setLoop(true);
+            mSoundBuffer = std::move(soundBuffer);
+            mSound = std::make_unique<sf::Sound>();
+            mSound->setBuffer(*mSoundBuffer);
+            mSound->setLoop(true);
+        }
+
+        void SetVolume(float volume)
+        {
+            if (!!mSound)
+            {
+                mSound->setVolume(volume);
+            }
         }
 
         void Start()
         {
-            if (!!Sound)
+            if (!!mSound)
             {
-                if (sf::Sound::Status::Playing != Sound->getStatus())
-                    Sound->play();
+                if (!mCurrentPauseState
+                    && sf::Sound::Status::Playing != mSound->getStatus())
+                {
+                    mSound->play();
+                }
             }
+
+            // Remember we want to play when we resume
+            mDesiredPlayingState = true;
         }
 
         void SetPaused(bool isPaused)
         {
-            if (!!Sound)
+            if (!!mSound)
             {
                 if (isPaused)
                 {
-                    if (sf::Sound::Status::Playing == Sound->getStatus())
-                        Sound->pause();
+                    // Pausing
+                    if (sf::Sound::Status::Playing == mSound->getStatus())
+                        mSound->pause();
                 }
                 else
                 {
-                    if (sf::Sound::Status::Paused == Sound->getStatus())
-                        Sound->play();
+                    // Resuming - look at the desired playing state
+                    if (mDesiredPlayingState)
+                        mSound->play();
                 }
             }
+
+            mCurrentPauseState = isPaused;
         }
 
         void Stop()
         {
-            if (!!Sound)
+            if (!!mSound)
             {
-                if (sf::Sound::Status::Stopped != Sound->getStatus())
-                    Sound->stop();
+                // We stop regardless of the pause state, even if we're paused
+                if (sf::Sound::Status::Stopped != mSound->getStatus())
+                    mSound->stop();
             }
+
+            // Remember we want to stay stopped when we resume
+            mDesiredPlayingState = false;
         }
+
+    private:
+        std::unique_ptr<sf::SoundBuffer> mSoundBuffer;
+        std::unique_ptr<sf::Sound> mSound;
+
+        // True/False if we are paused/not paused
+        bool mCurrentPauseState;
+
+        // The play state we want to be after resuming from a pause:
+        // - true: we want to play
+        // - false: we want to stop
+        bool mDesiredPlayingState;
     };
 
 private:
@@ -290,6 +323,9 @@ private:
 
     void ScavengeOldestSound(SoundType soundType);    
 
+    void UpdateContinuousSound(
+        size_t count, 
+        SingleContinuousSound & sound);
 
 private:
 
@@ -302,7 +338,12 @@ private:
     // State
     //
 
+    // True while we're applying the Draw tool
     bool mIsInDraw;
+
+    // Tracking which bombs are emitting which fuse sounds
+    std::set<ObjectId> mBombsEmittingSlowFuseSounds;
+    std::set<ObjectId> mBombsEmittingFastFuseSounds;
 
 
     //

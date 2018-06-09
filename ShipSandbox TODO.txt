@@ -49,9 +49,15 @@ Prev perf (before point et al destructuring)
 
 - Code:
 	+ Move definition of ElementIndex et al into GameTypes.h
-	- Textures are json files with world sizes as well
+	- Textures are json files, with world sizes, offset, and lighting boolean
 		- SEE MOLESKINE
-		- Then, change bomb rendering: takes vector of frame indices, no optionals needed
+		- Then:
+			- Change bomb rendering: takes vector of frame indices, no optionals needed
+			- Remove hardcoded sizes and offsets
+				- Cloud size
+				- Water size
+				- Land size
+				- Bombs sizes and offsets
 	+ CircularList::Erase unit test: complete verification of returned iterator
 
 - Titanic:
@@ -94,6 +100,10 @@ Prev perf (before point et al destructuring)
 
 - Gfx:
 	- Option to enable drawing of force vectors for each point
+	- Texture atlas:
+		- Test first if with a single texture bind per ship (which will look crappy!) there's a significant
+		  performance difference
+			- Check the three boxes
 	- Optimizations:
 		- See if drawing springs & triangles with Z buffer and depth test helps (for springs' fragment shader)
 	- AmbientLightIntensity:
@@ -213,8 +223,12 @@ Prev perf (before point et al destructuring)
 			+ FIX: first blast handler is so small that it doesn't find point in radius
 				+ Go linearly from 0.6 to BlastRadius
 				+ At end, re-enable texture frame for explosions
-			- FIX: ContinuousSound start while paused issue
-				- DesiredState
+			+ FIX: ContinuousSound start while paused issue
+				+ DesiredState
+			- FIX: TimerBomb x,y offsets
+				= Restore cursor hotspot
+				= Add temporarily fixed world offset at ShipRenderContext
+					= Desired center: 147, 228 off 300, 300 => +3, -78 over 12.0, 12.0 makes 0.12, -3.12
 				
 			= Bomb base class, w/type enum
 				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
@@ -238,7 +252,8 @@ Prev perf (before point et al destructuring)
 						+ Explosion
 					+ Finalize GetArea(): decide if new enlarged explosion looks good
 				- TimerBomb:
-					- Update()
+					- Update(): state machine
+						- Sparkles: sort frames by distance on fuse and do random choice on sliding window
 			= Bombs class
 				+ Not ElementContainer, just manager
 				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &

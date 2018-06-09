@@ -247,25 +247,30 @@ public:
         static constexpr float textureTileW = 12.0f;
         static constexpr float textureTileH = 12.0f;
 
+        // Offsets
+        // TODO: temporary, until we use Textures.json
+        float offsetX = bombType == BombType::TimerBomb ? 0.12f : 0.0f;
+        float offsetY = bombType == BombType::TimerBomb ? 3.12f : 0.0f;
+
         RotatedRectangle frameRect = renderInfo.CalculateRotatedRectangle(textureTileW, textureTileH);
         
-        bombElement.xTopLeft = frameRect.TopLeft.x;
-        bombElement.yTopLeft = frameRect.TopLeft.y;
+        bombElement.xTopLeft = frameRect.TopLeft.x + offsetX;
+        bombElement.yTopLeft = frameRect.TopLeft.y + offsetY;
         bombElement.textureXTopLeft = 0.0f;
         bombElement.textureYTopLeft = 0.0f;
 
-        bombElement.xBottomLeft = frameRect.BottomLeft.x;
-        bombElement.yBottomLeft = frameRect.BottomLeft.y;
+        bombElement.xBottomLeft = frameRect.BottomLeft.x + offsetX;
+        bombElement.yBottomLeft = frameRect.BottomLeft.y + offsetY;
         bombElement.textureXBottomLeft = 0.0f;
         bombElement.textureYBottomLeft = 1.0f;
 
-        bombElement.xTopRight = frameRect.TopRight.x;
-        bombElement.yTopRight = frameRect.TopRight.y;
+        bombElement.xTopRight = frameRect.TopRight.x + offsetX;
+        bombElement.yTopRight = frameRect.TopRight.y + offsetY;
         bombElement.textureXTopRight = 1.0f;
         bombElement.textureYTopRight = 0.0f;
 
-        bombElement.xBottomRight = frameRect.BottomRight.x;
-        bombElement.yBottomRight = frameRect.BottomRight.y;
+        bombElement.xBottomRight = frameRect.BottomRight.x + offsetX;
+        bombElement.yBottomRight = frameRect.BottomRight.y + offsetY;
         bombElement.textureXBottomRight = 1.0f;
         bombElement.textureYBottomRight = 1.0f;
 

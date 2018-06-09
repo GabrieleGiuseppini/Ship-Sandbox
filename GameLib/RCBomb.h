@@ -44,7 +44,7 @@ public:
             mParentWorld.IsUnderwater(
                 GetPosition()));
 
-        // Detach ourselves, if we're s attached
+        // Detach ourselves, if we're attached
         DetachIfAttached();
     }
 

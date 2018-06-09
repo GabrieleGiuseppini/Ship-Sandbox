@@ -22,7 +22,7 @@ void Bombs::Update(GameParameters const & gameParameters)
             // Bomb has expired
             //
 
-            // Bomb has been detached already
+            // Bomb has detached itself already
             assert(!(*it)->GetAttachedSpringIndex());
 
             // Notify (soundless) removal

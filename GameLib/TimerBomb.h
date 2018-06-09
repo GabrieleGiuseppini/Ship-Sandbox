@@ -51,7 +51,7 @@ public:
             mParentWorld.IsUnderwater(
                 GetPosition()));
 
-        // Detach ourselves, if we're s attached
+        // Detach ourselves, if we're attached
         DetachIfAttached();
     }
 
@@ -92,9 +92,10 @@ private:
         Expired
     };
 
-    static constexpr auto SlowFuseToDetonationLeadInInterval = 7000ms;
+    static constexpr auto SlowFuseToDetonationLeadInInterval = 8000ms;
+    static constexpr int FuseLengthStepsCount = 4;
     static constexpr auto DetonationLeadInToExplosionInterval = 1500ms;
-    static constexpr int FuseFramesPerLeveCount = 4;
+    static constexpr int FuseFramesPerLevelCount = 4;
 
     ////inline void TransitionToDetonationLeadIn(GameWallClock::time_point now)
     ////{
@@ -115,7 +116,10 @@ private:
     // The next timestamp at which we'll automatically transition state
     GameWallClock::time_point mNextStateTransitionTimePoint;
 
-    // The fuse frame frame index, which is calculated during state transitions
+    // The fuse length, which is calculated at state transitions
+    uint32_t mFuseLength;
+
+    // The fuse flame frame index, which is calculated at state transitions
     uint32_t mFuseFlameFrameIndex;
 };
 

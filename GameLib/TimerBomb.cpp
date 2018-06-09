@@ -27,7 +27,8 @@ TimerBomb::TimerBomb(
         shipPoints,
         shipSprings)
     , mState(State::SlowFuseBurning)
-    , mNextStateTransitionTimePoint(GameWallClock::GetInstance().Now() + SlowFuseToDetonationLeadInInterval)
+    , mNextStateTransitionTimePoint(GameWallClock::GetInstance().Now() + SlowFuseToDetonationLeadInInterval/FuseLengthStepsCount)
+    , mFuseLength(0)
     , mFuseFlameFrameIndex(0)
 {
     // Start slow fuse
@@ -46,28 +47,38 @@ bool TimerBomb::Update(
         {
             if (now > mNextStateTransitionTimePoint)
             {
-                //
-                // Transition to DetonationLeadIn state
-                //
+                // Check if we're done
+                if (mFuseLength == FuseLengthStepsCount - 1)
+                {
+                    //
+                    // Transition to DetonationLeadIn state
+                    //
 
-                mState = State::DetonationLeadIn;
+                    mState = State::DetonationLeadIn;
 
-                mGameEventHandler->OnTimerBombFuseStop(mId);
+                    mGameEventHandler->OnTimerBombFuseStop(mId);
 
-                // Schedule next transition
-                mNextStateTransitionTimePoint = now + DetonationLeadInToExplosionInterval;
+                    // Schedule next transition
+                    mNextStateTransitionTimePoint = now + DetonationLeadInToExplosionInterval;
+                }
+                else
+                {
+                    // Shorten the fuse length
+                    ++mFuseLength;
+
+                    // Schedule next transition
+                    mNextStateTransitionTimePoint = now + SlowFuseToDetonationLeadInInterval / FuseLengthStepsCount;
+                }
             }
-            else
-            {
-                // Calculate next fuse flame frame index
-                // TODO: take into account number of frames of base (fuse length)
-                mFuseFlameFrameIndex = 1 + GameRandomEngine::GetInstance().ChooseNew<uint32_t>(FuseFramesPerLeveCount, mFuseFlameFrameIndex - 1);
-            }
+
+            // Calculate next fuse flame frame index
+            mFuseFlameFrameIndex = GameRandomEngine::GetInstance().ChooseNew<uint32_t>(FuseFramesPerLevelCount, mFuseFlameFrameIndex);
 
             return true;
         }
 
-        // TODO
+        // TODO: other states
+
         default:
         {
             return true;
@@ -99,14 +110,14 @@ void TimerBomb::Upload(
                     1.0f,
                     mRotationBaseAxis,
                     GetRotationOffsetAxis()),
-                0,                      // Base frame
-                mFuseFlameFrameIndex,   // Fuse frame
+                mFuseLength,                                   // Base frame
+                FuseLengthStepsCount + mFuseFlameFrameIndex,   // Fuse frame
                 GetConnectedComponentId());
 
             break;
         }
 
-        // TODO: others
+        // TODO: other states
 
         case State::Expired:
         {

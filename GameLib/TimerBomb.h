@@ -85,7 +85,10 @@ private:
         Exploding,
 
         // We enter this state once the bomb gets underwater; we play a short
-        // smoke animation and then we expire
+        // smoke animation and then we transition to defuse
+        Defusing,
+
+        // Final state of defusing; we just stick around
         Defused,
 
         // This is the final state; once this state is reached, we're expired
@@ -93,34 +96,31 @@ private:
     };
 
     static constexpr auto SlowFuseToDetonationLeadInInterval = 8000ms;
-    static constexpr int FuseLengthStepsCount = 4;
+    static constexpr auto FastFuseToDetonationLeadInInterval = 2000ms;
+    static constexpr int FuseStepCount = 16;
+    static constexpr int FuseLengthStepCount = 4;
+    static constexpr int FuseFramesPerFuseLengthCount = FuseStepCount / FuseLengthStepCount;
+    static constexpr uint8_t ExplosionStepsCount = 9;
+
     static constexpr auto DetonationLeadInToExplosionInterval = 1500ms;
-    static constexpr int FuseFramesPerLevelCount = 4;
+    static constexpr auto ExplosionProgressInterval = 20ms;
 
-    ////inline void TransitionToDetonationLeadIn(GameWallClock::time_point now)
-    ////{
-    ////    mState = State::DetonationLeadIn;
-
-    ////    ++mPingOnStepCounter;
-
-    ////    mGameEventHandler->OnRCBombPing(
-    ////        mParentWorld.IsUnderwater(GetPosition()),
-    ////        1);
-
-    ////    // Schedule next transition
-    ////    mNextStateTransitionTimePoint = now + FastPingInterval;
-    ////}
+    static constexpr auto DefusingInterval = 500ms;
+    static constexpr uint8_t DefuseStepsCount = 3;
 
     State mState;
 
     // The next timestamp at which we'll automatically transition state
     GameWallClock::time_point mNextStateTransitionTimePoint;
 
-    // The fuse length, which is calculated at state transitions
-    uint32_t mFuseLength;
-
     // The fuse flame frame index, which is calculated at state transitions
     uint32_t mFuseFlameFrameIndex;
+
+    // The counters for the various states; set to zero upon
+    // entering the state for the first time. Fine to rollover!
+    uint8_t mFuseStepCounter;
+    uint8_t mExplodingStepCounter;
+    uint8_t mDefuseStepCounter;
 };
 
 }

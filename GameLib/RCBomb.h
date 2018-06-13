@@ -90,7 +90,7 @@ private:
     static constexpr auto FastPingInterval = 100ms;
     static constexpr auto DetonationLeadInToExplosionInterval = 1500ms;
     static constexpr auto ExplosionProgressInterval = 20ms;
-    static constexpr uint8_t ExplosionStepsCount = 8;
+    static constexpr uint8_t ExplosionStepsCount = 9;
     static constexpr int PingFramesCount = 4;
 
     inline void TransitionToDetonationLeadIn(GameWallClock::time_point now)

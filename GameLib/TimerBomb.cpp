@@ -27,9 +27,11 @@ TimerBomb::TimerBomb(
         shipPoints,
         shipSprings)
     , mState(State::SlowFuseBurning)
-    , mNextStateTransitionTimePoint(GameWallClock::GetInstance().Now() + SlowFuseToDetonationLeadInInterval/FuseLengthStepsCount)
-    , mFuseLength(0)
+    , mNextStateTransitionTimePoint(GameWallClock::GetInstance().Now() + SlowFuseToDetonationLeadInInterval / FuseStepCount)
     , mFuseFlameFrameIndex(0)
+    , mFuseStepCounter(0)
+    , mExplodingStepCounter(0)
+    , mDefuseStepCounter(0)
 {
     // Start slow fuse
     mGameEventHandler->OnTimerBombSlowFuseStart(
@@ -44,11 +46,30 @@ bool TimerBomb::Update(
     switch (mState)
     {
         case State::SlowFuseBurning:
+        case State::FastFuseBurning:
         {
-            if (now > mNextStateTransitionTimePoint)
+            // Check if we're underwater
+            // TODO: needs to become: check if any of the spring
+            // points are wet, helped by Points::IsWet(index)
+            if (mParentWorld.IsUnderwater(GetPosition()))
+            {
+                //
+                // Transition to defusing
+                //
+
+                mState = State::Defusing;
+
+                mGameEventHandler->OnTimerBombFuseStop(mId);
+
+                mGameEventHandler->OnTimerBombDefused(true, 1);
+
+                // Schedule next transition
+                mNextStateTransitionTimePoint = now + DefusingInterval / DefuseStepsCount;
+            }
+            else if (now > mNextStateTransitionTimePoint)
             {
                 // Check if we're done
-                if (mFuseLength == FuseLengthStepsCount - 1)
+                if (mFuseStepCounter == FuseStepCount - 1)
                 {
                     //
                     // Transition to DetonationLeadIn state
@@ -63,22 +84,117 @@ bool TimerBomb::Update(
                 }
                 else
                 {
-                    // Shorten the fuse length
-                    ++mFuseLength;
+                    // Go to next step
+                    ++mFuseStepCounter;
 
                     // Schedule next transition
-                    mNextStateTransitionTimePoint = now + SlowFuseToDetonationLeadInInterval / FuseLengthStepsCount;
+                    if (State::SlowFuseBurning == mState)
+                        mNextStateTransitionTimePoint = now + SlowFuseToDetonationLeadInInterval / FuseStepCount;
+                    else
+                        mNextStateTransitionTimePoint = now + FastFuseToDetonationLeadInInterval / FuseStepCount;
                 }
             }
 
-            // Calculate next fuse flame frame index
-            mFuseFlameFrameIndex = GameRandomEngine::GetInstance().ChooseNew<uint32_t>(FuseFramesPerLevelCount, mFuseFlameFrameIndex);
+            // Alternate sparkle frame
+            if (mFuseFlameFrameIndex == mFuseStepCounter)
+                mFuseFlameFrameIndex = mFuseStepCounter + 1;
+            else
+                mFuseFlameFrameIndex = mFuseStepCounter;
 
             return true;
         }
 
-        // TODO: other states
+        case State::DetonationLeadIn:
+        {
+            if (now > mNextStateTransitionTimePoint)
+            {
+                //
+                // Transition to Exploding state
+                //
 
+                mState = State::Exploding;
+
+                // Detach self (or else explosion will move along with ship performing
+                // its blast)
+                DetachIfAttached();
+
+                // Invoke blast handler
+                mBlastHandler(
+                    GetPosition(),
+                    GetConnectedComponentId(),
+                    mExplodingStepCounter,
+                    ExplosionStepsCount,
+                    gameParameters);
+
+                // Notify explosion
+                mGameEventHandler->OnBombExplosion(
+                    mParentWorld.IsUnderwater(GetPosition()),
+                    1);
+
+                // Schedule next transition
+                mNextStateTransitionTimePoint = now + ExplosionProgressInterval;
+            }
+
+            return true;
+        }
+
+        case State::Exploding:
+        {
+            if (now > mNextStateTransitionTimePoint)
+            {
+                assert(mExplodingStepCounter < ExplosionStepsCount);
+
+                // Check whether we're done        
+                if (mExplodingStepCounter == ExplosionStepsCount - 1)
+                {
+                    // Transition to expired
+                    mState = State::Expired;
+                }
+                else
+                {
+                    ++mExplodingStepCounter;
+
+                    // Invoke blast handler
+                    mBlastHandler(
+                        GetPosition(),
+                        GetConnectedComponentId(),
+                        mExplodingStepCounter,
+                        ExplosionStepsCount,
+                        gameParameters);
+
+                    // Schedule next transition
+                    mNextStateTransitionTimePoint = now + ExplosionProgressInterval;
+                }
+            }
+
+            return true;
+        }
+
+        case State::Defusing:
+        {
+            if (now > mNextStateTransitionTimePoint)
+            {
+                assert(mDefuseStepCounter < DefuseStepsCount);
+
+                // Check whether we're done        
+                if (mDefuseStepCounter == DefuseStepsCount - 1)
+                {
+                    // Transition to defused
+                    mState = State::Defused;
+                }
+                else
+                {
+                    ++mDefuseStepCounter;
+                }
+
+                // Schedule next transition
+                mNextStateTransitionTimePoint = now + DefusingInterval / DefuseStepsCount;
+            }
+            
+            return true;
+        }
+        
+        case State::Defused:
         default:
         {
             return true;
@@ -91,7 +207,31 @@ bool TimerBomb::Update(
 
 void TimerBomb::OnNeighborhoodDisturbed()
 {
-    // TODO
+    if (State::SlowFuseBurning == mState
+        || State::Defused == mState)
+    {
+        //
+        // Transition (again, if we're defused) to fast fuse burning
+        //
+
+        mState = State::FastFuseBurning;
+
+        if (State::Defused == mState)
+        {
+            // Start from scratch
+            mFuseStepCounter = 0;
+            mDefuseStepCounter = 0;
+        }
+
+        // Notify
+        mGameEventHandler->OnTimerBombFastFuseStart(
+            mId,
+            mParentWorld.IsUnderwater(GetPosition()));
+
+        // Schedule next transition
+        mNextStateTransitionTimePoint = GameWallClock::GetInstance().Now() 
+            + FastFuseToDetonationLeadInInterval / FuseStepCount;
+    }
 }
 
 void TimerBomb::Upload(
@@ -101,6 +241,7 @@ void TimerBomb::Upload(
     switch (mState)
     {
         case State::SlowFuseBurning:
+        case State::FastFuseBurning:
         {
             renderContext.UploadShipElementBomb(
                 shipId,
@@ -110,14 +251,82 @@ void TimerBomb::Upload(
                     1.0f,
                     mRotationBaseAxis,
                     GetRotationOffsetAxis()),
-                mFuseLength,                                   // Base frame
-                FuseLengthStepsCount + mFuseFlameFrameIndex,   // Fuse frame
+                mFuseStepCounter / FuseFramesPerFuseLengthCount,           // Base frame
+                FuseLengthStepCount + 1 + mFuseFlameFrameIndex,     // Fuse frame
                 GetConnectedComponentId());
 
             break;
         }
 
-        // TODO: other states
+        case State::DetonationLeadIn:
+        {
+            renderContext.UploadShipElementBomb(
+                shipId,
+                BombType::TimerBomb,
+                RotatedTextureRenderInfo(
+                    GetPosition(),
+                    1.0f,
+                    mRotationBaseAxis,
+                    GetRotationOffsetAxis()),
+                FuseLengthStepCount,    // Base frame
+                std::nullopt,           // Fuse frame
+                GetConnectedComponentId());
+
+            break;
+        }
+
+        case State::Exploding:
+        {
+            assert(mExplodingStepCounter < ExplosionStepsCount);
+
+            renderContext.UploadShipElementBomb(
+                shipId,
+                BombType::TimerBomb,
+                RotatedTextureRenderInfo(
+                    GetPosition(),
+                    1.0f + static_cast<float>(mExplodingStepCounter + 1) / static_cast<float>(ExplosionStepsCount),
+                    mRotationBaseAxis,
+                    GetRotationOffsetAxis()),
+                std::nullopt,
+                FuseLengthStepCount + 1 + FuseStepCount + 1 + DefuseStepsCount + mExplodingStepCounter,
+                GetConnectedComponentId());
+
+            break;
+        }
+
+        case State::Defusing:
+        {
+            renderContext.UploadShipElementBomb(
+                shipId,
+                BombType::TimerBomb,
+                RotatedTextureRenderInfo(
+                    GetPosition(),
+                    1.0f,
+                    mRotationBaseAxis,
+                    GetRotationOffsetAxis()),
+                mFuseStepCounter / FuseFramesPerFuseLengthCount,                               // Base frame
+                FuseLengthStepCount + 1 + FuseStepCount + 1 + mDefuseStepCounter,       // Fuse frame
+                GetConnectedComponentId());
+
+            break;
+        }
+
+        case State::Defused:
+        {
+            renderContext.UploadShipElementBomb(
+                shipId,
+                BombType::TimerBomb,
+                RotatedTextureRenderInfo(
+                    GetPosition(),
+                    1.0f,
+                    mRotationBaseAxis,
+                    GetRotationOffsetAxis()),
+                mFuseStepCounter / FuseFramesPerFuseLengthCount,   // Base frame
+                std::nullopt,                               // Fuse frame
+                GetConnectedComponentId());
+
+            break;
+        }
 
         case State::Expired:
         {

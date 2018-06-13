@@ -36,16 +36,39 @@ public:
     template <typename T>
     inline T ChooseNew(
         T count,
-        T last)
+        T previous)
     {
         // Choose randomly, but avoid choosing the last-chosen again
         T chosen = GenerateRandomInteger<T>(0, count - 2);
-        if (chosen >= last)
+        if (chosen >= previous)
         {
             ++chosen;
         }
 
         return chosen;
+    }
+
+    template <typename T>
+    inline T ChooseNew(
+        T first,
+        T last,
+        T previous)
+    {
+        // Choose randomly, but avoid choosing the last-chosen again
+        if (previous >= first && previous <= last)
+        {
+            T chosen = GenerateRandomInteger<T>(first, last - 1);
+            if (chosen >= previous)
+            {
+                ++chosen;
+            }
+
+            return chosen;
+        }
+        else
+        {
+            return GenerateRandomInteger<T>(first, last);
+        }
     }
 
     template <typename T>

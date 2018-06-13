@@ -225,12 +225,12 @@ Prev perf (before point et al destructuring)
 				+ At end, re-enable texture frame for explosions
 			+ FIX: ContinuousSound start while paused issue
 				+ DesiredState
-			- FIX: TimerBomb x,y offsets
-				= Restore cursor hotspot
-				= Add temporarily fixed world offset at ShipRenderContext
-					= Desired center: 147, 228 off 300, 300 => +3, -78 over 12.0, 12.0 makes 0.12, -3.12
+			+ FIX: TimerBomb x,y offsets
+				+ Restore cursor hotspot
+				+ Add temporarily fixed world offset at ShipRenderContext
+					+ Desired center: 147, 228 off 300, 300 => +3, -78 over 12.0, 12.0 makes 0.12, -3.12
 				
-			= Bomb base class, w/type enum
+			+ Bomb base class, w/type enum
 				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
 					+ Runs state machine with local clock
 						+ Advances animations (textures of bombs, sounds via events)
@@ -238,12 +238,8 @@ Prev perf (before point et al destructuring)
 					+ Returns false when needs to be deleted
 				+ GetRenderFrameIndex() -> size_t
 					+ Specialized for state machines
-				= NeighborhoodDisturbed() = 0
+				+ NeighborhoodDisturbed() = 0
 					+ Invoked when needs to explode because own or near point is disturbed
-					- TimerBomb: 
-						- Only if state machine duration < own time left
-					+ RCBomb:
-						+ Equivalent to RCDetonate()
 			= Two subclasses - TimerBomb and RCBomb
 				+ RCBomb:
 					+ RCBomb::Detonate(): input to state machine
@@ -251,10 +247,19 @@ Prev perf (before point et al destructuring)
 						+ Basics
 						+ Explosion
 					+ Finalize GetArea(): decide if new enlarged explosion looks good
-				- TimerBomb:
-					- Update(): state machine
-						- Sparkles: sort frames by distance on fuse and do random choice on sliding window
-			= Bombs class
+					+ NeighborhoodDisturbed()
+						+ Equivalent to RCDetonate()
+				= TimerBomb:
+					= Update(): state machine
+						+ Sparkles: sort frames by distance on fuse and do random choice on sliding window
+						+ Add a base frame of bomb with no fuse
+							+ Rename all frames
+							+ Fix calculation of base frame count at Update()
+						- Smoke:
+							- 3 sequential frames
+					- NeighborhoodDisturbed()
+						- Explodes only if state machine duration < own time left
+			+ Bombs class
 				+ Not ElementContainer, just manager
 				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &
 				+ Update(OnBombExplosion(position, radius)) -> void
@@ -284,12 +289,12 @@ Prev perf (before point et al destructuring)
 				+ Also changes mass (just at point, for gravity only...)				
 				+ Flag and mass change is done at Points::AttachBomb()/Points::DetachBomb() 
 
-			= Events:
+			+ Events:
 				+ OnRCBombPlaced/Removed(size, underwater): used by MainFrame to enable/disable detonation menu item
 					+ Also invoked when explodes
-				- OnTimerBombPlaced/Removed(size, underwater): used by SoundController to start/stop and set volume
-				  of RC bomb sound
-					- Also invoked when explodes
+				+ OnTimerBombPlaced/Removed(size, underwater): used by SoundController to start/stop and set volume
+				  of timer bomb sound
+					+ Also invoked when explodes
 				+ OnBombDetonated(size): used by SoundController 
 				+ OnRCBombPing(size): used by SoundController 
 
@@ -306,11 +311,11 @@ Prev perf (before point et al destructuring)
 				+ Ship::SpringDestroyHandler: 
 					+ Bombs::OnSpringDestroyed(idx)
 
-			= RenderContext:
-				= RenderContext:
-					= Load textures
+			+ RenderContext:
+				+ RenderContext:
+					+ Load textures
 						+ RC bomb
-						- Timer bomb
+						+ Timer bomb
 						+ Make sure textures are sorted by index
 							+ First index for multi-frame is 0 in filename as well
 					+ Forward calls
@@ -325,13 +330,13 @@ Prev perf (before point et al destructuring)
 			+ SoundController:
 				+ Event handlers
 
-			- Media:
+			= Media:
 				+ TimerBomb cursor
 				+ RCBomb cursor
-				- TimerBomb textures:
-					- Bases w/different fuse lengths
-						- With fuse burning, separate unlighted frames
-					- Explosion frames
+				+ TimerBomb textures:
+					+ Bases w/different fuse lengths
+						+ With fuse burning, separate unlighted frames
+					+ Explosion frames
 				+ RCBomb textures:
 					+ Base
 					+ Pings
@@ -343,6 +348,7 @@ Prev perf (before point et al destructuring)
 					+ 1 normal, 1 underwater
 				+ TimerBomb fuse sound
 					+ 1 fast, 1 slow
+				- Timerbomb defused sound ("sizzle")
 				+ Bomb placed sounds
 					+ N1 normal, N2 underwater
 				+ Bomb removed sounds
@@ -350,6 +356,16 @@ Prev perf (before point et al destructuring)
 		
 		- SettingsDialog: bomb blast radius
 		- Then see if also pinned points should move to a PinnedPoints class
+	- Saw
+		- Spec:
+			- Deletes springs (and affected triangles) that cross the *path* of the tool
+			- Continuous sound, overwater and underwater, depending on where x,y is
+		- Impl:
+			- Tool:
+				- At l-down and at mouse move when l-down, MainFrame passes x,y to GameController
+				  which uses own state to pass line endpoints to World
+					- GameController::OnSaw(screen coords)
+						- It calls into World only at second call
 
 - Controls:
 	+ Set max and min zoom (or monsters awaken when you zoom out too much)

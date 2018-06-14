@@ -32,6 +32,7 @@ TimerBomb::TimerBomb(
     , mFuseStepCounter(0)
     , mExplodingStepCounter(0)
     , mDefuseStepCounter(0)
+    , mDetonationLeadInShapeFrameCounter(0)
 {
     // Start slow fuse
     mGameEventHandler->OnTimerBombSlowFuseStart(
@@ -134,6 +135,9 @@ bool TimerBomb::Update(
                 // Schedule next transition
                 mNextStateTransitionTimePoint = now + ExplosionProgressInterval;
             }
+
+            // Increment frame counter
+            ++mDetonationLeadInShapeFrameCounter;
 
             return true;
         }
@@ -260,11 +264,17 @@ void TimerBomb::Upload(
 
         case State::DetonationLeadIn:
         {
+            static constexpr float ShakeOffset = 0.3f;
+            vec2f shakenPosition = GetPosition() +
+                (0 == (mDetonationLeadInShapeFrameCounter % 2) 
+                    ? vec2f(-ShakeOffset, 0.0f) 
+                    : vec2f(ShakeOffset, 0.0f));
+
             renderContext.UploadShipElementBomb(
                 shipId,
                 BombType::TimerBomb,
                 RotatedTextureRenderInfo(
-                    GetPosition(),
+                    shakenPosition,
                     1.0f,
                     mRotationBaseAxis,
                     GetRotationOffsetAxis()),

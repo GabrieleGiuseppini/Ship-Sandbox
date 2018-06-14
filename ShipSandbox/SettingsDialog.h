@@ -41,6 +41,7 @@ private:
     void OnLightDiffusionSliderScroll(wxScrollEvent & event);
     void OnSeaDepthSliderScroll(wxScrollEvent & event);
     void OnDestroyRadiusSliderScroll(wxScrollEvent & event);
+    void OnBombBlastRadiusSliderScroll(wxScrollEvent & event);
 
     void OnQuickWaterFixCheckBoxClick(wxCommandEvent & event);
     void OnShipRenderModeRadioBox(wxCommandEvent & event);
@@ -71,6 +72,8 @@ private:
     wxTextCtrl * mSeaDepthTextCtrl;
     wxSlider * mDestroyRadiusSlider;
     wxTextCtrl * mDestroyRadiusTextCtrl;
+    wxSlider * mBombBlastRadiusSlider;
+    wxTextCtrl * mBombBlastRadiusTextCtrl;
 
     wxCheckBox * mQuickWaterFixCheckBox;
     wxRadioBox * mShipRenderModeRadioBox;

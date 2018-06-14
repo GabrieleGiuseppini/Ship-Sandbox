@@ -121,6 +121,7 @@ private:
     uint8_t mFuseStepCounter;
     uint8_t mExplodingStepCounter;
     uint8_t mDefuseStepCounter;
+    uint8_t mDetonationLeadInShapeFrameCounter;
 };
 
 }

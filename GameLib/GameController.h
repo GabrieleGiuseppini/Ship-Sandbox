@@ -138,6 +138,11 @@ public:
     float GetMinDestroyRadius() const { return GameParameters::MinDestroyRadius; }
     float GetMaxDestroyRadius() const { return GameParameters::MaxDestroyRadius; }
 
+    float GetBombBlastRadius() const { return mGameParameters.BombBlastRadius; }
+    void SetBombBlastRadius(float value) { mGameParameters.BombBlastRadius = value; }
+    float GetMinBombBlastRadius() const { return GameParameters::MinBombBlastRadius; }
+    float GetMaxBombBlastRadius() const { return GameParameters::MaxBombBlastRadius; }
+
     float GetAmbientLightIntensity() const { return mRenderContext->GetAmbientLightIntensity(); }
     void SetAmbientLightIntensity(float value) { mRenderContext->SetAmbientLightIntensity(value); }
 

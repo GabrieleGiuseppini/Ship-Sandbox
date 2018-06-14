@@ -58,6 +58,7 @@ Prev perf (before point et al destructuring)
 				- Water size
 				- Land size
 				- Bombs sizes and offsets
+	- See if also pinned points should move to a PinnedPoints class, just like Bombs
 	+ CircularList::Erase unit test: complete verification of returned iterator
 
 - Titanic:
@@ -182,180 +183,7 @@ Prev perf (before point et al destructuring)
 	- DestroyAt:
 		- Test: Ship::SpringDestroyHandler() only destroys triangles that contain A-B
 			- Should definitely make both A and B leak, as they both now have an adjacent hole
-	+ Is Verlet implemented right?
-	+ Review parallel calculation, it suffers from races
-		+ Also See if can continue queueing tasks without waiting for all blocks of chunks
-	= Bombs:
-		+ Spec:
-			+ Placed and removed with similar tool as Point Pinning
-			+ Two types of bombs: timer and remote controlled
-			+ A bomb explodes when:
-				+ Its timer times out or the remote control is triggered
-				+ The point it's attached to is destroyed 
-				+ A point or spring in the "neighborhood" (a separate, small radius) is destroyed (includes nearby explosion)
-			+ When one or more bombs are detonated, ship needs to know only position, connected component ID, and blast radius, 
-			  not even point index
-				+ Thus (exploded) bombs are independent from lifetime of point that they were attached to,
-				  allowing ship to destroy point immediately at first step of detonation, for example
-				  if we have multiple-step detonations
-				+ By not using point index we allow explosions to affect multiple connected components (of same ship though)
-			+ Bomb decides for itself when it's to be deleted, and Bombs consequently removes it from
-			  collection (and from point indirectly via Bomb::Destroy which, if attached to point, calls Points::Detach)
-				 
-		= Impl:
-			+ TEST: bombs are attached to springs instead of points
-				+ Move isAttached buffer from Points to Springs
-				+ Move mass trick to springs
-				+ Bomb position becomes positionA and positionB (bomb attached across)
-					+ Also BlastHandler argument is positionA and positionB
-					+ Blast calculated's by ship from middle point
-				+ inline Springs::GetPointA/BPosition(Points const &)
-				+ Points::SetMassToMaterial(float ~offset)
-				+ Restructure positionA and positionB:
-					+ Freeze position and rotation offset, not positionA and positionB
-				+ Fix calculation of alpha - check just zero
-			+ TEST: lead-in: continuate ping counter, just different velocity and different translation to frame index
-			+ TEST: 360 rotation
-			+ Fix mass augmentation
-				+ Also update springs' coefficients
-			+ Fix blast flipping
-			+ TEST: run in debug
-			+ FIX: first blast handler is so small that it doesn't find point in radius
-				+ Go linearly from 0.6 to BlastRadius
-				+ At end, re-enable texture frame for explosions
-			+ FIX: ContinuousSound start while paused issue
-				+ DesiredState
-			+ FIX: TimerBomb x,y offsets
-				+ Restore cursor hotspot
-				+ Add temporarily fixed world offset at ShipRenderContext
-					+ Desired center: 147, 228 off 300, 300 => +3, -78 over 12.0, 12.0 makes 0.12, -3.12
-				
-			+ Bomb base class, w/type enum
-				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
-					+ Runs state machine with local clock
-						+ Advances animations (textures of bombs, sounds via events)
-					+ Invokes handler for each explosion step
-					+ Returns false when needs to be deleted
-				+ GetRenderFrameIndex() -> size_t
-					+ Specialized for state machines
-				+ NeighborhoodDisturbed() = 0
-					+ Invoked when needs to explode because own or near point is disturbed
-			= Two subclasses - TimerBomb and RCBomb
-				+ RCBomb:
-					+ RCBomb::Detonate(): input to state machine
-					+ Update():
-						+ Basics
-						+ Explosion
-					+ Finalize GetArea(): decide if new enlarged explosion looks good
-					+ NeighborhoodDisturbed()
-						+ Equivalent to RCDetonate()
-				= TimerBomb:
-					= Update(): state machine
-						+ Sparkles: sort frames by distance on fuse and do random choice on sliding window
-						+ Add a base frame of bomb with no fuse
-							+ Rename all frames
-							+ Fix calculation of base frame count at Update()
-						- Smoke:
-							- 3 sequential frames
-					- NeighborhoodDisturbed()
-						- Explodes only if state machine duration < own time left
-			+ Bombs class
-				+ Not ElementContainer, just manager
-				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &
-				+ Update(OnBombExplosion(position, radius)) -> void
-					+ Runs through all bombs and invokes ::Update() on each
-					+ Removes a bomb if its Update() returns false
-						+ Detach it if attached
-				+ ToggleTimer/RCBombAt(position) 
-					+ same logic as pinned points
-					+ returns boolean
-				+ DetonateRCBombs()
-					+ Calls Detonate() at each RCBomb
-				+ Upload(RenderContext)
-					+ Always upload all bombs, each w/current render frame index
-				+ OnPointDestroyed(idx)
-					+ For each bomb:
-						+ If bomb is attached to this point:
-							+ Detach bomb from point
-						+ If bomb within (new, smaller) radius from point:
-							+ Call bomb->NeighborhoodDisturbed()
-				+ OnSpringDestroyed(idx)
-					+ Bombs also takes Springs
-					+ For each bomb:
-						+ If bomb within radius (new GameParameters parameter, smaller) from spring mid-point:
-							+ Call bomb->NeighborhoodDisturbed()
-
-			+ Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
-				+ Also changes mass (just at point, for gravity only...)				
-				+ Flag and mass change is done at Points::AttachBomb()/Points::DetachBomb() 
-
-			+ Events:
-				+ OnRCBombPlaced/Removed(size, underwater): used by MainFrame to enable/disable detonation menu item
-					+ Also invoked when explodes
-				+ OnTimerBombPlaced/Removed(size, underwater): used by SoundController to start/stop and set volume
-				  of timer bomb sound
-					+ Also invoked when explodes
-				+ OnBombDetonated(size): used by SoundController 
-				+ OnRCBombPing(size): used by SoundController 
-
-			+ Ship implements:
-				+ ToggleTimer/RCBombAt(position)
-					+ FW to Bombs
-				+ DetonateRCBombs()
-					+ FW to Bombs
-				+ @Update(): invokes Bombs::Update() w/handler
-					+ After spring stress check, so explosion is visible before it breaks things up
-				+ @Render(): invokes Bombs::Upload(RenderContext)				
-				+ Ship::PointDestroyHandler: 
-					+ Bombs::OnPointDestroyed(idx)
-				+ Ship::SpringDestroyHandler: 
-					+ Bombs::OnSpringDestroyed(idx)
-
-			+ RenderContext:
-				+ RenderContext:
-					+ Load textures
-						+ RC bomb
-						+ Timer bomb
-						+ Make sure textures are sorted by index
-							+ First index for multi-frame is 0 in filename as well
-					+ Forward calls
-				+ ShipRenderContext
-					+ Buffers just like pinned points
-					+ Render
-			+ MainFrame/Tool:
-				+ Register for events and process OnRCBombPlaced/Removed() to enable
-				  Detonate menu item
-				+ Load 2 cursors
-					+ Set hotspot
-			+ SoundController:
-				+ Event handlers
-
-			= Media:
-				+ TimerBomb cursor
-				+ RCBomb cursor
-				+ TimerBomb textures:
-					+ Bases w/different fuse lengths
-						+ With fuse burning, separate unlighted frames
-					+ Explosion frames
-				+ RCBomb textures:
-					+ Base
-					+ Pings
-					+ Center
-					+ Explosion frames
-				+ Bomb explosion sounds
-					+ N1 normal, N2 underwater
-				+ RCBomb ping sounds
-					+ 1 normal, 1 underwater
-				+ TimerBomb fuse sound
-					+ 1 fast, 1 slow
-				- Timerbomb defused sound ("sizzle")
-				+ Bomb placed sounds
-					+ N1 normal, N2 underwater
-				+ Bomb removed sounds
-					+ N1 normal, N2 underwater
 		
-		- SettingsDialog: bomb blast radius
-		- Then see if also pinned points should move to a PinnedPoints class
 	- Saw
 		- Spec:
 			- Deletes springs (and affected triangles) that cross the *path* of the tool
@@ -370,6 +198,8 @@ Prev perf (before point et al destructuring)
 - Controls:
 	+ Set max and min zoom (or monsters awaken when you zoom out too much)
 	+ Reset view (ESC) should also reset camera pan
+	+ SettingsDialog: bomb blast radius
+	- Find solution to ugly slider value rounding
 	- Tool cursors: cursor should change when mouse down
 		- Just the cursors used with the strength bar
 		- Hammer
@@ -1451,6 +1281,178 @@ IF WX:
 	+ Cosmetics:
 		+ Explain Spring's coefficients (in terms of fractionXYZ* of return-to-rest-length, etc.)
 		+ Rename Points::MassFactor as IntegrationFactor and explain
+	+ Is Verlet implemented right?
+	+ Review parallel calculation, it suffers from races
+		+ Also See if can continue queueing tasks without waiting for all blocks of chunks
+	+ Bombs:
+		+ Spec:
+			+ Placed and removed with similar tool as Point Pinning
+			+ Two types of bombs: timer and remote controlled
+			+ A bomb explodes when:
+				+ Its timer times out or the remote control is triggered
+				+ The point it's attached to is destroyed 
+				+ A point or spring in the "neighborhood" (a separate, small radius) is destroyed (includes nearby explosion)
+			+ When one or more bombs are detonated, ship needs to know only position, connected component ID, and blast radius, 
+			  not even point index
+				+ Thus (exploded) bombs are independent from lifetime of point that they were attached to,
+				  allowing ship to destroy point immediately at first step of detonation, for example
+				  if we have multiple-step detonations
+				+ By not using point index we allow explosions to affect multiple connected components (of same ship though)
+			+ Bomb decides for itself when it's to be deleted, and Bombs consequently removes it from
+			  collection (and from point indirectly via Bomb::Destroy which, if attached to point, calls Points::Detach)
+				 
+		+ Impl:
+			+ Final test
+			+ TEST: bombs are attached to springs instead of points
+				+ Move isAttached buffer from Points to Springs
+				+ Move mass trick to springs
+				+ Bomb position becomes positionA and positionB (bomb attached across)
+					+ Also BlastHandler argument is positionA and positionB
+					+ Blast calculated's by ship from middle point
+				+ inline Springs::GetPointA/BPosition(Points const &)
+				+ Points::SetMassToMaterial(float ~offset)
+				+ Restructure positionA and positionB:
+					+ Freeze position and rotation offset, not positionA and positionB
+				+ Fix calculation of alpha - check just zero
+			+ TEST: lead-in: continuate ping counter, just different velocity and different translation to frame index
+			+ TEST: 360 rotation
+			+ Fix mass augmentation
+				+ Also update springs' coefficients
+			+ Fix blast flipping
+			+ TEST: run in debug
+			+ FIX: first blast handler is so small that it doesn't find point in radius
+				+ Go linearly from 0.6 to BlastRadius
+				+ At end, re-enable texture frame for explosions
+			+ FIX: ContinuousSound start while paused issue
+				+ DesiredState
+			+ FIX: TimerBomb x,y offsets
+				+ Restore cursor hotspot
+				+ Add temporarily fixed world offset at ShipRenderContext
+					+ Desired center: 147, 228 off 300, 300 => +3, -78 over 12.0, 12.0 makes 0.12, -3.12
+				
+			+ Bomb base class, w/type enum
+				+ Update(OnBombExplosionStep(position, radius)) -> bool = 0: 
+					+ Runs state machine with local clock
+						+ Advances animations (textures of bombs, sounds via events)
+					+ Invokes handler for each explosion step
+					+ Returns false when needs to be deleted
+				+ GetRenderFrameIndex() -> size_t
+					+ Specialized for state machines
+				+ NeighborhoodDisturbed() = 0
+					+ Invoked when needs to explode because own or near point is disturbed
+			+ Two subclasses - TimerBomb and RCBomb
+				+ RCBomb:
+					+ RCBomb::Detonate(): input to state machine
+					+ Update():
+						+ Basics
+						+ Explosion
+					+ Finalize GetArea(): decide if new enlarged explosion looks good
+					+ NeighborhoodDisturbed()
+						+ Equivalent to RCDetonate()
+				+ TimerBomb:
+					+ Update(): state machine
+						+ Sparkles: sort frames by distance on fuse and do random choice on sliding window
+						+ Add a base frame of bomb with no fuse
+							+ Rename all frames
+							+ Fix calculation of base frame count at Update()
+						+ Smoke:
+							+ 3 sequential frames
+					+ NeighborhoodDisturbed()
+						+ Explodes only if state machine duration < own time left
+			+ Bombs class
+				+ Not ElementContainer, just manager
+				+ cctor takes shared_ptr<IGameEventHandler>, ExplosionHandler, Points &
+				+ Update(OnBombExplosion(position, radius)) -> void
+					+ Runs through all bombs and invokes ::Update() on each
+					+ Removes a bomb if its Update() returns false
+						+ Detach it if attached
+				+ ToggleTimer/RCBombAt(position) 
+					+ same logic as pinned points
+					+ returns boolean
+				+ DetonateRCBombs()
+					+ Calls Detonate() at each RCBomb
+				+ Upload(RenderContext)
+					+ Always upload all bombs, each w/current render frame index
+				+ OnPointDestroyed(idx)
+					+ For each bomb:
+						+ If bomb is attached to this point:
+							+ Detach bomb from point
+						+ If bomb within (new, smaller) radius from point:
+							+ Call bomb->NeighborhoodDisturbed()
+				+ OnSpringDestroyed(idx)
+					+ Bombs also takes Springs
+					+ For each bomb:
+						+ If bomb within radius (new GameParameters parameter, smaller) from spring mid-point:
+							+ Call bomb->NeighborhoodDisturbed()
+
+			+ Points also has bool HasBombAttached buffer for interactions & lookups, just like pinned points 
+				+ Also changes mass (just at point, for gravity only...)				
+				+ Flag and mass change is done at Points::AttachBomb()/Points::DetachBomb() 
+
+			+ Events:
+				+ OnRCBombPlaced/Removed(size, underwater): used by MainFrame to enable/disable detonation menu item
+					+ Also invoked when explodes
+				+ OnTimerBombPlaced/Removed(size, underwater): used by SoundController to start/stop and set volume
+				  of timer bomb sound
+					+ Also invoked when explodes
+				+ OnBombDetonated(size): used by SoundController 
+				+ OnRCBombPing(size): used by SoundController 
+
+			+ Ship implements:
+				+ ToggleTimer/RCBombAt(position)
+					+ FW to Bombs
+				+ DetonateRCBombs()
+					+ FW to Bombs
+				+ @Update(): invokes Bombs::Update() w/handler
+					+ After spring stress check, so explosion is visible before it breaks things up
+				+ @Render(): invokes Bombs::Upload(RenderContext)				
+				+ Ship::PointDestroyHandler: 
+					+ Bombs::OnPointDestroyed(idx)
+				+ Ship::SpringDestroyHandler: 
+					+ Bombs::OnSpringDestroyed(idx)
+
+			+ RenderContext:
+				+ RenderContext:
+					+ Load textures
+						+ RC bomb
+						+ Timer bomb
+						+ Make sure textures are sorted by index
+							+ First index for multi-frame is 0 in filename as well
+					+ Forward calls
+				+ ShipRenderContext
+					+ Buffers just like pinned points
+					+ Render
+			+ MainFrame/Tool:
+				+ Register for events and process OnRCBombPlaced/Removed() to enable
+				  Detonate menu item
+				+ Load 2 cursors
+					+ Set hotspot
+			+ SoundController:
+				+ Event handlers
+
+			+ Media:
+				+ TimerBomb cursor
+				+ RCBomb cursor
+				+ TimerBomb textures:
+					+ Bases w/different fuse lengths
+						+ With fuse burning, separate unlighted frames
+					+ Explosion frames
+				+ RCBomb textures:
+					+ Base
+					+ Pings
+					+ Center
+					+ Explosion frames
+				+ Bomb explosion sounds
+					+ N1 normal, N2 underwater
+				+ RCBomb ping sounds
+					+ 1 normal, 1 underwater
+				+ TimerBomb fuse sound
+					+ 1 fast, 1 slow
+				+ Timerbomb defused sound ("sizzle")
+				+ Bomb placed sounds
+					+ N1 normal, N2 underwater
+				+ Bomb removed sounds
+					+ N1 normal, N2 underwater
 
 + Debug light/drag issue
 	+ Could be due to distance too close and shooting light to sky

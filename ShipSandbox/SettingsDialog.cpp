@@ -27,6 +27,7 @@ const long ID_WATER_TRANSPARENCY_SLIDER = wxNewId();
 const long ID_LIGHT_DIFFUSION_SLIDER = wxNewId();
 const long ID_SEA_DEPTH_SLIDER = wxNewId();
 const long ID_DESTROY_RADIUS_SLIDER = wxNewId();
+const long ID_BOMB_BLAST_RADIUS_SLIDER = wxNewId();
 
 const long ID_QUICK_WATER_FIX_CHECKBOX = wxNewId();
 const long ID_SHOW_STRESS_CHECKBOX = wxNewId();
@@ -41,6 +42,7 @@ wxBEGIN_EVENT_TABLE(SettingsDialog, wxDialog)
     EVT_COMMAND_SCROLL(ID_LIGHT_DIFFUSION_SLIDER, SettingsDialog::OnLightDiffusionSliderScroll)
 	EVT_COMMAND_SCROLL(ID_SEA_DEPTH_SLIDER, SettingsDialog::OnSeaDepthSliderScroll)
 	EVT_COMMAND_SCROLL(ID_DESTROY_RADIUS_SLIDER, SettingsDialog::OnDestroyRadiusSliderScroll)
+    EVT_COMMAND_SCROLL(ID_BOMB_BLAST_RADIUS_SLIDER, SettingsDialog::OnBombBlastRadiusSliderScroll)
 wxEND_EVENT_TABLE()
 
 SettingsDialog::SettingsDialog(
@@ -316,6 +318,27 @@ SettingsDialog::SettingsDialog(
 
 	
 
+    // Bomb Blast Radius
+
+    wxBoxSizer* bombBlastRadiusSizer = new wxBoxSizer(wxVERTICAL);
+
+    mBombBlastRadiusSlider = new wxSlider(this, ID_BOMB_BLAST_RADIUS_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
+        wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Bomb Blast Radius Slider"));
+    mBombBlastRadiusSlider->SetTickFreq(4);
+    bombBlastRadiusSizer->Add(mBombBlastRadiusSlider, 0, wxALIGN_CENTRE);
+
+    wxStaticText * bombBlastRadiusLabel = new wxStaticText(this, wxID_ANY, _("Bomb Blast Radius"), wxDefaultPosition, wxDefaultSize, 0, _T("Bomb Blast Radius Label"));
+    bombBlastRadiusSizer->Add(bombBlastRadiusLabel, 0, wxALIGN_CENTRE);
+
+    mBombBlastRadiusTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
+    bombBlastRadiusSizer->Add(mBombBlastRadiusTextCtrl, 0, wxALIGN_CENTRE);
+
+    bombBlastRadiusSizer->AddSpacer(20);
+
+    controls2Sizer->Add(bombBlastRadiusSizer, 0);
+
+    controls2Sizer->AddSpacer(20);
+
 
 	mainSizer->Add(controls2Sizer);
 
@@ -508,6 +531,21 @@ void SettingsDialog::OnDestroyRadiusSliderScroll(wxScrollEvent & /*event*/)
 	mApplyButton->Enable(true);
 }
 
+void SettingsDialog::OnBombBlastRadiusSliderScroll(wxScrollEvent & /*event*/)
+{
+    assert(!!mGameController);
+
+    float realValue = LinearSliderToRealValue(
+        mBombBlastRadiusSlider,
+        mGameController->GetMinBombBlastRadius(),
+        mGameController->GetMaxBombBlastRadius());
+
+    mBombBlastRadiusTextCtrl->SetValue(std::to_string(realValue));
+
+    // Remember we're dirty now
+    mApplyButton->Enable(true);
+}
+
 void SettingsDialog::OnQuickWaterFixCheckBoxClick(wxCommandEvent & /*event*/)
 {
 	// Remember we're dirty now
@@ -602,6 +640,12 @@ void SettingsDialog::ApplySettings()
 			mDestroyRadiusSlider,
 			mGameController->GetMinDestroyRadius(),
 			mGameController->GetMaxDestroyRadius()));
+
+    mGameController->SetBombBlastRadius(
+        LinearSliderToRealValue(
+            mBombBlastRadiusSlider,
+            mGameController->GetMinBombBlastRadius(),
+            mGameController->GetMaxBombBlastRadius()));
 
 	mGameController->SetShowShipThroughWater(mQuickWaterFixCheckBox->IsChecked());
 
@@ -708,6 +752,15 @@ void SettingsDialog::ReadSettings()
 		mDestroyRadiusSlider);
 
 	mDestroyRadiusTextCtrl->SetValue(std::to_string(mGameController->GetDestroyRadius()));
+
+
+    RealValueToLinearSlider(
+        mGameController->GetBombBlastRadius(),
+        mGameController->GetMinBombBlastRadius(),
+        mGameController->GetMaxBombBlastRadius(),
+        mBombBlastRadiusSlider);
+
+    mBombBlastRadiusTextCtrl->SetValue(std::to_string(mGameController->GetBombBlastRadius()));
 
 
 	mQuickWaterFixCheckBox->SetValue(mGameController->GetShowShipThroughWater());

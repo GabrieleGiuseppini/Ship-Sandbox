@@ -8,6 +8,8 @@ set  (SHIP_SANDBOX_SOURCES
 	AboutDialog.h
 	EventTickerPanel.cpp
 	EventTickerPanel.h
+	LinearSliderControl.cpp
+	LinearSliderControl.h
 	LoggingDialog.cpp
 	LoggingDialog.h
 	MainApp.cpp
@@ -15,6 +17,8 @@ set  (SHIP_SANDBOX_SOURCES
 	MainFrame.h
 	SettingsDialog.cpp
 	SettingsDialog.h
+	SliderControl.cpp
+	SliderControl.h
 	SoundController.cpp
 	SoundController.h
 	SplashScreenDialog.cpp

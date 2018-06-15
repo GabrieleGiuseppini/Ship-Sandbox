@@ -58,7 +58,7 @@ Prev perf (before point et al destructuring)
 				- Water size
 				- Land size
 				- Bombs sizes and offsets
-	- See if also pinned points should move to a PinnedPoints class, just like Bombs
+	- Move also pinned points to a PinnedPoints class, just like Bombs
 	+ CircularList::Erase unit test: complete verification of returned iterator
 
 - Titanic:
@@ -164,6 +164,7 @@ Prev perf (before point et al destructuring)
 			- Option 1: make it based on total number of points that have water instead, i.e. wet points
 				- ...which requires Points to keep track of point's water going from 0.0 to > 0.0, at all possible
 				  avenues of change (LeakWater, BalancePressure, etc.)
+				- Or can just be calculated at end of each update with simple pass through water buffer
 			- Option 2: make it based on total number of points whose Y is underwater
 				- Could be done @ Ship::UpdatePoint() when the count of underwater points reaches threshold for the first time
 					- Just reset count before loop
@@ -192,18 +193,34 @@ Prev perf (before point et al destructuring)
 			- Tool:
 				- At l-down and at mouse move when l-down, MainFrame passes x,y to GameController
 				  which uses own state to pass line endpoints to World
-					- GameController::OnSaw(screen coords)
-						- It calls into World only at second call
+					- GameController::OnSawMove(screen coords)
+						- It calls into World only at second call, i.e. iff !!mLastSawPoint (opt)
+				- At l-up, if tool is Saw, MainFrame calls into GameController::OnSawEnd()
+					- GameController::OnSawEnd(): set mLastSawPoint to nullopt
 
 - Controls:
 	+ Set max and min zoom (or monsters awaken when you zoom out too much)
 	+ Reset view (ESC) should also reset camera pan
 	+ SettingsDialog: bomb blast radius
-	- Find solution to ugly slider value rounding
+	- SettingsDialog: 
+		- Break into N Liner/ExponentialSliderControl
+			- Managed as vector
+			- Init'd with:
+				- CurrentValue
+				- Max and Min
+				- std::function for OnValueChanged(float newValue)
+		- Find solution to ugly slider value rounding
+			- Calc tick_size == (Max-Min)/100, floored to round float increment ... see doc'n on floats
+			- Then calc # ticks == floor((Max-Min)/tick_size) + 1 
+				- Extra +1 is for Min, TODOHERE: assert next val (==1*tick_size) is > Min
 	- Tool cursors: cursor should change when mouse down
-		- Just the cursors used with the strength bar
-		- Hammer
-		- Draw
+		- Bomb, Saw, Hammer, Draw
+		- ToolController class, called directly by MainFrame
+			- Has GameController shared_ptr
+			- SetTool(tool enum from ToolController)
+			- OnMouseDown/Up()
+			- RC Bomb detection via events is still left to MainFrame
+			
 	- SettingsDialog: save settings, and defaults
 		- JSON for both game & render params, assembled & saved by gamecontroller, who also loads it on startup if exists 
 		- GameParameters::ToJson()->picojson::value
@@ -259,6 +276,8 @@ Prev perf (before point et al destructuring)
 	- Diffusion improvement: see if can simply add light (rather than max'ing it)
 		- Need to ensure sum is always < 1.0
 			- May be via adding +1 to distance?
+	- Move electrical components to ElectricalComponents class, just like bombs, with update and all
+		- See if it still makes sense for ship to have mAllElectricalComponents - might be able to get away with mAllLamps
 	- Current Propagation Algo:
 		+ create new generation seq number; if new is 0 => 1
 		- ElectricalElement has SetVisited(curGen), bool IsVisited(curGen)
@@ -319,7 +338,6 @@ Prev perf (before point et al destructuring)
 		  used when rendering point in springs/triangles/points
 			+ Not used when using textures, of course
 			+ Needs material's Color to split in StructuralColor and RenderColor (set to the same except for lamps)
-	- See if it still makes sense for ship to have mAllElectricalComponents - might be able to get away with mAllLamps
 	
 
 - Smoke

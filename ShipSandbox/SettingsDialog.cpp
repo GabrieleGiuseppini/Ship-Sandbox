@@ -20,7 +20,6 @@ static constexpr int SliderHeight = 140;
 
 const long ID_STIFFNESS_SLIDER = wxNewId();
 const long ID_STRENGTH_SLIDER = wxNewId();
-const long ID_BUOYANCY_SLIDER = wxNewId();
 const long ID_WATER_PRESSURE_SLIDER = wxNewId();
 const long ID_WAVE_HEIGHT_SLIDER = wxNewId();
 const long ID_WATER_TRANSPARENCY_SLIDER = wxNewId();
@@ -35,7 +34,6 @@ const long ID_SHOW_STRESS_CHECKBOX = wxNewId();
 wxBEGIN_EVENT_TABLE(SettingsDialog, wxDialog)
     EVT_COMMAND_SCROLL(ID_STIFFNESS_SLIDER, SettingsDialog::OnStiffnessSliderScroll)
 	EVT_COMMAND_SCROLL(ID_STRENGTH_SLIDER, SettingsDialog::OnStrengthSliderScroll)
-	EVT_COMMAND_SCROLL(ID_BUOYANCY_SLIDER, SettingsDialog::OnBuoyancySliderScroll)
 	EVT_COMMAND_SCROLL(ID_WATER_PRESSURE_SLIDER, SettingsDialog::OnWaterPressureSliderScroll)
 	EVT_COMMAND_SCROLL(ID_WAVE_HEIGHT_SLIDER, SettingsDialog::OnWaveHeightSliderScroll)
     EVT_COMMAND_SCROLL(ID_WATER_TRANSPARENCY_SLIDER, SettingsDialog::OnWaterTransparencySliderScroll)
@@ -121,22 +119,21 @@ SettingsDialog::SettingsDialog(
 
 	// Buoyancy
 	
-	wxBoxSizer* buoyancySizer = new wxBoxSizer(wxVERTICAL);
-
-	mBuoyancySlider = new wxSlider(this, ID_BUOYANCY_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Buoyancy Slider"));
-	mBuoyancySlider->SetTickFreq(4);
-	buoyancySizer->Add(mBuoyancySlider, 0, wxALIGN_CENTRE);
-
-	wxStaticText * buoyancyLabel = new wxStaticText(this, wxID_ANY, _("Buoyancy Adjust"), wxDefaultPosition, wxDefaultSize, 0, _T("Buoyancy Label"));
-	buoyancySizer->Add(buoyancyLabel, 0, wxALIGN_CENTRE);
+    mBuoyancySlider = std::make_unique<LinearSliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Buoyancy Adjust",
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        mGameController->GetMinBuoyancyAdjustment(),
+        mGameController->GetMaxBuoyancyAdjustment(),
+        mGameController->GetBuoyancyAdjustment());
 	
-	mBuoyancyTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-	buoyancySizer->Add(mBuoyancyTextCtrl, 0, wxALIGN_CENTRE);
-
-	buoyancySizer->AddSpacer(20);
-
-    controls1Sizer->Add(buoyancySizer, 0);
+    controls1Sizer->Add(mBuoyancySlider.get(), 0);
 	
     controls1Sizer->AddSpacer(20);
 
@@ -426,21 +423,6 @@ void SettingsDialog::OnStrengthSliderScroll(wxScrollEvent & /*event*/)
 	mApplyButton->Enable(true);
 }
 
-void SettingsDialog::OnBuoyancySliderScroll(wxScrollEvent & /*event*/)
-{
-	assert(!!mGameController);
-
-	float realValue = LinearSliderToRealValue(
-		mBuoyancySlider,
-		mGameController->GetMinBuoyancyAdjustment(),
-		mGameController->GetMaxBuoyancyAdjustment());
-
-	mBuoyancyTextCtrl->SetValue(std::to_string(realValue));
-
-	// Remember we're dirty now
-	mApplyButton->Enable(true);
-}
-
 void SettingsDialog::OnWaterPressureSliderScroll(wxScrollEvent & /*event*/)
 {
 	assert(!!mGameController);
@@ -599,11 +581,8 @@ void SettingsDialog::ApplySettings()
 	mGameController->SetStrengthAdjustment(
 		StrengthSliderToRealValue());
 
-	mGameController->SetBuoyancyAdjustment(
-        LinearSliderToRealValue(
-			mBuoyancySlider,
-			mGameController->GetMinBuoyancyAdjustment(),
-			mGameController->GetMaxBuoyancyAdjustment()));
+    // TODO
+    mGameController->SetBuoyancyAdjustment(10.0f);
 
 	mGameController->SetWaterPressureAdjustment(
         LinearSliderToRealValue(
@@ -689,15 +668,6 @@ void SettingsDialog::ReadSettings()
 		mGameController->GetStrengthAdjustment());
 
 	mStrengthTextCtrl->SetValue(std::to_string(mGameController->GetStrengthAdjustment()));
-
-
-	RealValueToLinearSlider(
-		mGameController->GetBuoyancyAdjustment(),
-		mGameController->GetMinBuoyancyAdjustment(),
-		mGameController->GetMaxBuoyancyAdjustment(),
-		mBuoyancySlider);
-
-	mBuoyancyTextCtrl->SetValue(std::to_string(mGameController->GetBuoyancyAdjustment()));
 
 
 	RealValueToLinearSlider(

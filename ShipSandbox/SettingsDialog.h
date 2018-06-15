@@ -7,6 +7,8 @@
 ***************************************************************************************/
 #pragma once
 
+#include "LinearSliderControl.h"
+
 #include <GameLib/GameController.h>
 
 #include <wx/button.h>
@@ -58,8 +60,7 @@ private:
     wxTextCtrl * mStiffnessTextCtrl;
     wxSlider * mStrengthSlider;
     wxTextCtrl * mStrengthTextCtrl;
-    wxSlider * mBuoyancySlider;
-    wxTextCtrl * mBuoyancyTextCtrl;
+    std::unique_ptr<LinearSliderControl> mBuoyancySlider;
     wxSlider * mWaterPressureSlider;
     wxTextCtrl * mWaterPressureTextCtrl;
     wxSlider * mWaveHeightSlider;

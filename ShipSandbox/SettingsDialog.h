@@ -34,9 +34,7 @@ public:
 
 private:
 
-    void OnStiffnessSliderScroll(wxScrollEvent & event);
     void OnStrengthSliderScroll(wxScrollEvent & event);
-    void OnBuoyancySliderScroll(wxScrollEvent & event);
     void OnWaterPressureSliderScroll(wxScrollEvent & event);
     void OnWaveHeightSliderScroll(wxScrollEvent & event);
     void OnWaterTransparencySliderScroll(wxScrollEvent & event);
@@ -56,8 +54,7 @@ private:
 
     // Controls
 
-    wxSlider * mStiffnessSlider;
-    wxTextCtrl * mStiffnessTextCtrl;
+    std::unique_ptr<LinearSliderControl> mStiffnessSlider;
     wxSlider * mStrengthSlider;
     wxTextCtrl * mStrengthTextCtrl;
     std::unique_ptr<LinearSliderControl> mBuoyancySlider;

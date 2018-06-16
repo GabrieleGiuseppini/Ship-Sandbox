@@ -120,6 +120,11 @@ Prev perf (before point et al destructuring)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
+	- Swirl tool
+		- Use shift key to change from CW to CCW
+			- Same for Draw
+		- Force applied is r * AngularForce; AngularForce==m*AngularAcceleration
+		- Neec cursor
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded

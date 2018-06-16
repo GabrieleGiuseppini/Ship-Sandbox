@@ -34,5 +34,7 @@ private:
 
     float mTickSize;
     float mValueOffset;
-    float mTickZeroValue;
+    float mValueAtTickZero; // Net of offset
+    int mMaxTickValue;
+    float mValueAtTickMax;  // Net of offset
 };

@@ -40,11 +40,16 @@ LinearSliderControl::LinearSliderControl(
     // Now calculate the real number of ticks
     float numberOfTicks = ceilf((maxValue - minValue) / mTickSize);
 
-    // Re-adjust min: calc min at tick 0, and offset to add to slider's value
+    // Re-adjust min: calc min at tick 0 (exclusive of offset), and offset to add to slider's value
     mValueOffset = floorf(minValue / mTickSize) * mTickSize;
-    mTickZeroValue = minValue - mValueOffset;
-    if (mValueOffset != 0.0f)
-        numberOfTicks += 1.0f;
+    mValueAtTickZero = minValue - mValueOffset;
+    assert(mValueAtTickZero < mTickSize);
+
+    // Store maximum tick value and maximum value (exclusive of offset) at that tick
+    float theoreticalMaxValue = mValueOffset + numberOfTicks * mTickSize;
+    assert(theoreticalMaxValue - maxValue < mTickSize);
+    mMaxTickValue = static_cast<int>(numberOfTicks);
+    mValueAtTickMax = maxValue;
 
     this->Initialize(
         static_cast<int>(numberOfTicks),
@@ -53,21 +58,38 @@ LinearSliderControl::LinearSliderControl(
 
 float LinearSliderControl::TickToValue(int tick) const
 {
-    float sliderValue = (tick == 0)
-        ? mTickZeroValue
-        : mTickSize * static_cast<float>(tick);
+    float sliderValue;
+
+    if (tick == 0)
+    {
+        sliderValue = mValueAtTickZero;
+    }
+    else if (tick == mMaxTickValue)
+    {
+        sliderValue = mValueAtTickMax;
+    }
+    else
+    {
+        sliderValue = mTickSize * static_cast<float>(tick);
+    }
 
     return mValueOffset + sliderValue;
 }
 
 int LinearSliderControl::ValueToTick(float value) const
 {
-    if (value <= mTickZeroValue)
+    value -= mValueOffset;
+
+    if (value <= mValueAtTickZero)
     {
         return 0;
     }
+    else if (value >= mValueAtTickMax)
+    {
+        return mMaxTickValue;
+    }
     else
     {
-        return static_cast<int>(floorf((value - mTickZeroValue - mValueOffset) / mTickSize));
+        return static_cast<int>(floorf((value - mValueAtTickZero) / mTickSize));
     }
 }

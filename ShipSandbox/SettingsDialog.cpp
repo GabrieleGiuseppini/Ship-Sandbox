@@ -18,7 +18,6 @@ static constexpr int SliderTicks = 100;
 static constexpr int SliderWidth = 40;
 static constexpr int SliderHeight = 140;
 
-const long ID_STIFFNESS_SLIDER = wxNewId();
 const long ID_STRENGTH_SLIDER = wxNewId();
 const long ID_WATER_PRESSURE_SLIDER = wxNewId();
 const long ID_WAVE_HEIGHT_SLIDER = wxNewId();
@@ -32,7 +31,6 @@ const long ID_QUICK_WATER_FIX_CHECKBOX = wxNewId();
 const long ID_SHOW_STRESS_CHECKBOX = wxNewId();
 
 wxBEGIN_EVENT_TABLE(SettingsDialog, wxDialog)
-    EVT_COMMAND_SCROLL(ID_STIFFNESS_SLIDER, SettingsDialog::OnStiffnessSliderScroll)
 	EVT_COMMAND_SCROLL(ID_STRENGTH_SLIDER, SettingsDialog::OnStrengthSliderScroll)
 	EVT_COMMAND_SCROLL(ID_WATER_PRESSURE_SLIDER, SettingsDialog::OnWaterPressureSliderScroll)
 	EVT_COMMAND_SCROLL(ID_WAVE_HEIGHT_SLIDER, SettingsDialog::OnWaveHeightSliderScroll)
@@ -77,21 +75,21 @@ SettingsDialog::SettingsDialog(
 
     // Stiffness
 
-    wxBoxSizer* stiffnessSizer = new wxBoxSizer(wxVERTICAL);
-    mStiffnessSlider = new wxSlider(this, ID_STIFFNESS_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-        wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Stiffness Slider"));
-    mStiffnessSlider->SetTickFreq(4);
-    stiffnessSizer->Add(mStiffnessSlider, 0, wxALIGN_CENTRE);
+    mStiffnessSlider = std::make_unique<LinearSliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Stiffness Adjust",
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        mGameController->GetMinStiffnessAdjustment(),
+        mGameController->GetMaxStiffnessAdjustment(),
+        mGameController->GetStiffnessAdjustment());
 
-    wxStaticText * stiffnessLabel = new wxStaticText(this, wxID_ANY, _("Stiffness Adjust"), wxDefaultPosition, wxDefaultSize, 0, _T("Stiffness Label"));
-    stiffnessSizer->Add(stiffnessLabel, 0, wxALIGN_CENTRE);
-
-    mStiffnessTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-    stiffnessSizer->Add(mStiffnessTextCtrl, 0, wxALIGN_CENTRE);
-
-    stiffnessSizer->AddSpacer(20);
-
-    controls1Sizer->Add(stiffnessSizer, 0);
+    controls1Sizer->Add(mStiffnessSlider.get(), 0);
 
     controls1Sizer->AddSpacer(20);
 
@@ -396,21 +394,6 @@ void SettingsDialog::Open()
 	this->Show();
 }
 
-void SettingsDialog::OnStiffnessSliderScroll(wxScrollEvent & /*event*/)
-{
-    assert(!!mGameController);
-
-    float realValue = LinearSliderToRealValue(
-        mStiffnessSlider,
-        mGameController->GetMinStiffnessAdjustment(),
-        mGameController->GetMaxStiffnessAdjustment());
-
-    mStiffnessTextCtrl->SetValue(std::to_string(realValue));
-
-    // Remember we're dirty now
-    mApplyButton->Enable(true);
-}
-
 void SettingsDialog::OnStrengthSliderScroll(wxScrollEvent & /*event*/)
 {
 	assert(!!mGameController);
@@ -573,10 +556,7 @@ void SettingsDialog::ApplySettings()
 	assert(!!mGameController);
 
     mGameController->SetStiffnessAdjustment(
-        LinearSliderToRealValue(
-            mStiffnessSlider,
-            mGameController->GetMinStiffnessAdjustment(),
-            mGameController->GetMaxStiffnessAdjustment()));
+        mStiffnessSlider->GetValue());
 
 	mGameController->SetStrengthAdjustment(
 		StrengthSliderToRealValue());
@@ -653,15 +633,6 @@ void SettingsDialog::ApplySettings()
 void SettingsDialog::ReadSettings()
 {
 	assert(!!mGameController);
-
-
-    RealValueToLinearSlider(
-        mGameController->GetStiffnessAdjustment(),
-        mGameController->GetMinStiffnessAdjustment(),
-        mGameController->GetMaxStiffnessAdjustment(),
-        mStiffnessSlider);
-
-    mStiffnessTextCtrl->SetValue(std::to_string(mGameController->GetStiffnessAdjustment()));
 
 
 	RealValueToStrengthSlider(

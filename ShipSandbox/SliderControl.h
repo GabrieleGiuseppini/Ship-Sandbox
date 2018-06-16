@@ -5,6 +5,8 @@
 ***************************************************************************************/
 #pragma once
 
+#include <UILib/ISliderCore.h>
+
 #include <wx/slider.h>
 #include <wx/textctrl.h>
 #include <wx/wx.h>
@@ -14,12 +16,11 @@
 #include <string>
 
 /*
- * This control incorporates a slider and a textbox showing the 
+ * This control incorporates a slider and a textbox that shows the 
  * current mapped float value of the slider.
  *
- * This is the base class of concrete implementations, each
- * providing a different logic for mapping slider positions
- * to float vaues.
+ * The control takes a core that provides the logic that maps
+ * slider positions to float vaues.
  */
 class SliderControl : public wxPanel
 {
@@ -30,28 +31,15 @@ public:
         int width,
         int height,
         std::string const & label,
-        std::function<void(float)> onValueChanged);
+        float currentValue,
+        std::function<void(float)> onValueChanged,
+        std::unique_ptr<ISliderCore> sliderCore);
     
     virtual ~SliderControl();
 
-    void Initialize(
-        int numberOfTicks,
-        float currentValue);
-
     float GetValue() const
     {
-        return TickToValue(mSlider->GetValue());
-    }
-
-protected:
-
-    virtual float TickToValue(int tick) const = 0;
-
-    virtual int ValueToTick(float value) const = 0;
-
-    void SetTick(int tick)
-    {
-        mSlider->SetValue(tick);
+        return mSliderCore->TickToValue(mSlider->GetValue());
     }
 
 private:
@@ -64,4 +52,5 @@ private:
     std::unique_ptr<wxTextCtrl> mTextCtrl;
 
     std::function<void(float)> const mOnValueChanged;
+    std::unique_ptr<ISliderCore> const mSliderCore;
 };

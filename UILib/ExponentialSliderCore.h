@@ -1,27 +1,21 @@
 /***************************************************************************************
 * Original Author:      Gabriele Giuseppini
-* Created:              2018-06-15
+* Created:              2018-06-16
 * Copyright:            Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
 ***************************************************************************************/
 #pragma once
 
-#include "SliderControl.h"
+#include "ISliderCore.h"
 
-class LinearSliderControl final : public SliderControl
+class ExponentialSliderCore final : public ISliderCore
 {
 public:
 
-    LinearSliderControl(
-        wxWindow * parent,
-        int width,
-        int height,
-        std::string const & label,
-        std::function<void(float)> onValueChanged,
+    ExponentialSliderCore(
         float minValue,
-        float maxValue,
-        float currentValue);
+        float maxValue);
 
-protected:
+    virtual int GetNumberOfTicks() const override;
 
     virtual float TickToValue(int tick) const override;
 
@@ -31,10 +25,4 @@ private:
 
     float const mMinValue;
     float const mMaxValue;
-
-    float mTickSize;
-    float mValueOffset;
-    float mValueAtTickZero; // Net of offset
-    int mMaxTickValue;
-    float mValueAtTickMax;  // Net of offset
 };

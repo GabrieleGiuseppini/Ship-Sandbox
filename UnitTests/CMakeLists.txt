@@ -11,8 +11,7 @@ set (UNIT_TEST_SOURCES
 	CircularListTests.cpp
 	FixedSizeVectorTests.cpp
 	GameEventDispatcherTests.cpp
-	# Chasing ship builder interface too often these days...
-	# ShipTests.cpp
+	SliderCoreTests.cpp
 	TupleKeysTests.cpp
 	VectorsTests.cpp)
 
@@ -21,6 +20,7 @@ add_test (UnitTests UnitTests)
 
 target_link_libraries (UnitTests
 	GameLib
+	UILib
 	${OPENGL_LIBRARIES}
 	gmock
 	gtest_main

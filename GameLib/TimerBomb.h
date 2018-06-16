@@ -100,10 +100,11 @@ private:
     static constexpr int FuseStepCount = 16;
     static constexpr int FuseLengthStepCount = 4;
     static constexpr int FuseFramesPerFuseLengthCount = FuseStepCount / FuseLengthStepCount;
-    static constexpr uint8_t ExplosionStepsCount = 9;
-
+    
     static constexpr auto DetonationLeadInToExplosionInterval = 1500ms;
+
     static constexpr auto ExplosionProgressInterval = 20ms;
+    static constexpr uint8_t ExplosionStepsCount = 9;
 
     static constexpr auto DefusingInterval = 500ms;
     static constexpr uint8_t DefuseStepsCount = 3;

@@ -8,38 +8,19 @@
 #include "SettingsDialog.h"
 
 #include <GameLib/Log.h>
+#include <UILib/ExponentialSliderCore.h>
+#include <UILib/LinearSliderCore.h>
 
 #include <wx/intl.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/string.h>
 
-static constexpr int SliderTicks = 100;
 static constexpr int SliderWidth = 40;
 static constexpr int SliderHeight = 140;
 
-const long ID_STRENGTH_SLIDER = wxNewId();
-const long ID_WATER_PRESSURE_SLIDER = wxNewId();
-const long ID_WAVE_HEIGHT_SLIDER = wxNewId();
-const long ID_WATER_TRANSPARENCY_SLIDER = wxNewId();
-const long ID_LIGHT_DIFFUSION_SLIDER = wxNewId();
-const long ID_SEA_DEPTH_SLIDER = wxNewId();
-const long ID_DESTROY_RADIUS_SLIDER = wxNewId();
-const long ID_BOMB_BLAST_RADIUS_SLIDER = wxNewId();
-
 const long ID_QUICK_WATER_FIX_CHECKBOX = wxNewId();
 const long ID_SHOW_STRESS_CHECKBOX = wxNewId();
-
-wxBEGIN_EVENT_TABLE(SettingsDialog, wxDialog)
-	EVT_COMMAND_SCROLL(ID_STRENGTH_SLIDER, SettingsDialog::OnStrengthSliderScroll)
-	EVT_COMMAND_SCROLL(ID_WATER_PRESSURE_SLIDER, SettingsDialog::OnWaterPressureSliderScroll)
-	EVT_COMMAND_SCROLL(ID_WAVE_HEIGHT_SLIDER, SettingsDialog::OnWaveHeightSliderScroll)
-    EVT_COMMAND_SCROLL(ID_WATER_TRANSPARENCY_SLIDER, SettingsDialog::OnWaterTransparencySliderScroll)
-    EVT_COMMAND_SCROLL(ID_LIGHT_DIFFUSION_SLIDER, SettingsDialog::OnLightDiffusionSliderScroll)
-	EVT_COMMAND_SCROLL(ID_SEA_DEPTH_SLIDER, SettingsDialog::OnSeaDepthSliderScroll)
-	EVT_COMMAND_SCROLL(ID_DESTROY_RADIUS_SLIDER, SettingsDialog::OnDestroyRadiusSliderScroll)
-    EVT_COMMAND_SCROLL(ID_BOMB_BLAST_RADIUS_SLIDER, SettingsDialog::OnBombBlastRadiusSliderScroll)
-wxEND_EVENT_TABLE()
 
 SettingsDialog::SettingsDialog(
 	wxWindow* parent,
@@ -75,19 +56,20 @@ SettingsDialog::SettingsDialog(
 
     // Stiffness
 
-    mStiffnessSlider = std::make_unique<LinearSliderControl>(
+    mStiffnessSlider = std::make_unique<SliderControl>(
         this,
         SliderWidth,
         SliderHeight,
         "Stiffness Adjust",
+        mGameController->GetStiffnessAdjustment(),
         [this](float /*value*/)
         {
             // Remember we're dirty now
             this->mApplyButton->Enable(true);
         },
-        mGameController->GetMinStiffnessAdjustment(),
-        mGameController->GetMaxStiffnessAdjustment(),
-        mGameController->GetStiffnessAdjustment());
+        std::make_unique<LinearSliderCore>(
+            mGameController->GetMinStiffnessAdjustment(),
+            mGameController->GetMaxStiffnessAdjustment()));
 
     controls1Sizer->Add(mStiffnessSlider.get(), 0);
 
@@ -96,40 +78,42 @@ SettingsDialog::SettingsDialog(
 
 	// Strength
 
-	wxBoxSizer* strengthSizer = new wxBoxSizer(wxVERTICAL);
-	mStrengthSlider = new wxSlider(this, ID_STRENGTH_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Strength Slider"));
-	mStrengthSlider->SetTickFreq(4);
-	strengthSizer->Add(mStrengthSlider, 0, wxALIGN_CENTRE);
+	mStrengthSlider = std::make_unique<SliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Strength Adjust",
+        mGameController->GetStrengthAdjustment(),
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        std::make_unique<ExponentialSliderCore>(
+            mGameController->GetMinStrengthAdjustment(),
+            mGameController->GetMaxStrengthAdjustment()));
 
-	wxStaticText * strengthLabel = new wxStaticText(this, wxID_ANY, _("Strength Adjust"), wxDefaultPosition, wxDefaultSize, 0, _T("Strength Label"));	
-	strengthSizer->Add(strengthLabel, 0, wxALIGN_CENTRE);
-
-	mStrengthTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-	strengthSizer->Add(mStrengthTextCtrl, 0, wxALIGN_CENTRE);
-
-	strengthSizer->AddSpacer(20);
-
-    controls1Sizer->Add(strengthSizer, 0);
+    controls1Sizer->Add(mStrengthSlider.get(), 0);
 	
     controls1Sizer->AddSpacer(20);
 
 
 	// Buoyancy
 	
-    mBuoyancySlider = std::make_unique<LinearSliderControl>(
+    mBuoyancySlider = std::make_unique<SliderControl>(
         this,
         SliderWidth,
         SliderHeight,
         "Buoyancy Adjust",
+        mGameController->GetBuoyancyAdjustment(),
         [this](float /*value*/)
         {
             // Remember we're dirty now
             this->mApplyButton->Enable(true);
         },
-        mGameController->GetMinBuoyancyAdjustment(),
-        mGameController->GetMaxBuoyancyAdjustment(),
-        mGameController->GetBuoyancyAdjustment());
+        std::make_unique<LinearSliderCore>(
+            mGameController->GetMinBuoyancyAdjustment(),
+            mGameController->GetMaxBuoyancyAdjustment()));
 	
     controls1Sizer->Add(mBuoyancySlider.get(), 0);
 	
@@ -138,44 +122,44 @@ SettingsDialog::SettingsDialog(
 
 	// Water Pressure
 
-	wxBoxSizer* waterPressureSizer = new wxBoxSizer(wxVERTICAL);
+	mWaterPressureSlider = std::make_unique<SliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Water Pressure Adjust",
+        mGameController->GetWaterPressureAdjustment(),
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        std::make_unique<LinearSliderCore>(
+            mGameController->GetMinWaterPressureAdjustment(),
+            mGameController->GetMaxWaterPressureAdjustment()));
 
-	mWaterPressureSlider = new wxSlider(this, ID_WATER_PRESSURE_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Water Pressure Slider"));
-	mWaterPressureSlider->SetTickFreq(4);
-	waterPressureSizer->Add(mWaterPressureSlider, 0, wxALIGN_CENTRE);
-
-	wxStaticText * waterPressureLabel = new wxStaticText(this, wxID_ANY, _("Water Pressure Adjust"), wxDefaultPosition, wxDefaultSize, 0, _T("Water Pressure Label"));
-	waterPressureSizer->Add(waterPressureLabel, 0, wxALIGN_CENTRE);
-
-	mWaterPressureTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-	waterPressureSizer->Add(mWaterPressureTextCtrl, 0, wxALIGN_CENTRE);
-
-	waterPressureSizer->AddSpacer(20);
-
-    controls1Sizer->Add(waterPressureSizer, 0);
+    controls1Sizer->Add(mWaterPressureSlider.get(), 0);
 
     controls1Sizer->AddSpacer(20);
 
 
 	// Wave Height
 
-	wxBoxSizer* waveHeightSizer = new wxBoxSizer(wxVERTICAL);
-
-	mWaveHeightSlider = new wxSlider(this, ID_WAVE_HEIGHT_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Wave Height Slider"));
-	mWaveHeightSlider->SetTickFreq(4);
-	waveHeightSizer->Add(mWaveHeightSlider, 0, wxALIGN_CENTRE);
-
-	wxStaticText * waveHeightLabel = new wxStaticText(this, wxID_ANY, _("Wave Height"), wxDefaultPosition, wxDefaultSize, 0, _T("Wave Height Label"));
-	waveHeightSizer->Add(waveHeightLabel, 0, wxALIGN_CENTRE);
-
-	mWaveHeightTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-	waveHeightSizer->Add(mWaveHeightTextCtrl, 0, wxALIGN_CENTRE);
-
-	waveHeightSizer->AddSpacer(20);
-
-    controls1Sizer->Add(waveHeightSizer, 0);
+	mWaveHeightSlider = std::make_unique<SliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Wave Height",
+        mGameController->GetWaveHeight(),
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        std::make_unique<LinearSliderCore>(
+            mGameController->GetMinWaveHeight(),
+            mGameController->GetMaxWaveHeight()));
+    
+    controls1Sizer->Add(mWaveHeightSlider.get(), 0);
 
     controls1Sizer->AddSpacer(20);
 
@@ -226,88 +210,88 @@ SettingsDialog::SettingsDialog(
     
     // Water Transparency
 
-    wxBoxSizer* waterTransparencySizer = new wxBoxSizer(wxVERTICAL);
-
-    mWaterTransparencySlider = new wxSlider(this, ID_WATER_TRANSPARENCY_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-        wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Water Transparency Slider"));
-    mWaterTransparencySlider->SetTickFreq(4);
-    waterTransparencySizer->Add(mWaterTransparencySlider, 0, wxALIGN_CENTRE);
-
-    wxStaticText * waterTransparencyLabel = new wxStaticText(this, wxID_ANY, _("Water Transparency"), wxDefaultPosition, wxDefaultSize, 0, _T("Water Transparency Label"));
-    waterTransparencySizer->Add(waterTransparencyLabel, 0, wxALIGN_CENTRE);
-
-    mWaterTransparencyTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-    waterTransparencySizer->Add(mWaterTransparencyTextCtrl, 0, wxALIGN_CENTRE);
-
-    waterTransparencySizer->AddSpacer(20);
-
-    controls2Sizer->Add(waterTransparencySizer, 0);
+    mWaterTransparencySlider = std::make_unique<SliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Water Transparency",
+        mGameController->GetWaterTransparency(),
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        std::make_unique<LinearSliderCore>(
+            0.0f,
+            1.0f));
+    
+    controls2Sizer->Add(mWaterTransparencySlider.get(), 0);
 
     controls2Sizer->AddSpacer(20);
 
 
     // Light Diffusion
 
-    wxBoxSizer* lightDiffusionSizer = new wxBoxSizer(wxVERTICAL);
+    mLightDiffusionSlider = std::make_unique<SliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Light Diffusion Adjust",
+        mGameController->GetLightDiffusionAdjustment(),
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        std::make_unique<LinearSliderCore>(
+            0.0f,
+            1.0f));
 
-    mLightDiffusionSlider = new wxSlider(this, ID_LIGHT_DIFFUSION_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-        wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Light Diffusion Slider"));
-    mLightDiffusionSlider->SetTickFreq(4);
-    lightDiffusionSizer->Add(mLightDiffusionSlider, 0, wxALIGN_CENTRE);
-
-    wxStaticText * lightDiffusionLabel = new wxStaticText(this, wxID_ANY, _("Light Diffusion Adjust"), wxDefaultPosition, wxDefaultSize, 0, _T("Light Diffusion Label"));
-    lightDiffusionSizer->Add(lightDiffusionLabel, 0, wxALIGN_CENTRE);
-
-    mLightDiffusionTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-    lightDiffusionSizer->Add(mLightDiffusionTextCtrl, 0, wxALIGN_CENTRE);
-
-    lightDiffusionSizer->AddSpacer(20);
-
-    controls2Sizer->Add(lightDiffusionSizer, 0);
+    controls2Sizer->Add(mLightDiffusionSlider.get(), 0);
 
     controls2Sizer->AddSpacer(20);
 
 
 	// Sea Depth
 
-	wxBoxSizer* seaDepthSizer = new wxBoxSizer(wxVERTICAL);
+	mSeaDepthSlider = std::make_unique<SliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Ocean Depth",
+        mGameController->GetSeaDepth(),
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        std::make_unique<LinearSliderCore>(
+            mGameController->GetMinSeaDepth(),
+            mGameController->GetMaxSeaDepth()));
 
-	mSeaDepthSlider = new wxSlider(this, ID_SEA_DEPTH_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Sea Depth Slider"));
-	mSeaDepthSlider->SetTickFreq(4);
-	seaDepthSizer->Add(mSeaDepthSlider, 0, wxALIGN_CENTRE);
-
-	wxStaticText * seaDepthLabel = new wxStaticText(this, wxID_ANY, _("Ocean Depth"), wxDefaultPosition, wxDefaultSize, 0, _T("Sea Depth Label"));
-	seaDepthSizer->Add(seaDepthLabel, 0, wxALIGN_CENTRE);
-
-	mSeaDepthTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-	seaDepthSizer->Add(mSeaDepthTextCtrl, 0, wxALIGN_CENTRE);
-
-	seaDepthSizer->AddSpacer(20);
-
-    controls2Sizer->Add(seaDepthSizer, 0);
+    controls2Sizer->Add(mSeaDepthSlider.get(), 0);
 
     controls2Sizer->AddSpacer(20);
 
 
 	// Destroy Radius
 
-	wxBoxSizer* destroyRadiusSizer = new wxBoxSizer(wxVERTICAL);
+    mDestroyRadiusSlider = std::make_unique<SliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Destroy Radius",
+        mGameController->GetDestroyRadius(),
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        std::make_unique<LinearSliderCore>(
+            mGameController->GetMinDestroyRadius(),
+            mGameController->GetMaxDestroyRadius()));
 
-	mDestroyRadiusSlider = new wxSlider(this, ID_DESTROY_RADIUS_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-		wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Destroy Radius Slider"));
-	mDestroyRadiusSlider->SetTickFreq(4);
-	destroyRadiusSizer->Add(mDestroyRadiusSlider, 0, wxALIGN_CENTRE);
-
-	wxStaticText * destroyRadiusLabel = new wxStaticText(this, wxID_ANY, _("Destroy Radius"), wxDefaultPosition, wxDefaultSize, 0, _T("Destroy Radius Label"));
-	destroyRadiusSizer->Add(destroyRadiusLabel, 0, wxALIGN_CENTRE);
-
-	mDestroyRadiusTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-	destroyRadiusSizer->Add(mDestroyRadiusTextCtrl, 0, wxALIGN_CENTRE);
-
-	destroyRadiusSizer->AddSpacer(20);
-
-    controls2Sizer->Add(destroyRadiusSizer, 0);
+    controls2Sizer->Add(mDestroyRadiusSlider.get(), 0);
 
     controls2Sizer->AddSpacer(20);
 
@@ -315,22 +299,22 @@ SettingsDialog::SettingsDialog(
 
     // Bomb Blast Radius
 
-    wxBoxSizer* bombBlastRadiusSizer = new wxBoxSizer(wxVERTICAL);
+    mBombBlastRadiusSlider = std::make_unique<SliderControl>(
+        this,
+        SliderWidth,
+        SliderHeight,
+        "Bomb Blast Radius",
+        mGameController->GetBombBlastRadius(),
+        [this](float /*value*/)
+        {
+            // Remember we're dirty now
+            this->mApplyButton->Enable(true);
+        },
+        std::make_unique<LinearSliderCore>(
+            mGameController->GetMinBombBlastRadius(),
+            mGameController->GetMaxBombBlastRadius()));
 
-    mBombBlastRadiusSlider = new wxSlider(this, ID_BOMB_BLAST_RADIUS_SLIDER, 50, 0, SliderTicks, wxDefaultPosition, wxSize(SliderWidth, SliderHeight),
-        wxSL_VERTICAL | wxSL_LEFT | wxSL_INVERSE | wxSL_AUTOTICKS, wxDefaultValidator, _T("Bomb Blast Radius Slider"));
-    mBombBlastRadiusSlider->SetTickFreq(4);
-    bombBlastRadiusSizer->Add(mBombBlastRadiusSlider, 0, wxALIGN_CENTRE);
-
-    wxStaticText * bombBlastRadiusLabel = new wxStaticText(this, wxID_ANY, _("Bomb Blast Radius"), wxDefaultPosition, wxDefaultSize, 0, _T("Bomb Blast Radius Label"));
-    bombBlastRadiusSizer->Add(bombBlastRadiusLabel, 0, wxALIGN_CENTRE);
-
-    mBombBlastRadiusTextCtrl = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_CENTRE);
-    bombBlastRadiusSizer->Add(mBombBlastRadiusTextCtrl, 0, wxALIGN_CENTRE);
-
-    bombBlastRadiusSizer->AddSpacer(20);
-
-    controls2Sizer->Add(bombBlastRadiusSizer, 0);
+    controls2Sizer->Add(mBombBlastRadiusSlider.get(), 0);
 
     controls2Sizer->AddSpacer(20);
 
@@ -385,130 +369,12 @@ void SettingsDialog::Open()
 {
 	assert(!!mGameController);
 
-	// Populate ourselves with current settings
-	ReadSettings();
+    ReadSettings();
 
 	// We're not dirty
 	mApplyButton->Enable(false);
 
 	this->Show();
-}
-
-void SettingsDialog::OnStrengthSliderScroll(wxScrollEvent & /*event*/)
-{
-	assert(!!mGameController);
-
-	float realValue = StrengthSliderToRealValue();
-
-	mStrengthTextCtrl->SetValue(std::to_string(realValue));
-
-	// Remember we're dirty now
-	mApplyButton->Enable(true);
-}
-
-void SettingsDialog::OnWaterPressureSliderScroll(wxScrollEvent & /*event*/)
-{
-	assert(!!mGameController);
-
-	float realValue = LinearSliderToRealValue(
-		mWaterPressureSlider,
-		mGameController->GetMinWaterPressureAdjustment(),
-		mGameController->GetMaxWaterPressureAdjustment());
-
-	mWaterPressureTextCtrl->SetValue(std::to_string(realValue));
-
-	// Remember we're dirty now
-	mApplyButton->Enable(true);
-}
-
-void SettingsDialog::OnWaveHeightSliderScroll(wxScrollEvent & /*event*/)
-{
-	assert(!!mGameController);
-
-	float realValue = LinearSliderToRealValue(
-		mWaveHeightSlider,
-		mGameController->GetMinWaveHeight(),
-		mGameController->GetMaxWaveHeight());
-
-	mWaveHeightTextCtrl->SetValue(std::to_string(realValue));
-
-	// Remember we're dirty now
-	mApplyButton->Enable(true);
-}
-
-void SettingsDialog::OnWaterTransparencySliderScroll(wxScrollEvent & /*event*/)
-{
-    assert(!!mGameController);
-
-    float realValue = LinearSliderToRealValue(
-        mWaterTransparencySlider,
-        0.0f,
-        1.0f);
-
-    mWaterTransparencyTextCtrl->SetValue(std::to_string(realValue));
-
-    // Remember we're dirty now
-    mApplyButton->Enable(true);
-}
-
-void SettingsDialog::OnLightDiffusionSliderScroll(wxScrollEvent & /*event*/)
-{
-    assert(!!mGameController);
-
-    float realValue = LinearSliderToRealValue(
-        mLightDiffusionSlider,
-        0.0f,
-        1.0f);
-
-    mLightDiffusionTextCtrl->SetValue(std::to_string(realValue));
-
-    // Remember we're dirty now
-    mApplyButton->Enable(true);
-}
-
-void SettingsDialog::OnSeaDepthSliderScroll(wxScrollEvent & /*event*/)
-{
-	assert(!!mGameController);
-
-	float realValue = LinearSliderToRealValue(
-		mSeaDepthSlider,
-		mGameController->GetMinSeaDepth(),
-		mGameController->GetMaxSeaDepth());
-
-	mSeaDepthTextCtrl->SetValue(std::to_string(realValue));
-
-	// Remember we're dirty now
-	mApplyButton->Enable(true);
-}
-
-void SettingsDialog::OnDestroyRadiusSliderScroll(wxScrollEvent & /*event*/)
-{
-	assert(!!mGameController);
-
-	float realValue = LinearSliderToRealValue(
-		mDestroyRadiusSlider,
-		mGameController->GetMinDestroyRadius(),
-		mGameController->GetMaxDestroyRadius());
-
-	mDestroyRadiusTextCtrl->SetValue(std::to_string(realValue));
-
-	// Remember we're dirty now
-	mApplyButton->Enable(true);
-}
-
-void SettingsDialog::OnBombBlastRadiusSliderScroll(wxScrollEvent & /*event*/)
-{
-    assert(!!mGameController);
-
-    float realValue = LinearSliderToRealValue(
-        mBombBlastRadiusSlider,
-        mGameController->GetMinBombBlastRadius(),
-        mGameController->GetMaxBombBlastRadius());
-
-    mBombBlastRadiusTextCtrl->SetValue(std::to_string(realValue));
-
-    // Remember we're dirty now
-    mApplyButton->Enable(true);
 }
 
 void SettingsDialog::OnQuickWaterFixCheckBoxClick(wxCommandEvent & /*event*/)
@@ -559,52 +425,31 @@ void SettingsDialog::ApplySettings()
         mStiffnessSlider->GetValue());
 
 	mGameController->SetStrengthAdjustment(
-		StrengthSliderToRealValue());
+		mStrengthSlider->GetValue());
 
     mGameController->SetBuoyancyAdjustment(
         mBuoyancySlider->GetValue());
 
 	mGameController->SetWaterPressureAdjustment(
-        LinearSliderToRealValue(
-			mWaterPressureSlider,
-			mGameController->GetMinWaterPressureAdjustment(),
-			mGameController->GetMaxWaterPressureAdjustment()));
+        mWaterPressureSlider->GetValue());
 
 	mGameController->SetWaveHeight(
-        LinearSliderToRealValue(
-			mWaveHeightSlider,
-			mGameController->GetMinWaveHeight(),
-			mGameController->GetMaxWaveHeight()));
+        mWaveHeightSlider->GetValue());
 
     mGameController->SetWaterTransparency(
-        LinearSliderToRealValue(
-            mWaterTransparencySlider,
-            0.0f,
-            1.0f));
+        mWaterTransparencySlider->GetValue());
 
     mGameController->SetLightDiffusionAdjustment(
-        LinearSliderToRealValue(
-            mLightDiffusionSlider,
-            0.0f,
-            1.0f));
+        mLightDiffusionSlider->GetValue());
 
 	mGameController->SetSeaDepth(
-        LinearSliderToRealValue(
-			mSeaDepthSlider,
-			mGameController->GetMinSeaDepth(),
-			mGameController->GetMaxSeaDepth()));
+        mSeaDepthSlider->GetValue());
 
 	mGameController->SetDestroyRadius(
-        LinearSliderToRealValue(
-			mDestroyRadiusSlider,
-			mGameController->GetMinDestroyRadius(),
-			mGameController->GetMaxDestroyRadius()));
+        mDestroyRadiusSlider->GetValue());
 
     mGameController->SetBombBlastRadius(
-        LinearSliderToRealValue(
-            mBombBlastRadiusSlider,
-            mGameController->GetMinBombBlastRadius(),
-            mGameController->GetMaxBombBlastRadius()));
+        mBombBlastRadiusSlider->GetValue());
 
 	mGameController->SetShowShipThroughWater(mQuickWaterFixCheckBox->IsChecked());
 
@@ -633,76 +478,6 @@ void SettingsDialog::ApplySettings()
 void SettingsDialog::ReadSettings()
 {
 	assert(!!mGameController);
-
-
-	RealValueToStrengthSlider(
-		mGameController->GetStrengthAdjustment());
-
-	mStrengthTextCtrl->SetValue(std::to_string(mGameController->GetStrengthAdjustment()));
-
-
-	RealValueToLinearSlider(
-		mGameController->GetWaterPressureAdjustment(),
-		mGameController->GetMinWaterPressureAdjustment(),
-		mGameController->GetMaxWaterPressureAdjustment(),
-		mWaterPressureSlider);
-
-	mWaterPressureTextCtrl->SetValue(std::to_string(mGameController->GetWaterPressureAdjustment()));
-
-
-	RealValueToLinearSlider(
-		mGameController->GetWaveHeight(),
-		mGameController->GetMinWaveHeight(),
-		mGameController->GetMaxWaveHeight(),
-		mWaveHeightSlider);
-
-	mWaveHeightTextCtrl->SetValue(std::to_string(mGameController->GetWaveHeight()));
-
-
-    RealValueToLinearSlider(
-        mGameController->GetWaterTransparency(),
-        0.0f,
-        1.0f,
-        mWaterTransparencySlider);
-
-    mWaterTransparencyTextCtrl->SetValue(std::to_string(mGameController->GetWaterTransparency()));
-
-
-    RealValueToLinearSlider(
-        mGameController->GetLightDiffusionAdjustment(),
-        0.0f,
-        1.0f,
-        mLightDiffusionSlider);
-
-    mLightDiffusionTextCtrl->SetValue(std::to_string(mGameController->GetLightDiffusionAdjustment()));
-
-
-	RealValueToLinearSlider(
-		mGameController->GetSeaDepth(),
-		mGameController->GetMinSeaDepth(),
-		mGameController->GetMaxSeaDepth(),
-		mSeaDepthSlider);
-
-	mSeaDepthTextCtrl->SetValue(std::to_string(mGameController->GetSeaDepth()));
-
-
-	RealValueToLinearSlider(
-		mGameController->GetDestroyRadius(),
-		mGameController->GetMinDestroyRadius(),
-		mGameController->GetMaxDestroyRadius(),
-		mDestroyRadiusSlider);
-
-	mDestroyRadiusTextCtrl->SetValue(std::to_string(mGameController->GetDestroyRadius()));
-
-
-    RealValueToLinearSlider(
-        mGameController->GetBombBlastRadius(),
-        mGameController->GetMinBombBlastRadius(),
-        mGameController->GetMaxBombBlastRadius(),
-        mBombBlastRadiusSlider);
-
-    mBombBlastRadiusTextCtrl->SetValue(std::to_string(mGameController->GetBombBlastRadius()));
-
 
 	mQuickWaterFixCheckBox->SetValue(mGameController->GetShowShipThroughWater());
 
@@ -737,41 +512,3 @@ void SettingsDialog::ReadSettings()
     mShowStressCheckBox->SetValue(mGameController->GetShowShipStress());
 }
 
-float SettingsDialog::LinearSliderToRealValue(
-	wxSlider * const slider,
-	float minValue,
-	float maxValue) const
-{
-	int sliderValue = slider->GetValue();
-	float realValue = minValue + (static_cast<float>(sliderValue) / static_cast<float>(SliderTicks)) * (maxValue - minValue);
-
-	return realValue;
-}
-
-void SettingsDialog::RealValueToLinearSlider(
-	float value,
-	float minValue,
-	float maxValue,
-	wxSlider * slider) const
-{
-    int sliderValue = static_cast<int>(roundf((value - minValue) / (maxValue - minValue) * static_cast<float>(SliderTicks)));
-
-	slider->SetValue(sliderValue);
-}
-
-float SettingsDialog::StrengthSliderToRealValue() const
-{
-    // 0.001 + ((exp(x/70)-1)/2.3)^3.4
-
-    int sliderValue = mStrengthSlider->GetValue();    
-    float realValue = (exp(static_cast<float>(sliderValue) / 70.0f) - 1.0f) / 2.3f;
-    realValue = 0.0001f + powf(realValue, 3.4f);
-    return realValue;
-}
-
-void SettingsDialog::RealValueToStrengthSlider(float value) const
-{
-    value = powf(value - 0.0001f, 1.0f/3.4f);
-    float sliderValue = 70.0f * log((2.3f * value) + 1.0f);
-    mStrengthSlider->SetValue(static_cast<int>(roundf(sliderValue)));
-}

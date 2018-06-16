@@ -63,7 +63,7 @@ Prev perf (before point et al destructuring)
 
 - Titanic:
 	- Introduce weak metal
-	- Use below funnels
+		- Use it below funnels
 
 - Optimizations:	
 	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
@@ -124,7 +124,7 @@ Prev perf (before point et al destructuring)
 		- Use shift key to change from CW to CCW
 			- Same for Draw
 		- Force applied is r * AngularForce; AngularForce==m*AngularAcceleration
-		- Neec cursor
+		- Need cursor
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded
@@ -204,20 +204,6 @@ Prev perf (before point et al destructuring)
 					- GameController::OnSawEnd(): set mLastSawPoint to nullopt
 
 - Controls:
-	+ Set max and min zoom (or monsters awaken when you zoom out too much)
-	+ Reset view (ESC) should also reset camera pan
-	+ SettingsDialog: bomb blast radius
-	- SettingsDialog: 
-		- Break into N Liner/ExponentialSliderControl
-			- Managed as vector
-			- Init'd with:
-				- CurrentValue
-				- Max and Min
-				- std::function for OnValueChanged(float newValue)
-		- Find solution to ugly slider value rounding
-			- Calc tick_size == (Max-Min)/100, floored to round float increment ... see doc'n on floats
-			- Then calc # ticks == floor((Max-Min)/tick_size) + 1 
-				- Extra +1 is for Min, TODOHERE: assert next val (==1*tick_size) is > Min
 	- Tool cursors: cursor should change when mouse down
 		- Bomb, Saw, Hammer, Draw
 		- ToolController class, called directly by MainFrame
@@ -899,6 +885,19 @@ IF WX:
 		+ Points::SetStiffnessAdjustment(stiffnessAdjustment):
 			+ Called by Ship at each Update()
 			+ If != last, recalc coefficient/s
+	+ Set max and min zoom (or monsters awaken when you zoom out too much)
+	+ Reset view (ESC) should also reset camera pan
+	+ SettingsDialog: bomb blast radius
+	+ SettingsDialog: 
+		+ Break into N Liner/ExponentialSliderControl
+			+ Init'd with:
+				+ CurrentValue
+				+ Max and Min
+				+ std::function for OnValueChanged(float newValue)
+		+ Find solution to ugly slider value rounding
+			+ Calc tick_size == (Max-Min)/100, floored to round float increment ... see doc'n on floats
+			+ Then calc # ticks == floor((Max-Min)/tick_size)
+		+ Re-set default values to round values
 
 + Gfx:
 	+ Do ropes with two endpoints (000xxx)

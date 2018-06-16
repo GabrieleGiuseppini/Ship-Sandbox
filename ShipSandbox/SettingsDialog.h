@@ -7,7 +7,7 @@
 ***************************************************************************************/
 #pragma once
 
-#include "LinearSliderControl.h"
+#include "SliderControl.h"
 
 #include <GameLib/GameController.h>
 
@@ -15,8 +15,6 @@
 #include <wx/checkbox.h>
 #include <wx/dialog.h>
 #include <wx/radiobox.h>
-#include <wx/slider.h>
-#include <wx/textctrl.h>
 
 #include <memory>
 
@@ -34,15 +32,6 @@ public:
 
 private:
 
-    void OnStrengthSliderScroll(wxScrollEvent & event);
-    void OnWaterPressureSliderScroll(wxScrollEvent & event);
-    void OnWaveHeightSliderScroll(wxScrollEvent & event);
-    void OnWaterTransparencySliderScroll(wxScrollEvent & event);
-    void OnLightDiffusionSliderScroll(wxScrollEvent & event);
-    void OnSeaDepthSliderScroll(wxScrollEvent & event);
-    void OnDestroyRadiusSliderScroll(wxScrollEvent & event);
-    void OnBombBlastRadiusSliderScroll(wxScrollEvent & event);
-
     void OnQuickWaterFixCheckBoxClick(wxCommandEvent & event);
     void OnShipRenderModeRadioBox(wxCommandEvent & event);
     void OnShowStressCheckBoxClick(wxCommandEvent & event);
@@ -54,24 +43,16 @@ private:
 
     // Controls
 
-    std::unique_ptr<LinearSliderControl> mStiffnessSlider;
-    wxSlider * mStrengthSlider;
-    wxTextCtrl * mStrengthTextCtrl;
-    std::unique_ptr<LinearSliderControl> mBuoyancySlider;
-    wxSlider * mWaterPressureSlider;
-    wxTextCtrl * mWaterPressureTextCtrl;
-    wxSlider * mWaveHeightSlider;
-    wxTextCtrl * mWaveHeightTextCtrl;
-    wxSlider * mWaterTransparencySlider;
-    wxTextCtrl * mWaterTransparencyTextCtrl;
-    wxSlider * mLightDiffusionSlider;
-    wxTextCtrl * mLightDiffusionTextCtrl;
-    wxSlider * mSeaDepthSlider;
-    wxTextCtrl * mSeaDepthTextCtrl;
-    wxSlider * mDestroyRadiusSlider;
-    wxTextCtrl * mDestroyRadiusTextCtrl;
-    wxSlider * mBombBlastRadiusSlider;
-    wxTextCtrl * mBombBlastRadiusTextCtrl;
+    std::unique_ptr<SliderControl> mStiffnessSlider;
+    std::unique_ptr<SliderControl> mStrengthSlider;
+    std::unique_ptr<SliderControl> mBuoyancySlider;
+    std::unique_ptr<SliderControl> mWaterPressureSlider;
+    std::unique_ptr<SliderControl> mWaveHeightSlider;
+    std::unique_ptr<SliderControl> mWaterTransparencySlider;
+    std::unique_ptr<SliderControl> mLightDiffusionSlider;
+    std::unique_ptr<SliderControl> mSeaDepthSlider;
+    std::unique_ptr<SliderControl> mDestroyRadiusSlider;
+    std::unique_ptr<SliderControl> mBombBlastRadiusSlider;
 
     wxCheckBox * mQuickWaterFixCheckBox;
     wxRadioBox * mShipRenderModeRadioBox;
@@ -83,29 +64,12 @@ private:
 
 private:
 
+    void ReadSettings();
+
 	void ApplySettings();
-
-	void ReadSettings();
-
-	float LinearSliderToRealValue(
-		wxSlider * const slider,
-		float minValue,
-		float maxValue) const;
-
-	void RealValueToLinearSlider(
-		float value,
-		float minValue,
-		float maxValue,
-		wxSlider * slider) const;
-
-    float StrengthSliderToRealValue() const;
-
-    void RealValueToStrengthSlider(float value) const;
 
 private:
 
 	wxWindow * const mParent;
 	std::shared_ptr<GameController> mGameController;
-
-	DECLARE_EVENT_TABLE()
 };

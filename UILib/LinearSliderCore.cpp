@@ -1,28 +1,16 @@
 /***************************************************************************************
 * Original Author:      Gabriele Giuseppini
-* Created:              2018-06-15
+* Created:              2018-06-16
 * Copyright:            Gabriele Giuseppini  (https://github.com/GabrieleGiuseppini)
 ***************************************************************************************/
-#include "LinearSliderControl.h"
+#include "LinearSliderCore.h"
 
 #include <cassert>
 
-LinearSliderControl::LinearSliderControl(
-    wxWindow * parent,
-    int width,
-    int height,
-    std::string const & label,
-    std::function<void(float)> onValueChanged,
+LinearSliderCore::LinearSliderCore(
     float minValue,
-    float maxValue,
-    float currentValue)
-    : SliderControl(
-        parent,
-        width,
-        height,
-        label,
-        std::move(onValueChanged))
-    , mMinValue(minValue)
+    float maxValue)
+    : mMinValue(minValue)
     , mMaxValue(maxValue)
 {
     //
@@ -35,10 +23,11 @@ LinearSliderControl::LinearSliderControl(
     
     // Start with an approximate number of ticks
     float n = floorf(logf(100.0f / (maxValue - minValue)) / logf(2.0f));
-    mTickSize = 1.0 / powf(2.0, n);
+    mTickSize = 1.0f / powf(2.0f, n);
 
     // Now calculate the real number of ticks
     float numberOfTicks = ceilf((maxValue - minValue) / mTickSize);
+    mNumberOfTicks = static_cast<int>(numberOfTicks);
 
     // Re-adjust min: calc min at tick 0 (exclusive of offset), and offset to add to slider's value
     mValueOffset = floorf(minValue / mTickSize) * mTickSize;
@@ -47,16 +36,17 @@ LinearSliderControl::LinearSliderControl(
 
     // Store maximum tick value and maximum value (exclusive of offset) at that tick
     float theoreticalMaxValue = mValueOffset + numberOfTicks * mTickSize;
-    assert(theoreticalMaxValue - maxValue < mTickSize);
-    mMaxTickValue = static_cast<int>(numberOfTicks);
-    mValueAtTickMax = maxValue;
-
-    this->Initialize(
-        static_cast<int>(numberOfTicks),
-        currentValue);
+    assert(theoreticalMaxValue - maxValue < mTickSize);    
+    (void)theoreticalMaxValue;
+    mValueAtTickMax = maxValue - mValueOffset;
 }
 
-float LinearSliderControl::TickToValue(int tick) const
+int LinearSliderCore::GetNumberOfTicks() const
+{
+    return mNumberOfTicks;
+}
+
+float LinearSliderCore::TickToValue(int tick) const
 {
     float sliderValue;
 
@@ -64,7 +54,7 @@ float LinearSliderControl::TickToValue(int tick) const
     {
         sliderValue = mValueAtTickZero;
     }
-    else if (tick == mMaxTickValue)
+    else if (tick == mNumberOfTicks)
     {
         sliderValue = mValueAtTickMax;
     }
@@ -76,7 +66,7 @@ float LinearSliderControl::TickToValue(int tick) const
     return mValueOffset + sliderValue;
 }
 
-int LinearSliderControl::ValueToTick(float value) const
+int LinearSliderCore::ValueToTick(float value) const
 {
     value -= mValueOffset;
 
@@ -86,7 +76,7 @@ int LinearSliderControl::ValueToTick(float value) const
     }
     else if (value >= mValueAtTickMax)
     {
-        return mMaxTickValue;
+        return mNumberOfTicks;
     }
     else
     {

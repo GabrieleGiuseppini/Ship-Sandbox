@@ -8,8 +8,6 @@ set  (SHIP_SANDBOX_SOURCES
 	AboutDialog.h
 	EventTickerPanel.cpp
 	EventTickerPanel.h
-	LinearSliderControl.cpp
-	LinearSliderControl.h
 	LoggingDialog.cpp
 	LoggingDialog.h
 	MainApp.cpp
@@ -42,6 +40,7 @@ target_compile_definitions(ShipSandbox PRIVATE "${wxWidgets_DEFINITIONS}")
 target_link_libraries (ShipSandbox
 	GameLib
 	GladLib
+	UILib
 	${OPENGL_LIBRARIES}
 	${SFML_LIBRARIES}
 	${wxWidgets_LIBRARIES}

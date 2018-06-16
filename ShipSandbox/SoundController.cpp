@@ -614,7 +614,7 @@ void SoundController::ChooseAndPlaySound(
     }
     else
     {
-        assert(multipleChoiceSoundInfo.SoundBuffers.size() >= 2);
+        assert(multipleSoundChoiceInfo.SoundBuffers.size() >= 2);
 
         // Choose randomly, but avoid choosing the last-chosen sound again
         size_t chosenSoundIndex = GameRandomEngine::GetInstance().ChooseNew(

@@ -31,4 +31,8 @@ private:
 
     float const mMinValue;
     float const mMaxValue;
+
+    float mTickSize;
+    float mValueOffset;
+    float mTickZeroValue;
 };

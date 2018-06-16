@@ -50,7 +50,8 @@ void SliderControl::Initialize(
     int numberOfTicks,
     float currentValue)
 {
-    mSlider->SetPageSize(numberOfTicks);
+    mSlider->SetMin(0);
+    mSlider->SetMax(numberOfTicks);
 
     this->SetTick(this->ValueToTick(currentValue));
 

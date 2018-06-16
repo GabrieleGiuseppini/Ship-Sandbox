@@ -581,8 +581,8 @@ void SettingsDialog::ApplySettings()
 	mGameController->SetStrengthAdjustment(
 		StrengthSliderToRealValue());
 
-    // TODO
-    mGameController->SetBuoyancyAdjustment(10.0f);
+    mGameController->SetBuoyancyAdjustment(
+        mBuoyancySlider->GetValue());
 
 	mGameController->SetWaterPressureAdjustment(
         LinearSliderToRealValue(

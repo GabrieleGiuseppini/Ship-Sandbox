@@ -21,6 +21,10 @@ set  (SHIP_SANDBOX_SOURCES
 	SoundController.h
 	SplashScreenDialog.cpp
 	SplashScreenDialog.h
+	ToolController.cpp
+	ToolController.h
+	Tools.cpp
+	Tools.h
 	Version.h
 	)
 

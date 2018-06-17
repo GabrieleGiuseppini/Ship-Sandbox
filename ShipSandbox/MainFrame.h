@@ -12,6 +12,7 @@
 #include "LoggingDialog.h"
 #include "SettingsDialog.h"
 #include "SoundController.h"
+#include "ToolController.h"
 
 #include <GameLib/GameController.h>
 #include <GameLib/GameWallClock.h>
@@ -56,6 +57,7 @@ private:
 
     wxBoxSizer * mMainFrameSizer;
     wxMenuItem * mPauseMenuItem;    
+    wxMenu * mToolsMenu;
     wxMenuItem * mRCBombsDetonateMenuItem;
     wxMenuItem * mShowEventTickerMenuItem;
     wxMenuItem * mMuteMenuItem;
@@ -69,19 +71,6 @@ private:
 	std::unique_ptr<LoggingDialog> mLoggingDialog;
 	std::unique_ptr<SettingsDialog> mSettingsDialog;
     std::unique_ptr<AboutDialog> mAboutDialog;
-
-    //
-    // Cursors
-    //
-
-    // For multi-cursor: cursor 0 is base; cursor 1 up to size-1 are strength-based
-    std::vector<std::unique_ptr<wxCursor>> mGrabCursors;
-    std::vector<std::unique_ptr<wxCursor>> mSmashCursors;
-    std::unique_ptr<wxCursor> mMoveCursor;
-    std::unique_ptr<wxCursor> mPinCursor;
-    std::unique_ptr<wxCursor> mTimerBombCursor;
-    std::unique_ptr<wxCursor> mRCBombCursor;
-
 
 	//
 	// Timers
@@ -180,12 +169,7 @@ private:
 private:
 
     void ResetState();
-    std::vector<std::unique_ptr<wxCursor>> MakeCursors(std::string const & cursorName, int hotspotX, int hotspotY);
-    std::unique_ptr<wxCursor> MakeCursor(std::string const & cursorName, int hotspotX, int hotspotY);
-    void SwitchCursor();
-    void SetCursorStrength(float strength, float minStrength, float maxStrength);
     void SetFrameTitle();
-	void UpdateContinuousTool();
     bool IsPaused();
     void DoGameStep();
 	void RenderGame();
@@ -195,68 +179,6 @@ private:
 
     wxApp * const mMainApp;
 
-	struct MouseInfo
-	{
-		bool ldown;
-		bool rdown;
-		int x;
-		int y;
-
-		MouseInfo()
-			: ldown(false)
-			, rdown(false)
-			, x(0)
-			, y(0)
-		{
-		}
-	};
-	
-	MouseInfo mMouseInfo;
-
-	enum class ToolType
-	{
-		Smash,
-		Grab,
-        Pin,
-        TimerBomb,
-        RCBomb
-	};
-
-	ToolType mCurrentToolType;
-
-
-    // This struct contains the information we need to grow the strength of the
-    // tool while the user keeps the left mouse button pressed.
-    // The strength only grows when the mouse is still, and stays constant while it's moved.
-    struct ContinuousToolState
-    {
-        // Previous mouse position and time when we looked at it
-        int PreviousMouseX; 
-        int PreviousMouseY;
-        std::chrono::steady_clock::time_point PreviousTimestamp;
-
-        // The total accumulated press time - the proxy for the strength of the tool
-        std::chrono::microseconds CumulatedTime;
-
-        ContinuousToolState()
-            : PreviousMouseX(-1)
-            , PreviousMouseY(-1)
-            , PreviousTimestamp(std::chrono::steady_clock::now())
-            , CumulatedTime(0)
-        {            
-        }
-
-        void Initialize(int mouseX, int mouseY)
-        {
-            PreviousMouseX = mouseX;
-            PreviousMouseY = mouseY;
-            PreviousTimestamp = std::chrono::steady_clock::now();
-            CumulatedTime = std::chrono::microseconds(0);
-        }
-    };
-
-    ContinuousToolState mContinuousToolState;
-
     //
     // Helpers
     //
@@ -264,6 +186,7 @@ private:
     std::shared_ptr<ResourceLoader> mResourceLoader;
 	std::shared_ptr<GameController> mGameController;
     std::unique_ptr<SoundController> mSoundController;
+    std::unique_ptr<ToolController> mToolController;
 
 
     //
@@ -272,6 +195,7 @@ private:
 
     std::vector<std::string> mCurrentShipNames;
     size_t mCurrentRCBombCount;
+    bool mIsShiftKeyDown;
 
 
     //

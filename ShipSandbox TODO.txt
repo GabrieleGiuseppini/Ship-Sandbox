@@ -121,10 +121,25 @@ Prev perf (before point et al destructuring)
 
 - Dynamics:
 	- Swirl tool
-		- Use shift key to change from CW to CCW
-			- Same for Draw
 		- Force applied is r * AngularForce; AngularForce==m*AngularAcceleration
+			- CW; if Shift -> CCW
 		- Need cursor
+	- Saw
+		- Spec:
+			- Deletes springs (and affected triangles) that cross the *path* of the tool
+			- Continuous sound, overwater and underwater, depending on where x,y is
+		- Impl:
+			- Tool:
+				- At l-down and at mouse move when l-down, MainFrame passes x,y to GameController
+				  which uses own state to pass line endpoints to World
+					- GameController::OnSawMove(screen coords)
+						- It calls into World only at second call, i.e. iff !!mLastSawPoint (opt)
+				- At l-up, if tool is Saw, MainFrame calls into GameController::OnSawEnd()
+					- GameController::OnSawEnd(): set mLastSawPoint to nullopt
+			- Ship:
+				- Make sure Spring::Destroy only deletes triangles that share one edge with the spring;
+				  if not, make overload
+
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded
@@ -190,27 +205,24 @@ Prev perf (before point et al destructuring)
 		- Test: Ship::SpringDestroyHandler() only destroys triangles that contain A-B
 			- Should definitely make both A and B leak, as they both now have an adjacent hole
 		
-	- Saw
-		- Spec:
-			- Deletes springs (and affected triangles) that cross the *path* of the tool
-			- Continuous sound, overwater and underwater, depending on where x,y is
-		- Impl:
-			- Tool:
-				- At l-down and at mouse move when l-down, MainFrame passes x,y to GameController
-				  which uses own state to pass line endpoints to World
-					- GameController::OnSawMove(screen coords)
-						- It calls into World only at second call, i.e. iff !!mLastSawPoint (opt)
-				- At l-up, if tool is Saw, MainFrame calls into GameController::OnSawEnd()
-					- GameController::OnSawEnd(): set mLastSawPoint to nullopt
-
 - Controls:
-	- Tool cursors: cursor should change when mouse down
-		- Bomb, Saw, Hammer, Draw
-		- ToolController class, called directly by MainFrame
-			- Has GameController shared_ptr
-			- SetTool(tool enum from ToolController)
-			- OnMouseDown/Up()
-			- RC Bomb detection via events is still left to MainFrame
+	= Tool cursors: cursor should change when mouse down
+		- Hammer, Draw
+			- Copy code from Pin
+		- Pin, instead, does not change
+			- Undo its dual cursors
+		= ToolController class, called directly by MainFrame
+			+ Has GameController shared_ptr
+			+ SetTool(tool enum from ToolController)
+			+ OnMouseDown/Up/etc.()
+			+ RC Bomb detection via events is still left to MainFrame
+			+ Tool class:
+				+ ToolController has pointer to the current tool; might be null
+				+ ShowCurrentCursor(): shows the current cursor; invoked by ToolController at end of initialization
+				  to show the first cursor, and might be invoked via ToolController by MainFrame in the future
+				  to re-show cursor after having stolen it
+			- Test:
+				- Shift up and down detection
 			
 	- SettingsDialog: save settings, and defaults
 		- JSON for both game & render params, assembled & saved by gamecontroller, who also loads it on startup if exists 

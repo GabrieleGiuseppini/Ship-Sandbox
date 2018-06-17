@@ -50,8 +50,6 @@ bool TimerBomb::Update(
         case State::FastFuseBurning:
         {
             // Check if we're underwater
-            // TODO: needs to become: check if any of the spring
-            // points are wet, helped by Points::IsWet(index)
             if (mParentWorld.IsUnderwater(GetPosition()))
             {
                 //
@@ -204,9 +202,6 @@ bool TimerBomb::Update(
             return true;
         }
     }
-
-    assert(false);
-    return true;
 }
 
 void TimerBomb::OnNeighborhoodDisturbed()

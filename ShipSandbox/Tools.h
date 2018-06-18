@@ -150,12 +150,6 @@ public:
 
     virtual ~ContinuousTool() {}
 
-    virtual void Initialize(InputState const & /*inputState*/) override
-    {
-        // Reset current cursor
-        mCurrentCursor = mCursors[0].get();
-    }
-
     virtual void Update(InputState const & inputState) override;
 
     virtual void OnMouseMove(InputState const & /*inputState*/) override {}
@@ -167,17 +161,6 @@ public:
         mPreviousMouseY = inputState.MouseY;
         mPreviousTimestamp = std::chrono::steady_clock::now();
         mCumulatedTime = std::chrono::microseconds(0);
-
-        // Set current cursor
-        mCurrentCursor = mCursors[0].get();
-        ShowCurrentCursor();
-    }
-
-    virtual void OnLeftMouseUp(InputState const & /*inputState*/) override
-    {
-        // Set current cursor
-        mCurrentCursor = mCursors[0].get();
-        ShowCurrentCursor();
     }
 
     virtual void OnShiftKeyDown(InputState const & /*inputState*/) override {}
@@ -195,14 +178,12 @@ protected:
 
     ContinuousTool(
         ToolType toolType,
-        std::vector<std::unique_ptr<wxCursor>> cursors,
         wxFrame * parentFrame,
         std::shared_ptr<GameController> gameController)
         : Tool(
             toolType,
             parentFrame,
             std::move(gameController))
-        , mCursors(std::move(cursors))
         , mCurrentCursor(nullptr)
         , mPreviousMouseX(-1)
         , mPreviousMouseY(-1)
@@ -211,18 +192,19 @@ protected:
     {}
 
     void ModulateCursor(
+        std::vector<std::unique_ptr<wxCursor>> const & cursors,
         float strength,
         float minStrength,
         float maxStrength)
     {
         // Calculate cursor index (cursor 0 is the base, we don't use it here)
-        size_t const numberOfCursors = (mCursors.size() - 1);
+        size_t const numberOfCursors = (cursors.size() - 1);
         size_t cursorIndex = 1u + static_cast<size_t>(
             floorf(
                 (strength - minStrength) / (maxStrength - minStrength) * static_cast<float>(numberOfCursors - 1)));
 
         // Set cursor
-        mCurrentCursor = mCursors[cursorIndex].get();
+        mCurrentCursor = cursors[cursorIndex].get();
 
         // Display cursor
         ShowCurrentCursor();
@@ -232,13 +214,12 @@ protected:
         std::chrono::microseconds const & cumulatedTime,
         InputState const & inputState) = 0;
 
-private:
-
-    // Cursor 0 is base; cursor 1 up to size-1 are strength-based
-    std::vector<std::unique_ptr<wxCursor>> mCursors;
+protected:
 
     // The currently-selected cursor that will be shown
     wxCursor * mCurrentCursor;
+
+private:
 
     //
     // Tool state
@@ -266,11 +247,53 @@ public:
         std::shared_ptr<GameController> gameController,
         ResourceLoader & resourceLoader);
 
+public:
+
+    virtual void Initialize(InputState const & inputState) override
+    {
+        // Reset current cursor 
+        if (inputState.IsLeftMouseDown)
+        {
+            // Down
+            mCurrentCursor = mDownCursors[0].get();
+        }
+        else
+        {
+            // Up
+            mCurrentCursor = mUpCursor.get();
+        }
+    }
+
+    virtual void OnLeftMouseDown(InputState const & inputState) override
+    {
+        ContinuousTool::OnLeftMouseDown(inputState);
+
+        // Set current cursor to the first down cursor
+        mCurrentCursor = mDownCursors[0].get();
+        ShowCurrentCursor();
+    }
+
+    virtual void OnLeftMouseUp(InputState const & /*inputState*/) override
+    {
+        // Set current cursor to the up cursor
+        mCurrentCursor = mUpCursor.get();
+        ShowCurrentCursor();
+    }
+
 protected:
 
     virtual void ApplyTool(
         std::chrono::microseconds const & cumulatedTime,
         InputState const & inputState) override;
+
+private:
+
+    // The up cursor
+    std::unique_ptr<wxCursor> const mUpCursor;
+
+    // The force-modulated down cursors;
+    // cursor 0 is base; cursor 1 up to size-1 are strength-based
+    std::vector<std::unique_ptr<wxCursor>> const mDownCursors;
 };
 
 class GrabTool final : public ContinuousTool
@@ -282,11 +305,85 @@ public:
         std::shared_ptr<GameController> gameController,
         ResourceLoader & resourceLoader);
 
+public:
+
+    virtual void Initialize(InputState const & inputState) override
+    {
+        SetBasisCursor(inputState);
+    }
+
+    virtual void OnLeftMouseDown(InputState const & inputState) override
+    {
+        ContinuousTool::OnLeftMouseDown(inputState);
+
+        SetBasisCursor(inputState);
+        ShowCurrentCursor();
+    }
+
+    virtual void OnLeftMouseUp(InputState const & inputState) override
+    {
+        SetBasisCursor(inputState);
+        ShowCurrentCursor();
+    }
+
+    virtual void OnShiftKeyDown(InputState const & inputState) override
+    {
+        SetBasisCursor(inputState);
+        ShowCurrentCursor();
+    }
+
+    virtual void OnShiftKeyUp(InputState const & inputState) override
+    {
+        SetBasisCursor(inputState);
+        ShowCurrentCursor();
+    }
+
 protected:
 
     virtual void ApplyTool(
         std::chrono::microseconds const & cumulatedTime,
         InputState const & inputState) override;
+
+private:
+
+    void SetBasisCursor(InputState const & inputState)
+    {
+        if (inputState.IsLeftMouseDown)
+        {
+            if (inputState.IsShiftKeyDown)
+            {
+                // Down minus
+                mCurrentCursor = mDownMinusCursors[0].get();
+            }
+            else
+            {
+                // Down plus
+                mCurrentCursor = mDownPlusCursors[0].get();
+            }
+        }
+        else
+        {
+            if (inputState.IsShiftKeyDown)
+            {
+                // Up minus
+                mCurrentCursor = mUpMinusCursor.get();
+            }
+            else
+            {
+                // Up plus
+                mCurrentCursor = mUpPlusCursor.get();
+            }
+        }
+    }
+
+    // The up cursors
+    std::unique_ptr<wxCursor> const mUpPlusCursor;
+    std::unique_ptr<wxCursor> const mUpMinusCursor;
+
+    // The force-modulated down cursors;
+    // cursor 0 is base; cursor 1 up to size-1 are strength-based
+    std::vector<std::unique_ptr<wxCursor>> const mDownPlusCursors;
+    std::vector<std::unique_ptr<wxCursor>> const mDownMinusCursors;
 };
 
 class PinTool final : public OneShotTool
@@ -300,34 +397,24 @@ public:
 
 public:
 
-    virtual void Initialize(InputState const & inputState) override
+    virtual void Initialize(InputState const & /*inputState*/) override
     {
         // Reset cursor
-        assert(!!mUpCursor && !!mDownCursor);
-        mCurrentCursor = inputState.IsLeftMouseDown ? mDownCursor.get() : mUpCursor.get();
+        assert(!!mCursor);
+        mCurrentCursor = mCursor.get();
     }
 
     virtual void OnLeftMouseDown(InputState const & inputState) override
     {
-        // Switch cursor to down
-        mCurrentCursor = mDownCursor.get();
-        ShowCurrentCursor();
-
         // Toggle pin
         mGameController->TogglePinAt(vec2f(inputState.MouseX, inputState.MouseY));
     }
 
-    virtual void OnLeftMouseUp(InputState const & /*inputState*/) override
-    {
-        // Switch cursor to up
-        mCurrentCursor = mUpCursor.get();
-        ShowCurrentCursor();
-    }
+    virtual void OnLeftMouseUp(InputState const & /*inputState*/) override {}
 
 private:
 
-    std::unique_ptr<wxCursor> mUpCursor;
-    std::unique_ptr<wxCursor> mDownCursor;
+    std::unique_ptr<wxCursor> const mCursor;
 };
 
 class TimerBombTool final : public OneShotTool
@@ -358,7 +445,7 @@ public:
 
 private:
 
-    std::unique_ptr<wxCursor> mCursor;
+    std::unique_ptr<wxCursor> const mCursor;
 };
 
 class RCBombTool final : public OneShotTool
@@ -389,5 +476,5 @@ public:
 
 private:
 
-    std::unique_ptr<wxCursor> mCursor;
+    std::unique_ptr<wxCursor> const mCursor;
 };

@@ -151,9 +151,10 @@ SmashTool::SmashTool(
     ResourceLoader & resourceLoader)
     : ContinuousTool(
         ToolType::Smash,
-        MakeCursors("smash_cursor", 1, 16, resourceLoader),
         parentFrame,
         std::move(gameController))
+    , mUpCursor(MakeCursor("smash_cursor_up", 6, 9, resourceLoader))
+    , mDownCursors(MakeCursors("smash_cursor_down", 6, 9, resourceLoader))
 {
 }
 
@@ -171,8 +172,8 @@ void SmashTool::ApplyTool(
         std::chrono::duration_cast<std::chrono::milliseconds>(cumulatedTime).count());
     float radiusMultiplier = 1.0f + (MaxMultiplier - 1.0f) * std::min(1.0f, millisecondsElapsed / 5000.0f);
 
-    // Modulate cursor
-    ModulateCursor(radiusMultiplier, 1.0f, MaxMultiplier);
+    // Modulate down cursor
+    ModulateCursor(mDownCursors, radiusMultiplier, 1.0f, MaxMultiplier);
 
     // Destroy
     mGameController->DestroyAt(
@@ -190,9 +191,12 @@ GrabTool::GrabTool(
     ResourceLoader & resourceLoader)
     : ContinuousTool(
         ToolType::Grab,
-        MakeCursors("drag_cursor", 15, 15, resourceLoader),
         parentFrame,
         std::move(gameController))
+    , mUpPlusCursor(MakeCursor("drag_cursor_up_plus", 15, 15, resourceLoader))
+    , mUpMinusCursor(MakeCursor("drag_cursor_up_minus", 15, 15, resourceLoader))
+    , mDownPlusCursors(MakeCursors("drag_cursor_down_plus", 15, 15, resourceLoader))
+    , mDownMinusCursors(MakeCursors("drag_cursor_down_minus", 15, 15, resourceLoader))
 {
 }
 
@@ -210,8 +214,12 @@ void GrabTool::ApplyTool(
         std::chrono::duration_cast<std::chrono::milliseconds>(cumulatedTime).count());
     float strengthMultiplier = 1.0f + (MaxMultiplier - 1.0f) * std::min(1.0f, millisecondsElapsed / 5000.0f);
 
-    // Modulate cursor
-    ModulateCursor(strengthMultiplier, 1.0f, MaxMultiplier);
+    // Modulate down cursor
+    ModulateCursor(
+        inputState.IsShiftKeyDown ? mDownMinusCursors : mDownPlusCursors, 
+        strengthMultiplier, 
+        1.0f, 
+        MaxMultiplier);
 
     // Draw
     mGameController->DrawTo(
@@ -233,11 +241,8 @@ PinTool::PinTool(
         ToolType::Pin,
         parentFrame,
         std::move(gameController))
+    , mCursor(MakeCursor("pin_cursor", 4, 27, resourceLoader))
 {
-    // Load cursors
-    mUpCursor = MakeCursor("pin_up_cursor", 4, 27, resourceLoader);
-    // TODO: have different one
-    mDownCursor = MakeCursor("pin_up_cursor", 4, 27, resourceLoader);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -252,9 +257,8 @@ TimerBombTool::TimerBombTool(
         ToolType::TimerBomb,
         parentFrame,
         std::move(gameController))
+    , mCursor(MakeCursor("timer_bomb_cursor", 16, 19, resourceLoader))
 {
-    // Load cursor
-    mCursor = MakeCursor("timer_bomb_cursor", 16, 19, resourceLoader);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -269,7 +273,6 @@ RCBombTool::RCBombTool(
         ToolType::RCBomb,
         parentFrame,
         std::move(gameController))
+    , mCursor(MakeCursor("rc_bomb_cursor", 16, 21, resourceLoader))
 {
-    // Load cursor
-    mCursor = MakeCursor("rc_bomb_cursor", 16, 21, resourceLoader);
 }

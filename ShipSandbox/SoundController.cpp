@@ -238,7 +238,7 @@ void SoundController::HighFrequencyUpdate()
     else
     {
         // Reset the flag now...
-        // ...if we're doing a Draw, we'll find the flag up next time
+        // ...if we're doing a Draw or a Swirl, we'll find the flag up next time
         mIsInDraw = false;
     }
 }
@@ -307,6 +307,13 @@ void SoundController::OnDestroy(
 
 void SoundController::OnDraw()
 {    
+    mIsInDraw = true;
+
+    mDrawSound.Start();
+}
+
+void SoundController::OnSwirl()
+{
     mIsInDraw = true;
 
     mDrawSound.Start();

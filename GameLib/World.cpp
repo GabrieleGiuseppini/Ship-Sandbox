@@ -89,6 +89,18 @@ void World::DrawTo(
     }
 }
 
+void World::SwirlAt(
+    vec2f const & targetPos,
+    float strength)
+{
+    for (auto & ship : mAllShips)
+    {
+        ship->SwirlAt(
+            targetPos,
+            strength);
+    }
+}
+
 void World::TogglePinAt(
     vec2 const & targetPos,
     GameParameters const & gameParameters)

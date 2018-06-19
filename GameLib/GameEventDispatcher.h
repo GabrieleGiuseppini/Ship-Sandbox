@@ -19,6 +19,7 @@ public:
     GameEventDispatcher()
         : mDestroyEvents()
         , mDrawEvent(false)
+        , mSwirlEvent(false)
         , mPinToggledEvents()
         , mStressEvents()
         , mBreakEvents()
@@ -63,6 +64,11 @@ public:
     virtual void OnDraw() override
     {
         mDrawEvent = true;
+    }
+
+    virtual void OnSwirl() override
+    {
+        mSwirlEvent = true;
     }
 
     virtual void OnPinToggled(
@@ -208,6 +214,11 @@ public:
                 sink->OnDraw();
             }
 
+            if (mSwirlEvent)
+            {
+                sink->OnSwirl();
+            }
+
             for (auto const & entry : mPinToggledEvents)
             {
                 sink->OnPinToggled(std::get<0>(entry), std::get<1>(entry));
@@ -247,6 +258,7 @@ public:
         // Clear collections
         mDestroyEvents.clear();
         mDrawEvent = false;
+        mSwirlEvent = false;
         mPinToggledEvents.clear();
         mStressEvents.clear();
         mBreakEvents.clear();
@@ -266,6 +278,7 @@ private:
     // The current events being aggregated
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mDestroyEvents;
     bool mDrawEvent;
+    bool mSwirlEvent;
     unordered_tuple_set<std::tuple<bool, bool>> mPinToggledEvents;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mStressEvents;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mBreakEvents;

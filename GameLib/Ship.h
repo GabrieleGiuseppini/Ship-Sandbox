@@ -63,6 +63,10 @@ public:
         vec2 const & targetPos,
         float strength);
 
+    void SwirlAt(
+        vec2 const & targetPos,
+        float strength);
+
     bool TogglePinAt(
         vec2 const & targetPos,
         GameParameters const & gameParameters);
@@ -98,6 +102,10 @@ public:
     void UpdateDynamics(GameParameters const & gameParameters);
 
     void UpdateDrawForces(
+        vec2f const & position,
+        float forceStrength);
+
+    void UpdateSwirlForces(
         vec2f const & position,
         float forceStrength);
 
@@ -181,23 +189,26 @@ private:
 
 
     //
-    // Draw force to apply at next iteration
+    // Tool force to apply at next iteration
     //
 
-    struct DrawForce
+    struct ToolForce
     {
         vec2f Position;
         float Strength;
+        bool IsRadial;
 
-        DrawForce(
+        ToolForce(
             vec2f position,
-            float strength)
+            float strength,
+            bool isRadial)
             : Position(position)
             , Strength(strength)
+            , IsRadial(isRadial)
         {}
     };
 
-    std::optional<DrawForce> mCurrentDrawForce;
+    std::optional<ToolForce> mCurrentToolForce;
 };
 
 }

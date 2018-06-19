@@ -176,6 +176,23 @@ void GameController::DrawTo(
     mGameEventDispatcher->Flush();
 }
 
+void GameController::SwirlAt(
+    vec2 const & screenCoordinates,
+    float strengthMultiplier)
+{
+    vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);
+
+    // Apply action
+    assert(!!mWorld);
+    mWorld->SwirlAt(worldCoordinates, 1000.0f * strengthMultiplier);
+
+    // Notify
+    mGameEventDispatcher->OnSwirl();
+
+    // Flush events
+    mGameEventDispatcher->Flush();
+}
+
 void GameController::TogglePinAt(vec2 const & screenCoordinates)
 {
     vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);

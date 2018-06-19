@@ -230,6 +230,54 @@ void GrabTool::ApplyTool(
 }
 
 ////////////////////////////////////////////////////////////////////////
+// Swirl
+////////////////////////////////////////////////////////////////////////
+
+SwirlTool::SwirlTool(
+    wxFrame * parentFrame,
+    std::shared_ptr<GameController> gameController,
+    ResourceLoader & resourceLoader)
+    : ContinuousTool(
+        ToolType::Grab,
+        parentFrame,
+        std::move(gameController))
+    , mUpPlusCursor(MakeCursor("swirl_cursor_up_cw", 15, 15, resourceLoader))
+    , mUpMinusCursor(MakeCursor("swirl_cursor_up_ccw", 15, 15, resourceLoader))
+    , mDownPlusCursors(MakeCursors("swirl_cursor_down_cw", 15, 15, resourceLoader))
+    , mDownMinusCursors(MakeCursors("swirl_cursor_down_ccw", 15, 15, resourceLoader))
+{
+}
+
+void SwirlTool::ApplyTool(
+    std::chrono::microseconds const & cumulatedTime,
+    InputState const & inputState)
+{
+    // Calculate strength multiplier
+    // 0-500ms      = 1.0
+    // 5000ms-+INF = 20.0
+
+    static constexpr float MaxMultiplier = 20.0f;
+
+    float millisecondsElapsed = static_cast<float>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(cumulatedTime).count());
+    float strengthMultiplier = 1.0f + (MaxMultiplier - 1.0f) * std::min(1.0f, millisecondsElapsed / 5000.0f);
+
+    // Modulate down cursor
+    ModulateCursor(
+        inputState.IsShiftKeyDown ? mDownMinusCursors : mDownPlusCursors,
+        strengthMultiplier,
+        1.0f,
+        MaxMultiplier);
+
+    // Draw
+    mGameController->SwirlAt(
+        vec2f(inputState.MouseX, inputState.MouseY),
+        inputState.IsShiftKeyDown
+            ? -strengthMultiplier
+            : strengthMultiplier);
+}
+
+////////////////////////////////////////////////////////////////////////
 // Pin
 ////////////////////////////////////////////////////////////////////////
 

@@ -49,6 +49,7 @@ const long ID_RESET_VIEW_MENUITEM = wxNewId();
 
 const long ID_SMASH_MENUITEM = wxNewId();
 const long ID_GRAB_MENUITEM = wxNewId();
+const long ID_SWIRL_MENUITEM = wxNewId();
 const long ID_PIN_MENUITEM = wxNewId();
 const long ID_TIMERBOMB_MENUITEM = wxNewId();
 const long ID_RCBOMB_MENUITEM = wxNewId();
@@ -222,6 +223,10 @@ MainFrame::MainFrame(wxApp * mainApp)
     wxMenuItem * grabMenuItem = new wxMenuItem(mToolsMenu, ID_GRAB_MENUITEM, _("Grab\tG"), wxEmptyString, wxITEM_RADIO);
     mToolsMenu->Append(grabMenuItem);
     Connect(ID_GRAB_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnGrabMenuItemSelected);
+
+    wxMenuItem * swirlMenuItem = new wxMenuItem(mToolsMenu, ID_SWIRL_MENUITEM, _("Swirl\tW"), wxEmptyString, wxITEM_RADIO);
+    mToolsMenu->Append(swirlMenuItem);
+    Connect(ID_SWIRL_MENUITEM, wxEVT_COMMAND_MENU_SELECTED, (wxObjectEventFunction)&MainFrame::OnSwirlMenuItemSelected);
 
     wxMenuItem * pinMenuItem = new wxMenuItem(mToolsMenu, ID_PIN_MENUITEM, _("Toggle Pin\tP"), wxEmptyString, wxITEM_RADIO);
     mToolsMenu->Append(pinMenuItem);
@@ -778,6 +783,12 @@ void MainFrame::OnGrabMenuItemSelected(wxCommandEvent & /*event*/)
 {
     assert(!!mToolController);
     mToolController->SetTool(ToolType::Grab);
+}
+
+void MainFrame::OnSwirlMenuItemSelected(wxCommandEvent & /*event*/)
+{
+    assert(!!mToolController);
+    mToolController->SetTool(ToolType::Swirl);
 }
 
 void MainFrame::OnPinMenuItemSelected(wxCommandEvent & /*event*/)

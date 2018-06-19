@@ -49,6 +49,11 @@ public:
         // Default-implemented
     }
 
+    virtual void OnSwirl()
+    {
+        // Default-implemented
+    }
+
     virtual void OnPinToggled(
         bool /*isPinned*/,
         bool /*isUnderwater*/)

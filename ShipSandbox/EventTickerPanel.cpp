@@ -110,6 +110,11 @@ void EventTickerPanel::OnDraw()
     AppendFutureTickerText("Draw!");
 }
 
+void EventTickerPanel::OnSwirl()
+{
+    AppendFutureTickerText("Swirl!");
+}
+
 void EventTickerPanel::OnStress(
     Material const * material,
     bool isUnderwater,

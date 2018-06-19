@@ -53,6 +53,8 @@ public:
 
     virtual void OnDraw() override;
 
+    virtual void OnSwirl() override;
+
     virtual void OnPinToggled(
         bool isPinned,
         bool isUnderwater) override;

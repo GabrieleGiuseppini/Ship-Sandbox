@@ -69,7 +69,7 @@ Ship::Ship(
             },        
         mPoints,
         mSprings)
-    , mCurrentDrawForce(std::nullopt)
+    , mCurrentToolForce(std::nullopt)
 {
     // Set destroy handlers
     mPoints.SetDestroyHandler([this](auto idx) { this->PointDestroyHandler(idx); });
@@ -110,8 +110,17 @@ void Ship::DrawTo(
     float strength)
 {
     // Store the force
-    assert(!mCurrentDrawForce);
-    mCurrentDrawForce.emplace(targetPos, strength);
+    assert(!mCurrentToolForce);
+    mCurrentToolForce.emplace(targetPos, strength, false);
+}
+
+void Ship::SwirlAt(
+    vec2f const & targetPos,
+    float strength)
+{
+    // Store the force
+    assert(!mCurrentToolForce);
+    mCurrentToolForce.emplace(targetPos, strength, true);
 }
 
 bool Ship::TogglePinAt(
@@ -467,12 +476,17 @@ void Ship::UpdateDynamics(GameParameters const & gameParameters)
 {
     for (int iter = 0; iter < GameParameters::NumDynamicIterations<int>; ++iter)
     {
-        // Update draw forces, if we have any
-        if (!!mCurrentDrawForce)
+        // Update tool forces, if we have any
+        if (!!mCurrentToolForce)
         {
-            UpdateDrawForces(
-                mCurrentDrawForce->Position,
-                mCurrentDrawForce->Strength);
+            if (mCurrentToolForce->IsRadial)
+                UpdateSwirlForces(
+                    mCurrentToolForce->Position,
+                    mCurrentToolForce->Strength);
+            else
+                UpdateDrawForces(
+                    mCurrentToolForce->Position,
+                    mCurrentToolForce->Strength);
         }
 
         // Update point forces
@@ -489,10 +503,10 @@ void Ship::UpdateDynamics(GameParameters const & gameParameters)
     }
 
     //
-    // Reset draw force
+    // Reset tool force
     //
 
-    mCurrentDrawForce.reset();
+    mCurrentToolForce.reset();
 }
 
 void Ship::UpdateDrawForces(
@@ -501,9 +515,25 @@ void Ship::UpdateDrawForces(
 {
     for (auto pointIndex : mPoints)
     {
+        // F = ForceStrength/sqrt(distance), along radius
         vec2f displacement = (position - mPoints.GetPosition(pointIndex));
         float forceMagnitude = forceStrength / sqrtf(0.1f + displacement.length());
         mPoints.GetForce(pointIndex) += displacement.normalise() * forceMagnitude;
+    }
+}
+
+void Ship::UpdateSwirlForces(
+    vec2f const & position,
+    float forceStrength)
+{
+    for (auto pointIndex : mPoints)
+    {
+        // F = ForceStrength/sqrt(distance), perpendicular to radius
+        vec2f displacement = (position - mPoints.GetPosition(pointIndex));
+        float const displacementLength = displacement.length();
+        float forceMagnitude = forceStrength / sqrtf(0.1f + displacementLength);
+        displacement.normalise(displacementLength);
+        mPoints.GetForce(pointIndex) += vec2f(-displacement.y, displacement.x) * forceMagnitude;
     }
 }
 

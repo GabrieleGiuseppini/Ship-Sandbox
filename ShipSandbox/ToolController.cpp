@@ -39,6 +39,12 @@ ToolController::ToolController(
             resourceLoader));
 
     mAllTools.emplace_back(
+        std::make_unique<SwirlTool>(
+            parentFrame,
+            gameController,
+            resourceLoader));
+
+    mAllTools.emplace_back(
         std::make_unique<PinTool>(
             parentFrame,
             gameController,

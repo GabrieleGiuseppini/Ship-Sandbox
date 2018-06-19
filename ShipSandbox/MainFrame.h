@@ -115,6 +115,7 @@ private:
 	void OnReloadLastShipMenuItemSelected(wxCommandEvent& event);
 	void OnSmashMenuItemSelected(wxCommandEvent& event);
 	void OnGrabMenuItemSelected(wxCommandEvent& event);
+    void OnSwirlMenuItemSelected(wxCommandEvent& event);
     void OnPinMenuItemSelected(wxCommandEvent& event);
     void OnTimerBombMenuItemSelected(wxCommandEvent& event);
     void OnRCBombMenuItemSelected(wxCommandEvent& event);

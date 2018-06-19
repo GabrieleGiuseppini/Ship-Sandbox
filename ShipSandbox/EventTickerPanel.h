@@ -37,6 +37,8 @@ public:
 
     virtual void OnDraw() override;
 
+    virtual void OnSwirl() override;
+
     virtual void OnStress(
         Material const * material,
         bool isUnderwater,

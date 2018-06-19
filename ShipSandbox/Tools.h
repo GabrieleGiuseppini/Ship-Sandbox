@@ -31,9 +31,10 @@ enum class ToolType
 {
     Smash = 0,
     Grab = 1,
-    Pin = 2,
-    TimerBomb = 3,
-    RCBomb = 4
+    Swirl = 2,
+    Pin = 3,
+    TimerBomb = 4,
+    RCBomb = 5
 };
 
 struct InputState
@@ -301,6 +302,96 @@ class GrabTool final : public ContinuousTool
 public:
 
     GrabTool(
+        wxFrame * parentFrame,
+        std::shared_ptr<GameController> gameController,
+        ResourceLoader & resourceLoader);
+
+public:
+
+    virtual void Initialize(InputState const & inputState) override
+    {
+        SetBasisCursor(inputState);
+    }
+
+    virtual void OnLeftMouseDown(InputState const & inputState) override
+    {
+        ContinuousTool::OnLeftMouseDown(inputState);
+
+        SetBasisCursor(inputState);
+        ShowCurrentCursor();
+    }
+
+    virtual void OnLeftMouseUp(InputState const & inputState) override
+    {
+        SetBasisCursor(inputState);
+        ShowCurrentCursor();
+    }
+
+    virtual void OnShiftKeyDown(InputState const & inputState) override
+    {
+        SetBasisCursor(inputState);
+        ShowCurrentCursor();
+    }
+
+    virtual void OnShiftKeyUp(InputState const & inputState) override
+    {
+        SetBasisCursor(inputState);
+        ShowCurrentCursor();
+    }
+
+protected:
+
+    virtual void ApplyTool(
+        std::chrono::microseconds const & cumulatedTime,
+        InputState const & inputState) override;
+
+private:
+
+    void SetBasisCursor(InputState const & inputState)
+    {
+        if (inputState.IsLeftMouseDown)
+        {
+            if (inputState.IsShiftKeyDown)
+            {
+                // Down minus
+                mCurrentCursor = mDownMinusCursors[0].get();
+            }
+            else
+            {
+                // Down plus
+                mCurrentCursor = mDownPlusCursors[0].get();
+            }
+        }
+        else
+        {
+            if (inputState.IsShiftKeyDown)
+            {
+                // Up minus
+                mCurrentCursor = mUpMinusCursor.get();
+            }
+            else
+            {
+                // Up plus
+                mCurrentCursor = mUpPlusCursor.get();
+            }
+        }
+    }
+
+    // The up cursors
+    std::unique_ptr<wxCursor> const mUpPlusCursor;
+    std::unique_ptr<wxCursor> const mUpMinusCursor;
+
+    // The force-modulated down cursors;
+    // cursor 0 is base; cursor 1 up to size-1 are strength-based
+    std::vector<std::unique_ptr<wxCursor>> const mDownPlusCursors;
+    std::vector<std::unique_ptr<wxCursor>> const mDownMinusCursors;
+};
+
+class SwirlTool final : public ContinuousTool
+{
+public:
+
+    SwirlTool(
         wxFrame * parentFrame,
         std::shared_ptr<GameController> gameController,
         ResourceLoader & resourceLoader);

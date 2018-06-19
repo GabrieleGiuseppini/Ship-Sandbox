@@ -60,6 +60,10 @@ public:
         vec2 const & targetPos,
         float strength);
 
+    void SwirlAt(
+        vec2 const & targetPos,
+        float strength);
+
     void TogglePinAt(
         vec2 const & targetPos,
         GameParameters const & gameParameters);

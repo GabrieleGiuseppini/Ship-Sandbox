@@ -106,7 +106,11 @@ Prev perf (before point et al destructuring)
 		  performance difference
 			- Check the three boxes
 	- Optimizations:
-		- See if drawing springs & triangles with Z buffer and depth test helps (for springs' fragment shader)
+		- More connected components => slower (multiple batches); try
+		  to draw one single batch then, using Z buffer
+			- Assign Z based on connected component ID
+		- See if drawing springs & triangles with Z buffer and depth test helps (for springs' fragment shader, may be it takes 
+		  shortcuts if it knows it's behind)
 	- AmbientLightIntensity:
 		+ Use also in RenderContext::RenderStart() for clear (sky) color
 		+ Phase 1: pgup/down
@@ -120,26 +124,37 @@ Prev perf (before point et al destructuring)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
-	- Swirl tool
-		- Force applied is r * AngularForce; AngularForce==m*AngularAcceleration
-			- CW; if Shift -> CCW
-		- Need cursor
+	= Swirl tool
+		+ Force applied is r * AngularForce; AngularForce==m*AngularAcceleration
+			+ CW; if Shift -> CCW
+		+ Cursors
+		- Need own sound - replicate Draw infrastructure and use different drill
+	- Fix power bar room at all cursors
+		- Try: MakeCursors: make non-transparent pixels green or red, multiplying
 	- Saw
 		- Spec:
 			- Deletes springs (and affected triangles) that cross the *path* of the tool
 			- Continuous sound, overwater and underwater, depending on where x,y is
 		- Impl:
+			- Media:
+				- Cursor up and down
+				- Sound
 			- Tool:
-				- At l-down and at mouse move when l-down, MainFrame passes x,y to GameController
-				  which uses own state to pass line endpoints to World
-					- GameController::OnSawMove(screen coords)
-						- It calls into World only at second call, i.e. iff !!mLastSawPoint (opt)
-				- At l-up, if tool is Saw, MainFrame calls into GameController::OnSawEnd()
-					- GameController::OnSawEnd(): set mLastSawPoint to nullopt
+				- L-Down: 
+					- prevMousePos = mouse X, Y
+					- Fire event (for sound)
+				- L-Up: 
+					- Reset prevMousePos
+					- Fire event (for sound)
+				- Move: if l-down:
+					- if has prevMousePos:
+						- GameController->Saw(prevMousePos, current)
+					- prevMousePos = current
 			- Ship:
 				- Make sure Spring::Destroy only deletes triangles that share one edge with the spring;
 				  if not, make overload
-
+			- SoundController: new continuous sound
+	- Ultra-violent flag: very strong Draw and Swirl forces
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded

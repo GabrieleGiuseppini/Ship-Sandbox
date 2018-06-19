@@ -48,6 +48,7 @@ public:
 
     void DestroyAt(vec2f const & screenCoordinates, float radiusMultiplier);
     void DrawTo(vec2f const & screenCoordinates, float strengthMultiplier);
+    void SwirlAt(vec2f const & screenCoordinates, float strengthMultiplier);
     void TogglePinAt(vec2f const & screenCoordinates);
     void ToggleTimerBombAt(vec2f const & screenCoordinates);
     void ToggleRCBombAt(vec2f const & screenCoordinates);

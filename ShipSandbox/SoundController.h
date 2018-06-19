@@ -51,6 +51,8 @@ public:
         bool isUnderwater,
         unsigned int size) override;
 
+    virtual void OnSawToggled(bool isSawing) override;
+
     virtual void OnDraw() override;
 
     virtual void OnSwirl() override;
@@ -109,10 +111,11 @@ private:
     {
         Break,
         Destroy,
+        Draw,
+        Saw,
+        Swirl,
         PinPoint,
         UnpinPoint,
-        Draw,
-        Swirl,
         Stress,
         BombAttached,
         BombDetached,
@@ -133,6 +136,8 @@ private:
             return SoundType::Destroy;
         else if (lstr == "draw")
             return SoundType::Draw;
+        else if (lstr == "saw")
+            return SoundType::Saw;
         else if (lstr == "swirl")
             return SoundType::Swirl;
         else if (lstr == "pinpoint")
@@ -373,6 +378,7 @@ private:
     // Continuous sounds
     //
 
+    SingleContinuousSound mSawSound;
     SingleContinuousSound mDrawSound;
     SingleContinuousSound mSwirlSound;
     SingleContinuousSound mTimerBombSlowFuseSound;

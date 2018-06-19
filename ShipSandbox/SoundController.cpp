@@ -29,6 +29,7 @@ SoundController::SoundController(
     , mUSoundBuffers()
     , mCurrentlyPlayingSounds()
     // Continuous sounds
+    , mSawSound()
     , mDrawSound()
     , mSwirlSound()
     , mTimerBombSlowFuseSound()
@@ -87,7 +88,11 @@ SoundController::SoundController(
 
         assert(soundTypeMatch.size() == 1 + 1);
         SoundType soundType = StrToSoundType(soundTypeMatch[1].str());
-        if (soundType == SoundType::Draw)
+        if (soundType == SoundType::Saw)
+        {
+            mSawSound.Initialize(std::move(soundBuffer));
+        }
+        else if (soundType == SoundType::Draw)
         {
             mDrawSound.Initialize(std::move(soundBuffer));
         }
@@ -287,6 +292,7 @@ void SoundController::Reset()
 
     mCurrentlyPlayingSounds.clear();
 
+    mSawSound.Stop();
     mDrawSound.Stop();
     mSwirlSound.Stop();
     mTimerBombSlowFuseSound.Stop();
@@ -323,6 +329,14 @@ void SoundController::OnDestroy(
         size, 
         isUnderwater,
         50.0f);
+}
+
+void SoundController::OnSawToggled(bool isSawing)
+{
+    if (isSawing)
+        mSawSound.Start();
+    else
+        mSawSound.Stop();
 }
 
 void SoundController::OnDraw()

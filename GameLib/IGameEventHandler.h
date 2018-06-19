@@ -44,6 +44,11 @@ public:
         // Default-implemented
     }
 
+    virtual void OnSawToggled(bool /*isSawing*/)
+    {
+        // Default-implemented
+    }
+
     virtual void OnDraw()
     {
         // Default-implemented

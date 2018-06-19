@@ -33,6 +33,12 @@ ToolController::ToolController(
             resourceLoader));
 
     mAllTools.emplace_back(
+        std::make_unique<SawTool>(
+            parentFrame,
+            gameController,
+            resourceLoader));
+
+    mAllTools.emplace_back(
         std::make_unique<GrabTool>(
             parentFrame,
             gameController,

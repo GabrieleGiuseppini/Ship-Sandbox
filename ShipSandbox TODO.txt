@@ -124,36 +124,42 @@ Prev perf (before point et al destructuring)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
-	+ Swirl tool
-		+ Force applied is r * AngularForce; AngularForce==m*AngularAcceleration
-			+ CW; if Shift -> CCW
-		+ Cursors
-		+ Need own sound - replicate Draw infrastructure and use different drill
-	+ Fix power bar room at all cursors
-		+ Try: MakeCursors: make non-transparent pixels green or red, multiplying
+
 	- Saw
 		- Spec:
 			- Deletes springs (and affected triangles) that cross the *path* of the tool
 			- Continuous sound, overwater and underwater, depending on where x,y is
+
 		- Impl:
-			- Media:
-				- Cursor up and down
-				- Sound
-			- Tool:
-				- L-Down: 
-					- prevMousePos = mouse X, Y
-					- Fire event (for sound)
-				- L-Up: 
-					- Reset prevMousePos
-					- Fire event (for sound)
-				- Move: if l-down:
-					- if has prevMousePos:
-						- GameController->Saw(prevMousePos, current)
-					- prevMousePos = current
+			+ Media:
+				+ Cursor up and down
+				= Sound
+			+ Events:
+				+ Need boolean true/false for sawing
+			+ Tool:
+				+ L-Down: 
+					+ prevMousePos = mouse X, Y
+					+ Fire event (asking GameController for game event handler)
+					+ Set new cursor
+				+ L-Up: 
+					+ Reset prevMousePos
+					+ Fire event (asking GameController for game event handler)
+					+ Set new cursor
+				+ Move: if l-down:
+					+ if has prevMousePos:
+						+ GameController->Saw(prevMousePos, current)
+					+ prevMousePos = current
 			- Ship:
 				- Make sure Spring::Destroy only deletes triangles that share one edge with the spring;
 				  if not, make overload
-			- SoundController: new continuous sound
+				- Use Geometry::TODO
+
+			+ SoundController: new continuous sound
+
+		- Rethink notification of Draw and Swirl events
+			- Remove from GameController, fire at tool via "Toggled(bool)" events
+			- Remove magic from SoundController
+
 	- Ultra-violent flag: very strong Draw and Swirl forces
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
@@ -1504,6 +1510,13 @@ IF WX:
 					+ N1 normal, N2 underwater
 				+ Bomb removed sounds
 					+ N1 normal, N2 underwater
+	+ Swirl tool
+		+ Force applied is r * AngularForce; AngularForce==m*AngularAcceleration
+			+ CW; if Shift -> CCW
+		+ Cursors
+		+ Need own sound - replicate Draw infrastructure and use different drill
+	+ Fix power bar room at all cursors
+		+ Try: MakeCursors: make non-transparent pixels green or red, multiplying
 
 + Debug light/drag issue
 	+ Could be due to distance too close and shooting light to sky

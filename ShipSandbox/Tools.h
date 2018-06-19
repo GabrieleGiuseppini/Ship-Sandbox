@@ -13,6 +13,7 @@
 
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <vector>
 
 std::vector<std::unique_ptr<wxCursor>> MakeCursors(
@@ -30,11 +31,12 @@ std::unique_ptr<wxCursor> MakeCursor(
 enum class ToolType
 {
     Smash = 0,
-    Grab = 1,
-    Swirl = 2,
-    Pin = 3,
-    TimerBomb = 4,
-    RCBomb = 5
+    Saw = 1,
+    Grab = 2,
+    Swirl = 3,
+    Pin = 4,
+    TimerBomb = 5,
+    RCBomb = 6
 };
 
 struct InputState
@@ -295,6 +297,126 @@ private:
     // The force-modulated down cursors;
     // cursor 0 is base; cursor 1 up to size-1 are strength-based
     std::vector<std::unique_ptr<wxCursor>> const mDownCursors;
+};
+
+class SawTool final : public Tool
+{
+public:
+
+    SawTool(
+        wxFrame * parentFrame,
+        std::shared_ptr<GameController> gameController,
+        ResourceLoader & resourceLoader);
+
+public:
+
+    virtual void Initialize(InputState const & inputState) override
+    {
+        if (inputState.IsLeftMouseDown)
+        {
+            // Initialize state
+            mPreviousMousePos = vec2f(inputState.MouseX, inputState.MouseY);
+
+            // Set current cursor to the current down cursor
+            mCurrentCursor = (mDownCursorCounter % 2) ? mDownCursor2.get() : mDownCursor1.get();
+            ShowCurrentCursor();
+        }
+        else
+        {
+            // Reset state
+            mPreviousMousePos = std::nullopt;
+
+            // Set current cursor to the up cursor
+            mCurrentCursor = mUpCursor.get();
+            ShowCurrentCursor();
+        }
+    }
+
+    virtual void Update(InputState const & inputState) override
+    {
+        if (inputState.IsLeftMouseDown)
+        {
+            // Update down cursor
+            ++mDownCursorCounter;
+            mCurrentCursor = (mDownCursorCounter % 2) ? mDownCursor2.get() : mDownCursor1.get();
+            ShowCurrentCursor();
+        }
+    }
+
+    virtual void OnMouseMove(InputState const & inputState) override
+    {
+        if (inputState.IsLeftMouseDown)
+        {
+            vec2f currentMousePos = vec2f(inputState.MouseX, inputState.MouseY);
+
+            if (!!mPreviousMousePos)
+            {
+                mGameController->SawThrough(
+                    *mPreviousMousePos,
+                    currentMousePos);
+            }
+
+            // Remember the next previous mouse position
+            mPreviousMousePos = currentMousePos;
+        }
+    }
+
+    virtual void OnLeftMouseDown(InputState const & inputState) override
+    {
+        // Initialize state
+        mPreviousMousePos = vec2f(inputState.MouseX, inputState.MouseY);
+
+        // Notify
+        mGameController->GetGameEventHandler()->OnSawToggled(true);
+
+        // Set current cursor to the current down cursor
+        mCurrentCursor = (mDownCursorCounter % 2) ? mDownCursor2.get() : mDownCursor1.get();
+        ShowCurrentCursor();
+    }
+
+    virtual void OnLeftMouseUp(InputState const & /*inputState*/) override
+    {
+        // Reset state
+        mPreviousMousePos = std::nullopt;
+
+        // Notify
+        mGameController->GetGameEventHandler()->OnSawToggled(false);
+
+        // Set current cursor to the up cursor
+        mCurrentCursor = mUpCursor.get();
+        ShowCurrentCursor();
+    }
+
+    virtual void OnShiftKeyDown(InputState const & /*inputState*/) override {}
+    virtual void OnShiftKeyUp(InputState const & /*inputState*/) override {}
+
+    virtual void ShowCurrentCursor() override
+    {
+        assert(nullptr != mParentFrame);
+        assert(nullptr != mCurrentCursor);
+
+        mParentFrame->SetCursor(*mCurrentCursor);
+    }
+
+private:
+
+    // Our cursors
+    std::unique_ptr<wxCursor> const mUpCursor;
+    std::unique_ptr<wxCursor> const mDownCursor1;
+    std::unique_ptr<wxCursor> const mDownCursor2;
+
+    // The currently-selected cursor that will be shown
+    wxCursor * mCurrentCursor;
+
+    //
+    // State
+    //
+
+    // The previous mouse position; when set, we have a segment and can saw
+    std::optional<vec2f> mPreviousMousePos;
+
+    // The current counter for the down cursors
+    uint8_t mDownCursorCounter;
 };
 
 class GrabTool final : public ContinuousTool

@@ -105,6 +105,23 @@ void Ship::DestroyAt(
     }
 }
 
+void Ship::SawThrough(
+    vec2 const & startPos,
+    vec2 const & endPos)
+{
+    //
+    // Find all springs that intersect the saw segment
+    //
+
+    for (auto springIndex : mSprings)
+    {
+        if (!mSprings.IsDeleted(springIndex))
+        {
+            // TODO
+        }
+    }
+}
+
 void Ship::DrawTo(
     vec2f const & targetPos,
     float strength)

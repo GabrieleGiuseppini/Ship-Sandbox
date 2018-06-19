@@ -18,8 +18,6 @@ public:
 
     GameEventDispatcher()
         : mDestroyEvents()
-        , mDrawEvent(false)
-        , mSwirlEvent(false)
         , mPinToggledEvents()
         , mStressEvents()
         , mBreakEvents()
@@ -61,14 +59,31 @@ public:
         mDestroyEvents[std::make_tuple(material, isUnderwater)] += size;
     }
 
+    virtual void OnSawToggled(bool isSawing) override
+    {
+        // No need to aggregate this one
+        for (auto sink : mSinks)
+        {
+            sink->OnSawToggled(isSawing);
+        }
+    }
+
     virtual void OnDraw() override
     {
-        mDrawEvent = true;
+        // No need to aggregate this one
+        for (auto sink : mSinks)
+        {
+            sink->OnDraw();
+        }
     }
 
     virtual void OnSwirl() override
     {
-        mSwirlEvent = true;
+        // No need to aggregate this one
+        for (auto sink : mSinks)
+        {
+            sink->OnSwirl();
+        }
     }
 
     virtual void OnPinToggled(
@@ -209,16 +224,6 @@ public:
                 sink->OnDestroy(std::get<0>(entry.first), std::get<1>(entry.first), entry.second);
             }
 
-            if (mDrawEvent)
-            {
-                sink->OnDraw();
-            }
-
-            if (mSwirlEvent)
-            {
-                sink->OnSwirl();
-            }
-
             for (auto const & entry : mPinToggledEvents)
             {
                 sink->OnPinToggled(std::get<0>(entry), std::get<1>(entry));
@@ -257,8 +262,6 @@ public:
 
         // Clear collections
         mDestroyEvents.clear();
-        mDrawEvent = false;
-        mSwirlEvent = false;
         mPinToggledEvents.clear();
         mStressEvents.clear();
         mBreakEvents.clear();
@@ -277,8 +280,6 @@ private:
 
     // The current events being aggregated
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mDestroyEvents;
-    bool mDrawEvent;
-    bool mSwirlEvent;
     unordered_tuple_set<std::tuple<bool, bool>> mPinToggledEvents;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mStressEvents;
     unordered_tuple_map<std::tuple<Material const *, bool>, unsigned int> mBreakEvents;

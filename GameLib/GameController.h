@@ -15,6 +15,7 @@
 #include "ResourceLoader.h"
 #include "Vectors.h"
 
+#include <cassert>
 #include <chrono>
 #include <filesystem>
 #include <memory>
@@ -32,6 +33,12 @@ public:
         std::shared_ptr<ResourceLoader> resourceLoader,
         ProgressCallback const & progressCallback);
 
+    std::shared_ptr<IGameEventHandler> GetGameEventHandler()
+    {
+        assert(!!mGameEventDispatcher);
+        return mGameEventDispatcher;
+    }
+
     void RegisterGameEventHandler(IGameEventHandler * gameEventHandler);
 
     void ResetAndLoadShip(std::filesystem::path const & filepath);
@@ -47,6 +54,7 @@ public:
     //
 
     void DestroyAt(vec2f const & screenCoordinates, float radiusMultiplier);
+    void SawThrough(vec2 const & startScreenCoordinates, vec2 const & endScreenCoordinates);
     void DrawTo(vec2f const & screenCoordinates, float strengthMultiplier);
     void SwirlAt(vec2f const & screenCoordinates, float strengthMultiplier);
     void TogglePinAt(vec2f const & screenCoordinates);

@@ -77,6 +77,18 @@ void World::DestroyAt(
     }
 }
 
+void World::SawThrough(
+    vec2 const & startPos,
+    vec2 const & endPos)
+{
+    for (auto & ship : mAllShips)
+    {
+        ship->SawThrough(
+            startPos,
+            endPos);
+    }
+}
+
 void World::DrawTo(
     vec2f const & targetPos,
     float strength)

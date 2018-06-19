@@ -59,6 +59,10 @@ public:
         vec2 const & targetPos,
         float radius);
 
+    void SawThrough(
+        vec2 const & startPos,
+        vec2 const & endPos);
+
     void DrawTo(
         vec2 const & targetPos,
         float strength);

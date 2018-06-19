@@ -159,6 +159,18 @@ void GameController::DestroyAt(
     mGameEventDispatcher->Flush();
 }
 
+void GameController::SawThrough(
+    vec2 const & startScreenCoordinates,
+    vec2 const & endScreenCoordinates)
+{
+    vec2f startWorldCoordinates = mRenderContext->ScreenToWorld(startScreenCoordinates);
+    vec2f endWorldCoordinates = mRenderContext->ScreenToWorld(endScreenCoordinates);
+
+    // Apply action
+    assert(!!mWorld);
+    mWorld->SawThrough(startWorldCoordinates, endWorldCoordinates);
+}
+
 void GameController::DrawTo(
     vec2 const & screenCoordinates,
     float strengthMultiplier)

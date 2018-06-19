@@ -186,6 +186,27 @@ void SmashTool::ApplyTool(
 }
 
 ////////////////////////////////////////////////////////////////////////
+// Saw
+////////////////////////////////////////////////////////////////////////
+
+SawTool::SawTool(
+    wxFrame * parentFrame,
+    std::shared_ptr<GameController> gameController,
+    ResourceLoader & resourceLoader)
+    : Tool(
+        ToolType::Saw,
+        parentFrame,
+        std::move(gameController))
+    , mUpCursor(MakeCursor("chainsaw_cursor_up", 8, 20, resourceLoader))
+    , mDownCursor1(MakeCursor("chainsaw_cursor_down_1", 8, 20, resourceLoader))
+    , mDownCursor2(MakeCursor("chainsaw_cursor_down_2", 8, 20, resourceLoader))
+    , mCurrentCursor(nullptr)
+    , mPreviousMousePos()
+    , mDownCursorCounter(0)
+{
+}
+
+////////////////////////////////////////////////////////////////////////
 // Grab
 ////////////////////////////////////////////////////////////////////////
 
@@ -227,7 +248,7 @@ void GrabTool::ApplyTool(
 
     // Draw
     mGameController->DrawTo(
-        vec2f(inputState.MouseX, inputState.MouseY), 
+        vec2f(inputState.MouseX, inputState.MouseY),
         inputState.IsShiftKeyDown
             ? -strengthMultiplier
             : strengthMultiplier);

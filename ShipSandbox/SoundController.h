@@ -112,6 +112,7 @@ private:
         PinPoint,
         UnpinPoint,
         Draw,
+        Swirl,
         Stress,
         BombAttached,
         BombDetached,
@@ -132,6 +133,8 @@ private:
             return SoundType::Destroy;
         else if (lstr == "draw")
             return SoundType::Draw;
+        else if (lstr == "swirl")
+            return SoundType::Swirl;
         else if (lstr == "pinpoint")
             return SoundType::PinPoint;
         else if (lstr == "unpinpoint")
@@ -340,8 +343,9 @@ private:
     // State
     //
 
-    // True while we're applying the Draw tool
+    // True while we're applying a continuous tool
     bool mIsInDraw;
+    bool mIsInSwirl;
 
     // Tracking which bombs are emitting which fuse sounds
     std::set<ObjectId> mBombsEmittingSlowFuseSounds;
@@ -370,6 +374,7 @@ private:
     //
 
     SingleContinuousSound mDrawSound;
+    SingleContinuousSound mSwirlSound;
     SingleContinuousSound mTimerBombSlowFuseSound;
     SingleContinuousSound mTimerBombFastFuseSound;
 

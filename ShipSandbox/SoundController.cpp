@@ -21,6 +21,7 @@ SoundController::SoundController(
     , mCurrentVolume(100.0f)
     // State
     , mIsInDraw(false)
+    , mIsInSwirl(false)
     , mBombsEmittingSlowFuseSounds()
     , mBombsEmittingFastFuseSounds()
     // One-shot sounds
@@ -29,6 +30,7 @@ SoundController::SoundController(
     , mCurrentlyPlayingSounds()
     // Continuous sounds
     , mDrawSound()
+    , mSwirlSound()
     , mTimerBombSlowFuseSound()
     , mTimerBombFastFuseSound()
     // Music
@@ -88,6 +90,10 @@ SoundController::SoundController(
         if (soundType == SoundType::Draw)
         {
             mDrawSound.Initialize(std::move(soundBuffer));
+        }
+        else if (soundType == SoundType::Swirl)
+        {
+            mSwirlSound.Initialize(std::move(soundBuffer));
         }
         else if (soundType == SoundType::TimerBombSlowFuse)
         {
@@ -197,7 +203,7 @@ void SoundController::SetPaused(bool isPaused)
         }
     }
 
-    // We don't pause the draw sound
+    // We don't pause the continuous tool sounds
 
     mTimerBombSlowFuseSound.SetPaused(isPaused);
     mTimerBombFastFuseSound.SetPaused(isPaused);
@@ -238,9 +244,21 @@ void SoundController::HighFrequencyUpdate()
     else
     {
         // Reset the flag now...
-        // ...if we're doing a Draw or a Swirl, we'll find the flag up next time
+        // ...if we're doing a Draw, we'll find the flag up next time
         mIsInDraw = false;
     }
+
+    if (!mIsInSwirl)
+    {
+        mSwirlSound.Stop();
+    }
+    else
+    {
+        // Reset the flag now...
+        // ...if we're doing a Swirl, we'll find the flag up next time
+        mIsInSwirl = false;
+    }
+
 }
 
 void SoundController::LowFrequencyUpdate()
@@ -270,6 +288,7 @@ void SoundController::Reset()
     mCurrentlyPlayingSounds.clear();
 
     mDrawSound.Stop();
+    mSwirlSound.Stop();
     mTimerBombSlowFuseSound.Stop();
     mTimerBombFastFuseSound.Stop();
 
@@ -284,6 +303,7 @@ void SoundController::Reset()
     //
 
     mIsInDraw = false;
+    mIsInSwirl = false;
     mBombsEmittingSlowFuseSounds.clear();
     mBombsEmittingFastFuseSounds.clear();
 }
@@ -314,9 +334,9 @@ void SoundController::OnDraw()
 
 void SoundController::OnSwirl()
 {
-    mIsInDraw = true;
+    mIsInSwirl = true;
 
-    mDrawSound.Start();
+    mSwirlSound.Start();
 }
 
 void SoundController::OnPinToggled(

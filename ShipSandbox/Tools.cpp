@@ -13,7 +13,6 @@
 #include <cassert>
 
 static constexpr int CursorStep = 30;
-static constexpr int PowerBarThickness = 2;
 
 std::vector<std::unique_ptr<wxCursor>> MakeCursors(
     std::string const & cursorName,
@@ -36,21 +35,23 @@ std::vector<std::unique_ptr<wxCursor>> MakeCursors(
     img.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_X, hotspotX);
     img.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_Y, hotspotY);
 
+    //
+    // Build series of cursors for each power step: 0 (base), 1-CursorStep
+    //
+
     std::vector<std::unique_ptr<wxCursor>> cursors;
 
     // Create base
     cursors.emplace_back(std::make_unique<wxCursor>(img));
 
-    // Create cursors for all the strengths we want to have on the power base
+    // Create power steps
+
     static_assert(CursorStep > 0, "CursorStep is at least 1");
-    static_assert(PowerBarThickness > 0, "PowerBarThickness is at least 1");
 
     unsigned char * data = img.GetData();
-    unsigned char * alpha = img.GetAlpha();
 
     for (int c = 1; c <= CursorStep; ++c)
     {
-        // Draw vertical line on the right, height = f(c),  0 < height <= imageHeight
         int powerHeight = static_cast<int>(floorf(
             static_cast<float>(imageHeight) * static_cast<float>(c) / static_cast<float>(CursorStep)
         ));
@@ -58,17 +59,20 @@ std::vector<std::unique_ptr<wxCursor>> MakeCursors(
         // Start from top
         for (int y = imageHeight - powerHeight; y < imageHeight; ++y)
         {
-            int index = imageWidth - PowerBarThickness - 1 + (imageWidth * y);
+            int rowStartIndex = (imageWidth * y);
 
-            // Thickness
-            for (int t = 0; t < PowerBarThickness; ++t, ++index)
+            // Red   = 0xDB0F0F
+            // Green = 0x039B0A (final)
+            
+            float const targetR = ((c == CursorStep) ? 0x03 : 0xDB) / 255.0f;
+            float const targetG = ((c == CursorStep) ? 0x9B : 0x0F) / 255.0f;
+            float const targetB = ((c == CursorStep) ? 0x0A : 0x0F) / 255.0f;
+
+            for (int x = 0; x < imageWidth; ++x)
             {
-                // Red:   ff3300
-                // Green: 00ff00
-                alpha[index] = 0xff;
-                data[index * 3] = (c == CursorStep) ? 0x00 : 0xFF;
-                data[index * 3 + 1] = (c == CursorStep) ? 0xFF : 0x33;
-                data[index * 3 + 2] = (c == CursorStep) ? 0x00 : 0x00;
+                data[(rowStartIndex + x) * 3] = static_cast<unsigned char>(targetR * 255.0f);
+                data[(rowStartIndex + x) * 3 + 1] = static_cast<unsigned char>(targetG * 255.0f);
+                data[(rowStartIndex + x) * 3 + 2] = static_cast<unsigned char>(targetB * 255.0f);
             }
         }
 

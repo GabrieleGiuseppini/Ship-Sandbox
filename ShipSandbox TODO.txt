@@ -124,13 +124,13 @@ Prev perf (before point et al destructuring)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
-	= Swirl tool
+	+ Swirl tool
 		+ Force applied is r * AngularForce; AngularForce==m*AngularAcceleration
 			+ CW; if Shift -> CCW
 		+ Cursors
-		- Need own sound - replicate Draw infrastructure and use different drill
-	- Fix power bar room at all cursors
-		- Try: MakeCursors: make non-transparent pixels green or red, multiplying
+		+ Need own sound - replicate Draw infrastructure and use different drill
+	+ Fix power bar room at all cursors
+		+ Try: MakeCursors: make non-transparent pixels green or red, multiplying
 	- Saw
 		- Spec:
 			- Deletes springs (and affected triangles) that cross the *path* of the tool

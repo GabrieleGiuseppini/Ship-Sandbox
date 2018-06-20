@@ -35,9 +35,11 @@ public:
         bool isUnderwater,
         unsigned int size) override;
 
-    virtual void OnDraw() override;
+    virtual void OnSaw(std::optional<bool> /*isUnderwater*/) override;
 
-    virtual void OnSwirl() override;
+    virtual void OnDraw(std::optional<bool> /*isUnderwater*/) override;
+
+    virtual void OnSwirl(std::optional<bool> /*isUnderwater*/) override;
 
     virtual void OnStress(
         Material const * material,

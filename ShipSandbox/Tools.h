@@ -44,19 +44,15 @@ struct InputState
     bool IsLeftMouseDown;
     bool IsRightMouseDown;
     bool IsShiftKeyDown;
-    int MouseX;
-    int MouseY;
-    int PreviousMouseX;
-    int PreviousMouseY;
+    vec2f MousePosition;
+    vec2f PreviousMousePosition;
 
     InputState()
         : IsLeftMouseDown(false)
         , IsRightMouseDown(false)
         , IsShiftKeyDown(false)
-        , MouseX(0)
-        , MouseY(0)
-        , PreviousMouseX(0)
-        , PreviousMouseY(0)
+        , MousePosition()
+        , PreviousMousePosition()
     {
     }
 };
@@ -160,8 +156,7 @@ public:
     virtual void OnLeftMouseDown(InputState const & inputState) override
     {
         // Initialize the continuous tool state
-        mPreviousMouseX = inputState.MouseX;
-        mPreviousMouseY = inputState.MouseY;
+        mPreviousMousePosition = inputState.MousePosition;
         mPreviousTimestamp = std::chrono::steady_clock::now();
         mCumulatedTime = std::chrono::microseconds(0);
     }
@@ -188,8 +183,7 @@ protected:
             parentFrame,
             std::move(gameController))
         , mCurrentCursor(nullptr)
-        , mPreviousMouseX(-1)
-        , mPreviousMouseY(-1)
+        , mPreviousMousePosition()
         , mPreviousTimestamp(std::chrono::steady_clock::now())
         , mCumulatedTime(0)
     {}
@@ -229,8 +223,7 @@ private:
     //
 
     // Previous mouse position and time when we looked at it
-    int mPreviousMouseX;
-    int mPreviousMouseY;
+    vec2f mPreviousMousePosition;
     std::chrono::steady_clock::time_point mPreviousTimestamp;
 
     // The total accumulated press time - the proxy for the strength of the tool
@@ -315,11 +308,11 @@ public:
         if (inputState.IsLeftMouseDown)
         {
             // Initialize state
-            mPreviousMousePos = vec2f(inputState.MouseX, inputState.MouseY);
+            mPreviousMousePos = inputState.MousePosition;
+            mIsUnderwater = mGameController->IsUnderwater(inputState.MousePosition);
 
             // Set current cursor to the current down cursor
             mCurrentCursor = (mDownCursorCounter % 2) ? mDownCursor2.get() : mDownCursor1.get();
-            ShowCurrentCursor();
         }
         else
         {
@@ -328,14 +321,24 @@ public:
 
             // Set current cursor to the up cursor
             mCurrentCursor = mUpCursor.get();
-            ShowCurrentCursor();
-        }
+        }        
     }
 
     virtual void Update(InputState const & inputState) override
     {
         if (inputState.IsLeftMouseDown)
         {
+            // Update underwater-ness
+            bool isUnderwater = mGameController->IsUnderwater(inputState.MousePosition);
+            if (isUnderwater != mIsUnderwater)
+            {
+                // Notify
+                mGameController->GetGameEventHandler()->OnSaw(isUnderwater);
+
+                // Update state
+                mIsUnderwater = isUnderwater;
+            }
+
             // Update down cursor
             ++mDownCursorCounter;
             mCurrentCursor = (mDownCursorCounter % 2) ? mDownCursor2.get() : mDownCursor1.get();
@@ -347,27 +350,26 @@ public:
     {
         if (inputState.IsLeftMouseDown)
         {
-            vec2f currentMousePos = vec2f(inputState.MouseX, inputState.MouseY);
-
             if (!!mPreviousMousePos)
             {
                 mGameController->SawThrough(
                     *mPreviousMousePos,
-                    currentMousePos);
+                    inputState.MousePosition);
             }
 
             // Remember the next previous mouse position
-            mPreviousMousePos = currentMousePos;
+            mPreviousMousePos = inputState.MousePosition;
         }
     }
 
     virtual void OnLeftMouseDown(InputState const & inputState) override
     {
         // Initialize state
-        mPreviousMousePos = vec2f(inputState.MouseX, inputState.MouseY);
+        mPreviousMousePos = inputState.MousePosition;
+        mIsUnderwater = mGameController->IsUnderwater(inputState.MousePosition);
 
         // Notify
-        mGameController->GetGameEventHandler()->OnSawToggled(true);
+        mGameController->GetGameEventHandler()->OnSaw(mGameController->IsUnderwater(inputState.MousePosition));
 
         // Set current cursor to the current down cursor
         mCurrentCursor = (mDownCursorCounter % 2) ? mDownCursor2.get() : mDownCursor1.get();
@@ -380,7 +382,7 @@ public:
         mPreviousMousePos = std::nullopt;
 
         // Notify
-        mGameController->GetGameEventHandler()->OnSawToggled(false);
+        mGameController->GetGameEventHandler()->OnSaw(std::nullopt);
 
         // Set current cursor to the up cursor
         mCurrentCursor = mUpCursor.get();
@@ -417,6 +419,9 @@ private:
 
     // The current counter for the down cursors
     uint8_t mDownCursorCounter;
+
+    // The current above/underwaterness of the tool
+    bool mIsUnderwater;
 };
 
 class GrabTool final : public ContinuousTool
@@ -439,12 +444,20 @@ public:
     {
         ContinuousTool::OnLeftMouseDown(inputState);
 
+        // Notify
+        mGameController->GetGameEventHandler()->OnDraw(mGameController->IsUnderwater(inputState.MousePosition));
+
+        // Change cursor
         SetBasisCursor(inputState);
         ShowCurrentCursor();
     }
 
     virtual void OnLeftMouseUp(InputState const & inputState) override
     {
+        // Notify
+        mGameController->GetGameEventHandler()->OnDraw(std::nullopt);
+
+        // Change cursor
         SetBasisCursor(inputState);
         ShowCurrentCursor();
     }
@@ -529,12 +542,20 @@ public:
     {
         ContinuousTool::OnLeftMouseDown(inputState);
 
+        // Notify
+        mGameController->GetGameEventHandler()->OnSwirl(mGameController->IsUnderwater(inputState.MousePosition));
+
+        // Change cursor
         SetBasisCursor(inputState);
         ShowCurrentCursor();
     }
 
     virtual void OnLeftMouseUp(InputState const & inputState) override
     {
+        // Notify
+        mGameController->GetGameEventHandler()->OnSwirl(std::nullopt);
+
+        // Change cursor
         SetBasisCursor(inputState);
         ShowCurrentCursor();
     }
@@ -620,7 +641,7 @@ public:
     virtual void OnLeftMouseDown(InputState const & inputState) override
     {
         // Toggle pin
-        mGameController->TogglePinAt(vec2f(inputState.MouseX, inputState.MouseY));
+        mGameController->TogglePinAt(inputState.MousePosition);
     }
 
     virtual void OnLeftMouseUp(InputState const & /*inputState*/) override {}
@@ -651,7 +672,7 @@ public:
     virtual void OnLeftMouseDown(InputState const & inputState) override
     {
         // Toggle bomb
-        mGameController->ToggleTimerBombAt(vec2f(inputState.MouseX, inputState.MouseY));
+        mGameController->ToggleTimerBombAt(inputState.MousePosition);
     }
 
     virtual void OnLeftMouseUp(InputState const & /*inputState*/) override {}
@@ -682,7 +703,7 @@ public:
     virtual void OnLeftMouseDown(InputState const & inputState) override
     {
         // Toggle bomb
-        mGameController->ToggleRCBombAt(vec2f(inputState.MouseX, inputState.MouseY));
+        mGameController->ToggleRCBombAt(inputState.MousePosition);
     }
 
     virtual void OnLeftMouseUp(InputState const & /*inputState*/) override {}

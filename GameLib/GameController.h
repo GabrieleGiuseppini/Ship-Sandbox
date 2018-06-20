@@ -175,6 +175,11 @@ public:
         return mRenderContext->ScreenToWorld(screenCoordinates);
     }
 
+    inline bool IsUnderwater(vec2f const & screenCoordinates) const
+    {
+        return mWorld->IsUnderwater(ScreenToWorld(screenCoordinates));
+    }
+
 private:
 
     GameController(

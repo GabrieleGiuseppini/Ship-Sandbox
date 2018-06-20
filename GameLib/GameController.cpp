@@ -154,9 +154,6 @@ void GameController::DestroyAt(
     mWorld->DestroyAt(
 		worldCoordinates,
 		mGameParameters.DestroyRadius * radiusMultiplier);
-
-    // Flush events
-    mGameEventDispatcher->Flush();
 }
 
 void GameController::SawThrough(
@@ -180,12 +177,6 @@ void GameController::DrawTo(
 	// Apply action
 	assert(!!mWorld);
     mWorld->DrawTo(worldCoordinates, 50000.0f * strengthMultiplier);
-
-    // Notify
-    mGameEventDispatcher->OnDraw();
-
-    // Flush events
-    mGameEventDispatcher->Flush();
 }
 
 void GameController::SwirlAt(
@@ -197,12 +188,6 @@ void GameController::SwirlAt(
     // Apply action
     assert(!!mWorld);
     mWorld->SwirlAt(worldCoordinates, 1000.0f * strengthMultiplier);
-
-    // Notify
-    mGameEventDispatcher->OnSwirl();
-
-    // Flush events
-    mGameEventDispatcher->Flush();
 }
 
 void GameController::TogglePinAt(vec2 const & screenCoordinates)
@@ -215,8 +200,9 @@ void GameController::TogglePinAt(vec2 const & screenCoordinates)
         worldCoordinates,
         mGameParameters);
 
-    // Flush events
-    mGameEventDispatcher->Flush();
+    // TODOTEST: flush
+    ////// Flush events
+    ////mGameEventDispatcher->Flush();
 }
 
 void GameController::ToggleTimerBombAt(vec2f const & screenCoordinates)
@@ -228,9 +214,6 @@ void GameController::ToggleTimerBombAt(vec2f const & screenCoordinates)
     mWorld->ToggleTimerBombAt(
         worldCoordinates,
         mGameParameters);
-
-    // Flush events
-    mGameEventDispatcher->Flush();
 }
 
 void GameController::ToggleRCBombAt(vec2f const & screenCoordinates)
@@ -242,9 +225,6 @@ void GameController::ToggleRCBombAt(vec2f const & screenCoordinates)
     mWorld->ToggleRCBombAt(
         worldCoordinates,
         mGameParameters);
-
-    // Flush events
-    mGameEventDispatcher->Flush();
 }
 
 void GameController::DetonateRCBombs()
@@ -252,9 +232,6 @@ void GameController::DetonateRCBombs()
     // Apply action
     assert(!!mWorld);
     mWorld->DetonateRCBombs();
-
-    // Flush events
-    mGameEventDispatcher->Flush();
 }
 
 ElementIndex GameController::GetNearestPointAt(vec2 const & screenCoordinates) const

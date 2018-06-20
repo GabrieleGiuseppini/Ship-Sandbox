@@ -59,30 +59,30 @@ public:
         mDestroyEvents[std::make_tuple(material, isUnderwater)] += size;
     }
 
-    virtual void OnSawToggled(bool isSawing) override
+    virtual void OnSaw(std::optional<bool> isUnderwater) override
     {
         // No need to aggregate this one
         for (auto sink : mSinks)
         {
-            sink->OnSawToggled(isSawing);
+            sink->OnSaw(isUnderwater);
         }
     }
 
-    virtual void OnDraw() override
+    virtual void OnDraw(std::optional<bool> isUnderwater) override
     {
         // No need to aggregate this one
         for (auto sink : mSinks)
         {
-            sink->OnDraw();
+            sink->OnDraw(isUnderwater);
         }
     }
 
-    virtual void OnSwirl() override
+    virtual void OnSwirl(std::optional<bool> isUnderwater) override
     {
         // No need to aggregate this one
         for (auto sink : mSinks)
         {
-            sink->OnSwirl();
+            sink->OnSwirl(isUnderwater);
         }
     }
 
@@ -165,40 +165,16 @@ public:
         mRCBombPingEvents[std::make_tuple(isUnderwater)] += size;
     }
 
-    virtual void OnTimerBombSlowFuseStart(
+    virtual void OnTimerBombFuse(
         ObjectId bombId,
-        bool isUnderwater)
+        std::optional<bool> isFast)
     {
         // No need to aggregate this one
         for (auto sink : mSinks)
         {
-            sink->OnTimerBombSlowFuseStart(
+            sink->OnTimerBombFuse(
                 bombId,
-                isUnderwater);
-        }
-    }
-
-    virtual void OnTimerBombFastFuseStart(
-        ObjectId bombId,
-        bool isUnderwater)
-    {
-        // No need to aggregate this one
-        for (auto sink : mSinks)
-        {
-            sink->OnTimerBombFastFuseStart(
-                bombId,
-                isUnderwater);
-        }
-    }
-
-    virtual void OnTimerBombFuseStop(
-        ObjectId bombId)
-    {
-        // No need to aggregate this one
-        for (auto sink : mSinks)
-        {
-            sink->OnTimerBombFuseStop(
-                bombId);
+                isFast);
         }
     }
 

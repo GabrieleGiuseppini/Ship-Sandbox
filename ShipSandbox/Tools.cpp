@@ -122,8 +122,7 @@ void ContinuousTool::Update(InputState const & inputState)
         auto now = std::chrono::steady_clock::now();
 
         // Accumulate total time iff we haven't moved since last time
-        if (mPreviousMouseX == inputState.MouseX
-            && mPreviousMouseY == inputState.MouseY)
+        if (mPreviousMousePosition == inputState.MousePosition)
         {
             mCumulatedTime += std::chrono::duration_cast<std::chrono::microseconds>(now - mPreviousTimestamp);
         }
@@ -134,8 +133,7 @@ void ContinuousTool::Update(InputState const & inputState)
         }
 
         // Remember new position and timestamp
-        mPreviousMouseX = inputState.MouseX;
-        mPreviousMouseY = inputState.MouseY;
+        mPreviousMousePosition = inputState.MousePosition;
         mPreviousTimestamp = now;
 
         // Apply current tool
@@ -181,7 +179,7 @@ void SmashTool::ApplyTool(
 
     // Destroy
     mGameController->DestroyAt(
-        vec2f(inputState.MouseX, inputState.MouseY), 
+        inputState.MousePosition, 
         radiusMultiplier);
 }
 
@@ -203,6 +201,7 @@ SawTool::SawTool(
     , mCurrentCursor(nullptr)
     , mPreviousMousePos()
     , mDownCursorCounter(0)
+    , mIsUnderwater(false)
 {
 }
 
@@ -248,7 +247,7 @@ void GrabTool::ApplyTool(
 
     // Draw
     mGameController->DrawTo(
-        vec2f(inputState.MouseX, inputState.MouseY),
+        inputState.MousePosition,
         inputState.IsShiftKeyDown
             ? -strengthMultiplier
             : strengthMultiplier);
@@ -296,7 +295,7 @@ void SwirlTool::ApplyTool(
 
     // Draw
     mGameController->SwirlAt(
-        vec2f(inputState.MouseX, inputState.MouseY),
+        inputState.MousePosition,
         inputState.IsShiftKeyDown
             ? -strengthMultiplier
             : strengthMultiplier);

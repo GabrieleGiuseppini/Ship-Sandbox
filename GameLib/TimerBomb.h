@@ -41,7 +41,7 @@ public:
         if (State::SlowFuseBurning == mState
             || State::FastFuseBurning == mState)
         {
-            mGameEventHandler->OnTimerBombFuseStop(mId);
+            mGameEventHandler->OnTimerBombFuse(mId, std::nullopt);
         }
 
         // Notify removal

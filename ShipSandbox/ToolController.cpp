@@ -80,10 +80,8 @@ void ToolController::OnMouseMove(
     int y)
 {
     // Update input state
-    mInputState.PreviousMouseX = mInputState.MouseX;
-    mInputState.PreviousMouseY = mInputState.MouseY;
-    mInputState.MouseX = x;
-    mInputState.MouseY = y;
+    mInputState.PreviousMousePosition = mInputState.MousePosition;
+    mInputState.MousePosition = vec2f(x, y);
     
     // Perform action
     if (mInputState.IsRightMouseDown)
@@ -91,7 +89,7 @@ void ToolController::OnMouseMove(
         // Perform our move tool
 
         // Pan (opposite direction)
-        vec2 screenOffset = vec2(mInputState.PreviousMouseX, mInputState.PreviousMouseY) - vec2(mInputState.MouseX, mInputState.MouseY);
+        vec2f screenOffset = mInputState.PreviousMousePosition - mInputState.MousePosition;
         mGameController->PanImmediate(screenOffset);
     }
     else

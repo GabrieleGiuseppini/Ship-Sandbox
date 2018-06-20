@@ -44,17 +44,17 @@ public:
         // Default-implemented
     }
 
-    virtual void OnSawToggled(bool /*isSawing*/)
+    virtual void OnSaw(std::optional<bool> /*isUnderwater*/)
     {
         // Default-implemented
     }
 
-    virtual void OnDraw()
+    virtual void OnDraw(std::optional<bool> /*isUnderwater*/)
     {
         // Default-implemented
     }
 
-    virtual void OnSwirl()
+    virtual void OnSwirl(std::optional<bool> /*isUnderwater*/)
     {
         // Default-implemented
     }
@@ -121,22 +121,9 @@ public:
         // Default-implemented
     }
 
-    virtual void OnTimerBombSlowFuseStart(
+    virtual void OnTimerBombFuse(
         ObjectId /*bombId*/,
-        bool /*isUnderwater*/)
-    {
-        // Default-implemented
-    }
-
-    virtual void OnTimerBombFastFuseStart(
-        ObjectId /*bombId*/,
-        bool /*isUnderwater*/)
-    {
-        // Default-implemented
-    }
-
-    virtual void OnTimerBombFuseStop(
-        ObjectId /*bombId*/)
+        std::optional<bool> /*isFast*/)
     {
         // Default-implemented
     }

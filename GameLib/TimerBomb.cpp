@@ -35,9 +35,9 @@ TimerBomb::TimerBomb(
     , mDetonationLeadInShapeFrameCounter(0)
 {
     // Start slow fuse
-    mGameEventHandler->OnTimerBombSlowFuseStart(
+    mGameEventHandler->OnTimerBombFuse(
         mId,
-        mParentWorld.IsUnderwater(GetPosition()));
+        false);
 }
 
 bool TimerBomb::Update(
@@ -58,7 +58,7 @@ bool TimerBomb::Update(
 
                 mState = State::Defusing;
 
-                mGameEventHandler->OnTimerBombFuseStop(mId);
+                mGameEventHandler->OnTimerBombFuse(mId, std::nullopt);
 
                 mGameEventHandler->OnTimerBombDefused(true, 1);
 
@@ -76,7 +76,7 @@ bool TimerBomb::Update(
 
                     mState = State::DetonationLeadIn;
 
-                    mGameEventHandler->OnTimerBombFuseStop(mId);
+                    mGameEventHandler->OnTimerBombFuse(mId, std::nullopt);
 
                     // Schedule next transition
                     mNextStateTransitionTimePoint = now + DetonationLeadInToExplosionInterval;
@@ -222,10 +222,10 @@ void TimerBomb::OnNeighborhoodDisturbed()
             mDefuseStepCounter = 0;
         }
 
-        // Notify
-        mGameEventHandler->OnTimerBombFastFuseStart(
+        // Notify fast fuse
+        mGameEventHandler->OnTimerBombFuse(
             mId,
-            mParentWorld.IsUnderwater(GetPosition()));
+            true);
 
         // Schedule next transition
         mNextStateTransitionTimePoint = GameWallClock::GetInstance().Now() 

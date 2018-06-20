@@ -126,14 +126,14 @@ Prev perf (before point et al destructuring)
 - Dynamics:
 
 	- Saw
-		- Spec:
+		= Spec:
 			- Deletes springs (and affected triangles) that cross the *path* of the tool
-			- Continuous sound, overwater and underwater, depending on where x,y is
+			+ Continuous sound, overwater and underwater, depending on where x,y is
 
-		- Impl:
+		= Impl:
 			+ Media:
 				+ Cursor up and down
-				= Sound
+				+ Sound
 			+ Events:
 				+ Need boolean true/false for sawing
 			+ Tool:
@@ -152,15 +152,37 @@ Prev perf (before point et al destructuring)
 			- Ship:
 				- Make sure Spring::Destroy only deletes triangles that share one edge with the spring;
 				  if not, make overload
-				- Use Geometry::TODO
+				- Use Geometry::Segment::TestIntersect()
+					- Move also AABB to Geometry
 
 			+ SoundController: new continuous sound
-
-		- Rethink notification of Draw and Swirl events
-			- Remove from GameController, fire at tool via "Toggled(bool)" events
-			- Remove magic from SoundController
+				+ Also underwater
 
 	- Ultra-violent flag: very strong Draw and Swirl forces
+	- Ephemeral Particles:
+		- Carve out room at tail of Points for ephemeral particles
+			- No need to mark as deleted to hide them
+			- Tail managed as circular queue, used when creating new ones - eventually smothering oldest
+			  ones (started more anciently, but not necessarily closest to death as each has own lifetime)
+				- TODO: not really circular queue, dead not last must be reused
+			- Points has new buffers:
+				- EphemeralType (uint8 enum)
+					- None (set at non-ephemeral and at dead ephimerals)
+					- Sparkle
+				- EphemeralLife (float between 0.0 and 1.0)
+				- EphemeralXTODOX: union of structs
+					- SparkleXTODOX:
+						- TODO
+			- Smothering done by Ship (UpdateEphemeralParticles) as:
+				- TODO:
+			- Points methods:
+				- TODO: create/kill, create has first overload that takes all the dynamics params, including Material, and
+				  type-specific params
+		- Rendering:
+			- Points::UploadEphemeralParticles():
+				- (Ship)RenderContext::TODOHERE
+	- Do chainsaw sparkles with Ephemeral Particles
+		- At Ship::Chainsaw
 	- Test:
 		- Self-adjustment of kSpring and kDamp based off paper's formula (H and L bounds)
 		- Debug to see if bounds ever exceeded
@@ -1622,6 +1644,16 @@ IF WX:
 		+ SoundController: uses own sound.isPlaying as state and starts @ event/stops @ update
 			+ Uses two consecutive Update() w/no Draw in-between as stop
 			+ how to loop though?
+	+ Rethink notification of Draw and Swirl events
+		+ Remove from GameController, fire at tool via "Toggled(bool)" events
+		+ Remove magic from SoundController
+		+ Can always modulate sounds at Tool::Update, for example asking GameController::IsUnderwater(screen coords)
+			+ Do at Chainsaw, do underwater sound 
+				+ Change event handler:
+					+ OnSaw(opt<bool> isUnderwater): off, on overwater, on underwater
+		+ Test: get rid of all FlushEvents outside of update
+			+ If OK, remove commented-out code
+
 + Put credits
 	+ Splash: https://www.artstation.com/stukata/profile, contact the guy
 

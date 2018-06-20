@@ -105,14 +105,19 @@ void EventTickerPanel::OnDestroy(
     AppendFutureTickerText(ss.str());
 }
 
-void EventTickerPanel::OnDraw()
+void EventTickerPanel::OnSaw(std::optional<bool> /*isUnderwater*/)
 {
-    AppendFutureTickerText("Draw!");
+    AppendFutureTickerText("Slicing!");
 }
 
-void EventTickerPanel::OnSwirl()
+void EventTickerPanel::OnDraw(std::optional<bool> /*isUnderwater*/)
 {
-    AppendFutureTickerText("Swirl!");
+    AppendFutureTickerText("Drawing!");
+}
+
+void EventTickerPanel::OnSwirl(std::optional<bool> /*isUnderwater*/)
+{
+    AppendFutureTickerText("Swirling!");
 }
 
 void EventTickerPanel::OnStress(

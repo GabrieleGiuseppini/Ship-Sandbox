@@ -51,11 +51,11 @@ public:
         bool isUnderwater,
         unsigned int size) override;
 
-    virtual void OnSawToggled(bool isSawing) override;
+    virtual void OnSaw(std::optional<bool> isUnderwater) override;
 
-    virtual void OnDraw() override;
+    virtual void OnDraw(std::optional<bool> isUnderwater) override;
 
-    virtual void OnSwirl() override;
+    virtual void OnSwirl(std::optional<bool> isUnderwater) override;
 
     virtual void OnPinToggled(
         bool isPinned,
@@ -91,15 +91,9 @@ public:
         bool isUnderwater,
         unsigned int size) override;
 
-    virtual void OnTimerBombSlowFuseStart(
+    virtual void OnTimerBombFuse(
         ObjectId bombId,
-        bool isUnderwater) override;
-
-    virtual void OnTimerBombFastFuseStart(
-        ObjectId bombId,
-        bool isUnderwater) override;
-
-    virtual void OnTimerBombFuseStop(ObjectId bombId) override;
+        std::optional<bool> isFast) override;
 
     virtual void OnTimerBombDefused(
         bool isUnderwater,
@@ -348,10 +342,6 @@ private:
     // State
     //
 
-    // True while we're applying a continuous tool
-    bool mIsInDraw;
-    bool mIsInSwirl;
-
     // Tracking which bombs are emitting which fuse sounds
     std::set<ObjectId> mBombsEmittingSlowFuseSounds;
     std::set<ObjectId> mBombsEmittingFastFuseSounds;
@@ -378,7 +368,8 @@ private:
     // Continuous sounds
     //
 
-    SingleContinuousSound mSawSound;
+    SingleContinuousSound mSawAbovewaterSound;
+    SingleContinuousSound mSawUnderwaterSound;
     SingleContinuousSound mDrawSound;
     SingleContinuousSound mSwirlSound;
     SingleContinuousSound mTimerBombSlowFuseSound;

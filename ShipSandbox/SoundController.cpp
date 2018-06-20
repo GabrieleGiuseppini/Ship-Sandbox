@@ -20,8 +20,6 @@ SoundController::SoundController(
     : mResourceLoader(std::move(resourceLoader))
     , mCurrentVolume(100.0f)
     // State
-    , mIsInDraw(false)
-    , mIsInSwirl(false)
     , mBombsEmittingSlowFuseSounds()
     , mBombsEmittingFastFuseSounds()
     // One-shot sounds
@@ -29,7 +27,8 @@ SoundController::SoundController(
     , mUSoundBuffers()
     , mCurrentlyPlayingSounds()
     // Continuous sounds
-    , mSawSound()
+    , mSawAbovewaterSound()
+    , mSawUnderwaterSound()
     , mDrawSound()
     , mSwirlSound()
     , mTimerBombSlowFuseSound()
@@ -90,7 +89,22 @@ SoundController::SoundController(
         SoundType soundType = StrToSoundType(soundTypeMatch[1].str());
         if (soundType == SoundType::Saw)
         {
-            mSawSound.Initialize(std::move(soundBuffer));
+            std::regex sawRegex(R"(([^_]+)(_underwater)?)");
+            std::smatch uMatch;
+            if (!std::regex_match(soundName, uMatch, sawRegex))
+            {
+                throw GameException("Saw sound filename \"" + soundName + "\" is not recognized");
+            }
+
+            if (uMatch[2].matched)
+            {
+                assert(uMatch[2].str() == "underwater");
+                mSawUnderwaterSound.Initialize(std::move(soundBuffer));
+            }
+            else
+            {
+                mSawAbovewaterSound.Initialize(std::move(soundBuffer));
+            }            
         }
         else if (soundType == SoundType::Draw)
         {
@@ -242,28 +256,6 @@ void SoundController::SetVolume(float volume)
 
 void SoundController::HighFrequencyUpdate()
 {
-    if (!mIsInDraw)
-    {
-        mDrawSound.Stop();
-    }
-    else
-    {
-        // Reset the flag now...
-        // ...if we're doing a Draw, we'll find the flag up next time
-        mIsInDraw = false;
-    }
-
-    if (!mIsInSwirl)
-    {
-        mSwirlSound.Stop();
-    }
-    else
-    {
-        // Reset the flag now...
-        // ...if we're doing a Swirl, we'll find the flag up next time
-        mIsInSwirl = false;
-    }
-
 }
 
 void SoundController::LowFrequencyUpdate()
@@ -292,7 +284,8 @@ void SoundController::Reset()
 
     mCurrentlyPlayingSounds.clear();
 
-    mSawSound.Stop();
+    mSawAbovewaterSound.Stop();
+    mSawUnderwaterSound.Stop();
     mDrawSound.Stop();
     mSwirlSound.Stop();
     mTimerBombSlowFuseSound.Stop();
@@ -308,8 +301,6 @@ void SoundController::Reset()
     // Reset state
     //
 
-    mIsInDraw = false;
-    mIsInSwirl = false;
     mBombsEmittingSlowFuseSounds.clear();
     mBombsEmittingFastFuseSounds.clear();
 }
@@ -331,26 +322,52 @@ void SoundController::OnDestroy(
         50.0f);
 }
 
-void SoundController::OnSawToggled(bool isSawing)
+void SoundController::OnSaw(std::optional<bool> isUnderwater)
 {
-    if (isSawing)
-        mSawSound.Start();
+    if (!!isUnderwater)
+    {
+        if (*isUnderwater)
+        {
+            mSawUnderwaterSound.Start();
+            mSawAbovewaterSound.Stop();            
+        }
+        else
+        {
+            mSawAbovewaterSound.Start();
+            mSawUnderwaterSound.Stop();            
+        }
+    }
     else
-        mSawSound.Stop();
+    {
+        mSawAbovewaterSound.Stop();
+        mSawUnderwaterSound.Stop();
+    }
 }
 
-void SoundController::OnDraw()
+void SoundController::OnDraw(std::optional<bool> isUnderwater)
 {    
-    mIsInDraw = true;
-
-    mDrawSound.Start();
+    if (!!isUnderwater)    
+    {
+        // At the moment we ignore the water-ness
+        mDrawSound.Start();
+    }
+    else
+    {
+        mDrawSound.Stop();
+    }    
 }
 
-void SoundController::OnSwirl()
+void SoundController::OnSwirl(std::optional<bool> isUnderwater)
 {
-    mIsInSwirl = true;
-
-    mSwirlSound.Start();
+    if (!!isUnderwater)
+    {
+        // At the moment we ignore the water-ness
+        mSwirlSound.Start();
+    }
+    else
+    {
+        mSwirlSound.Stop();
+    }
 }
 
 void SoundController::OnPinToggled(
@@ -450,53 +467,60 @@ void SoundController::OnRCBombPing(
             30.0f * size));
 }
 
-void SoundController::OnTimerBombSlowFuseStart(
+void SoundController::OnTimerBombFuse(
     ObjectId bombId,
-    bool /*isUnderwater*/)
+    std::optional<bool> isFast)
 {
-    // See if this bomb is emitting a fast fuse sound; if so, remove it 
-    // and update fast fuse sound
-    if (mBombsEmittingFastFuseSounds.erase(bombId) != 0)
+    if (!!isFast)
     {
-        UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
-    }
+        if (*isFast)
+        {
+            // Start fast
 
-    // Add bomb to set of timer bombs emitting slow fuse sound, and
-    // update slow fuse sound
-    assert(0 == mBombsEmittingSlowFuseSounds.count(bombId));
-    mBombsEmittingSlowFuseSounds.insert(bombId);
-    UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
-}
+            // See if this bomb is emitting a slow fuse sound; if so, remove it 
+            // and update slow fuse sound
+            if (mBombsEmittingSlowFuseSounds.erase(bombId) != 0)
+            {
+                UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
+            }
 
-void SoundController::OnTimerBombFastFuseStart(
-    ObjectId bombId,
-    bool /*isUnderwater*/)
-{
-    // See if this bomb is emitting a slow fuse sound; if so, remove it 
-    // and update slow fuse sound
-    if (mBombsEmittingSlowFuseSounds.erase(bombId) != 0)
-    {
-        UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
-    }
+            // Add bomb to set of timer bombs emitting fast fuse sound, and
+            // update fast fuse sound
+            assert(0 == mBombsEmittingFastFuseSounds.count(bombId));
+            mBombsEmittingFastFuseSounds.insert(bombId);
+            UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
+        }
+        else
+        {
+            // Start slow
 
-    // Add bomb to set of timer bombs emitting fast fuse sound, and
-    // update fast fuse sound
-    assert(0 == mBombsEmittingFastFuseSounds.count(bombId));
-    mBombsEmittingFastFuseSounds.insert(bombId);
-    UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
-}
+            // See if this bomb is emitting a fast fuse sound; if so, remove it 
+            // and update fast fuse sound
+            if (mBombsEmittingFastFuseSounds.erase(bombId) != 0)
+            {
+                UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
+            }
 
-void SoundController::OnTimerBombFuseStop(ObjectId bombId)
-{
-    if (mBombsEmittingSlowFuseSounds.erase(bombId) != 0)
-    {
-        UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
+            // Add bomb to set of timer bombs emitting slow fuse sound, and
+            // update slow fuse sound
+            assert(0 == mBombsEmittingSlowFuseSounds.count(bombId));
+            mBombsEmittingSlowFuseSounds.insert(bombId);
+            UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
+        }
     }
     else
-    {
-        if (mBombsEmittingFastFuseSounds.erase(bombId) != 0)
+    { 
+        // Stop the sound
+        if (mBombsEmittingSlowFuseSounds.erase(bombId) != 0)
         {
-            UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
+            UpdateContinuousSound(mBombsEmittingSlowFuseSounds.size(), mTimerBombSlowFuseSound);
+        }
+        else
+        {
+            if (mBombsEmittingFastFuseSounds.erase(bombId) != 0)
+            {
+                UpdateContinuousSound(mBombsEmittingFastFuseSounds.size(), mTimerBombFastFuseSound);
+            }
         }
     }
 }

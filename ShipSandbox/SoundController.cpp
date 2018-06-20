@@ -89,7 +89,7 @@ SoundController::SoundController(
         SoundType soundType = StrToSoundType(soundTypeMatch[1].str());
         if (soundType == SoundType::Saw)
         {
-            std::regex sawRegex(R"(([^_]+)(_underwater)?)");
+            std::regex sawRegex(R"(([^_]+)(?:_(underwater))?)");
             std::smatch uMatch;
             if (!std::regex_match(soundName, uMatch, sawRegex))
             {

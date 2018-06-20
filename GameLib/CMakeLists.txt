@@ -4,8 +4,6 @@
 #
 
 set  (GAME_SOURCES
-	AABB.cpp
-	AABB.h
 	Buffer.h
 	CircularList.h
 	ElementContainer.h
@@ -52,6 +50,11 @@ set  (GAME_SOURCES
 	Vectors.cpp
 	Vectors.h)
 
+set  (GEOMETRY_SOURCES
+	AABB.cpp
+	AABB.h
+	Segment.h)
+
 set  (PHYSICS_SOURCES
 	Bomb.h
 	Bombs.cpp
@@ -88,10 +91,10 @@ set  (PHYSICS_SOURCES
 	World.h)
 
 source_group(" " FILES ${GAME_SOURCES})
-
+source_group("Geometry" FILES ${GEOMETRY_SOURCES})
 source_group("Physics" FILES ${PHYSICS_SOURCES})
 
-add_library (GameLib ${GAME_SOURCES} ${PHYSICS_SOURCES})
+add_library (GameLib ${GAME_SOURCES} ${GEOMETRY_SOURCES} ${PHYSICS_SOURCES})
 
 target_include_directories(GameLib PUBLIC ${PICOJSON_INCLUDE_DIRS})
 target_include_directories(GameLib PRIVATE ${IL_INCLUDE_DIR})

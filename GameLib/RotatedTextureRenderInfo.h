@@ -41,9 +41,7 @@ struct RotatedTextureRenderInfo
         // Calculate rotation matrix, based off cosine of the angle between rotation offset and rotation base
         //
 
-        float const alpha = -atan2f(
-            RotationBaseAxis.x * RotationOffsetAxis.y - RotationBaseAxis.y * RotationOffsetAxis.x,
-            RotationBaseAxis.x * RotationOffsetAxis.x + RotationBaseAxis.y * RotationOffsetAxis.y);
+        float const alpha = RotationBaseAxis.angle(RotationOffsetAxis);
 
         float const cosAlpha = cosf(alpha);
         float const sinAlpha = sinf(alpha);

@@ -8,6 +8,7 @@
 #include "Physics.h"
 
 #include "Log.h"
+#include "Segment.h"
 
 #include <algorithm>
 #include <cassert>
@@ -117,7 +118,17 @@ void Ship::SawThrough(
     {
         if (!mSprings.IsDeleted(springIndex))
         {
-            // TODO
+            if (Geometry::Segment::ProperIntersectionTest(
+                startPos, 
+                endPos,
+                mSprings.GetPointAPosition(springIndex, mPoints),
+                mSprings.GetPointBPosition(springIndex, mPoints)))
+            {
+                // Destroy spring
+                // TODO: The handler currently at Springs destroys all triangles, while
+                // we only want to destroy affected triangles
+                mSprings.Destroy(springIndex);
+            }
         }
     }
 }

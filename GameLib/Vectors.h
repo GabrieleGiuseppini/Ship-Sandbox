@@ -101,6 +101,11 @@ public:
 		return x * rhs.x + y * rhs.y;
 	}
 
+    inline float cross(vec2f const & rhs) const
+    {
+        return x * rhs.y - y * rhs.x;
+    }
+
 	inline float length() const
 	{
         return sqrtf(x * x + y * y);
@@ -134,6 +139,13 @@ public:
         {
             return vec2f(0.0f, 0.0f);
         }
+    }
+
+    inline float angle(vec2f const & rhs) const
+    {
+        return -atan2f(
+            x * rhs.y - y * rhs.x,
+            x * rhs.x + y * rhs.y);
     }
 
     std::string toString() const;

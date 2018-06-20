@@ -149,13 +149,13 @@ Prev perf (before point et al destructuring)
 					+ if has prevMousePos:
 						+ GameController->Saw(prevMousePos, current)
 					+ prevMousePos = current
-			- Ship:
-				- Make sure Spring::Destroy only deletes triangles that share one edge with the spring;
-				  if not, make overload
-				- Use Geometry::Segment::TestIntersect()
-					- Also add to it GetAngle...
-						- Move from Texture Rotation
-					- Move also AABB to Geometry
+			= Ship:
+				- Make sure Spring::Destroy only deletes triangles that share one edge with the spring
+					- Requires parameter at Spring::Destroy: normal destroy vs expanded destroy
+				+ Use Geometry::Segment::TestIntersect()
+					+ Also add to it GetAngle...
+						+ Move from Texture Rotation
+					+ Move also AABB to Geometry
 
 			+ SoundController: new continuous sound
 				+ Also underwater

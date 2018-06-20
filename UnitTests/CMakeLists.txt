@@ -11,6 +11,7 @@ set (UNIT_TEST_SOURCES
 	CircularListTests.cpp
 	FixedSizeVectorTests.cpp
 	GameEventDispatcherTests.cpp
+	SegmentTests.cpp
 	SliderCoreTests.cpp
 	TupleKeysTests.cpp
 	VectorsTests.cpp)

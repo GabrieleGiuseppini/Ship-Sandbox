@@ -47,8 +47,6 @@ public:
         //
 
         vec2f const q1q2 = q2 - q1;
-        // TODOTEST
-        //vec2f const q1p1 = p1 - q1;
         vec2f const q1p2 = p2 - q1;
 
         return (q1q2.cross(p1q1) > 0.0f) != (q1q2.cross(q1p2) < 0.0f);

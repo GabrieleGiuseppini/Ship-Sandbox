@@ -153,12 +153,15 @@ Prev perf (before point et al destructuring)
 				- Make sure Spring::Destroy only deletes triangles that share one edge with the spring;
 				  if not, make overload
 				- Use Geometry::Segment::TestIntersect()
+					- Also add to it GetAngle...
+						- Move from Texture Rotation
 					- Move also AABB to Geometry
 
 			+ SoundController: new continuous sound
 				+ Also underwater
 
-	- Ultra-violent flag: very strong Draw and Swirl forces
+	+ Ultra-violent flag: very strong Draw and Swirl forces
+
 	- Ephemeral Particles:
 		- Carve out room at tail of Points for ephemeral particles
 			- No need to mark as deleted to hide them

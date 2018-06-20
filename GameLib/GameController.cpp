@@ -174,9 +174,15 @@ void GameController::DrawTo(
 {
 	vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);
 
+    float strength = 50000.0f * strengthMultiplier;
+    if (mGameParameters.IsUltraViolentMode)
+        strength *= 10.0f;
+
 	// Apply action
 	assert(!!mWorld);
-    mWorld->DrawTo(worldCoordinates, 50000.0f * strengthMultiplier);
+    mWorld->DrawTo(
+        worldCoordinates, 
+        strength);
 }
 
 void GameController::SwirlAt(
@@ -185,9 +191,13 @@ void GameController::SwirlAt(
 {
     vec2f worldCoordinates = mRenderContext->ScreenToWorld(screenCoordinates);
 
+    float strength = 1000.0f * strengthMultiplier;
+    if (mGameParameters.IsUltraViolentMode)
+        strength *= 20.0f;
+
     // Apply action
     assert(!!mWorld);
-    mWorld->SwirlAt(worldCoordinates, 1000.0f * strengthMultiplier);
+    mWorld->SwirlAt(worldCoordinates, strength);
 }
 
 void GameController::TogglePinAt(vec2 const & screenCoordinates)

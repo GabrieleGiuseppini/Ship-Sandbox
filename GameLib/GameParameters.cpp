@@ -25,5 +25,6 @@ GameParameters::GameParameters()
     , LightDiffusionAdjustment(0.5f)
     , NumberOfClouds(50)
     , WindSpeed(3.0f)
+    , IsUltraViolentMode(false)
 {
 }

@@ -19,6 +19,7 @@
 static constexpr int SliderWidth = 40;
 static constexpr int SliderHeight = 140;
 
+const long ID_ULTRA_VIOLENT_CHECKBOX = wxNewId();
 const long ID_QUICK_WATER_FIX_CHECKBOX = wxNewId();
 const long ID_SHOW_STRESS_CHECKBOX = wxNewId();
 
@@ -164,32 +165,15 @@ SettingsDialog::SettingsDialog(
     controls1Sizer->AddSpacer(20);
 
 
-    // Check boxes
+    // Check boxes 1
 
-    wxStaticBoxSizer* checkboxesSizer = new wxStaticBoxSizer(wxVERTICAL, this);
+    wxStaticBoxSizer* checkboxesSizer1 = new wxStaticBoxSizer(wxVERTICAL, this);
 
-    mQuickWaterFixCheckBox = new wxCheckBox(this, ID_QUICK_WATER_FIX_CHECKBOX, _("See Ship Through Water"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Quick Water Fix Checkbox"));
-    Connect(ID_QUICK_WATER_FIX_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnQuickWaterFixCheckBoxClick);
-    checkboxesSizer->Add(mQuickWaterFixCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
+    mUltraViolentCheckBox = new wxCheckBox(this, ID_ULTRA_VIOLENT_CHECKBOX, _("Ultra-Violent Mode"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Ultra-Violent Checkbox"));
+    Connect(ID_ULTRA_VIOLENT_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnUltraViolentCheckBoxClick);
+    checkboxesSizer1->Add(mUltraViolentCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
 
-    wxString shipRenderModeChoices[] =
-    {
-        _("Draw Only Points"),
-        _("Draw Only Springs"),
-        _("Draw Structure"),
-        _("Draw Image")
-    };
-
-    mShipRenderModeRadioBox = new wxRadioBox(this, wxID_ANY, _("Ship Draw Options"), wxDefaultPosition, wxDefaultSize,
-        WXSIZEOF(shipRenderModeChoices), shipRenderModeChoices, 1, wxRA_SPECIFY_COLS);
-    Connect(mShipRenderModeRadioBox->GetId(), wxEVT_RADIOBOX, (wxObjectEventFunction)&SettingsDialog::OnShipRenderModeRadioBox);
-    checkboxesSizer->Add(mShipRenderModeRadioBox, 0, wxALL | wxALIGN_LEFT, 5);
-
-    mShowStressCheckBox = new wxCheckBox(this, ID_SHOW_STRESS_CHECKBOX, _("Show Stress"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Show Stress Checkbox"));
-    Connect(ID_SHOW_STRESS_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnShowStressCheckBoxClick);
-    checkboxesSizer->Add(mShowStressCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
-
-    controls1Sizer->Add(checkboxesSizer, 0);
+    controls1Sizer->Add(checkboxesSizer1, 0);
 
     controls1Sizer->AddSpacer(20);
 
@@ -294,7 +278,6 @@ SettingsDialog::SettingsDialog(
     controls2Sizer->Add(mDestroyRadiusSlider.get(), 0);
 
     controls2Sizer->AddSpacer(20);
-
 	
 
     // Bomb Blast Radius
@@ -317,6 +300,37 @@ SettingsDialog::SettingsDialog(
     controls2Sizer->Add(mBombBlastRadiusSlider.get(), 0);
 
     controls2Sizer->AddSpacer(20);
+
+
+    // Check boxes 2
+
+    wxStaticBoxSizer* checkboxesSizer2 = new wxStaticBoxSizer(wxVERTICAL, this);
+
+    mQuickWaterFixCheckBox = new wxCheckBox(this, ID_QUICK_WATER_FIX_CHECKBOX, _("See Ship Through Water"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Quick Water Fix Checkbox"));
+    Connect(ID_QUICK_WATER_FIX_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnQuickWaterFixCheckBoxClick);
+    checkboxesSizer2->Add(mQuickWaterFixCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
+
+    wxString shipRenderModeChoices[] =
+    {
+        _("Draw Only Points"),
+        _("Draw Only Springs"),
+        _("Draw Structure"),
+        _("Draw Image")
+    };
+
+    mShipRenderModeRadioBox = new wxRadioBox(this, wxID_ANY, _("Ship Draw Options"), wxDefaultPosition, wxDefaultSize,
+        WXSIZEOF(shipRenderModeChoices), shipRenderModeChoices, 1, wxRA_SPECIFY_COLS);
+    Connect(mShipRenderModeRadioBox->GetId(), wxEVT_RADIOBOX, (wxObjectEventFunction)&SettingsDialog::OnShipRenderModeRadioBox);
+    checkboxesSizer2->Add(mShipRenderModeRadioBox, 0, wxALL | wxALIGN_LEFT, 5);
+
+    mShowStressCheckBox = new wxCheckBox(this, ID_SHOW_STRESS_CHECKBOX, _("Show Stress"), wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, _T("Show Stress Checkbox"));
+    Connect(ID_SHOW_STRESS_CHECKBOX, wxEVT_COMMAND_CHECKBOX_CLICKED, (wxObjectEventFunction)&SettingsDialog::OnShowStressCheckBoxClick);
+    checkboxesSizer2->Add(mShowStressCheckBox, 0, wxALL | wxALIGN_LEFT, 5);
+
+    controls2Sizer->Add(checkboxesSizer2, 0);
+
+    controls2Sizer->AddSpacer(20);
+
 
 
 	mainSizer->Add(controls2Sizer);
@@ -381,6 +395,12 @@ void SettingsDialog::OnQuickWaterFixCheckBoxClick(wxCommandEvent & /*event*/)
 {
 	// Remember we're dirty now
 	mApplyButton->Enable(true);
+}
+
+void SettingsDialog::OnUltraViolentCheckBoxClick(wxCommandEvent & /*event*/)
+{
+    // Remember we're dirty now
+    mApplyButton->Enable(true);
 }
 
 void SettingsDialog::OnShipRenderModeRadioBox(wxCommandEvent & /*event*/)
@@ -451,6 +471,8 @@ void SettingsDialog::ApplySettings()
     mGameController->SetBombBlastRadius(
         mBombBlastRadiusSlider->GetValue());
 
+    mGameController->SetUltraViolentMode(mUltraViolentCheckBox->IsChecked());
+
 	mGameController->SetShowShipThroughWater(mQuickWaterFixCheckBox->IsChecked());
 
     auto selectedShipRenderMode = mShipRenderModeRadioBox->GetSelection();
@@ -478,6 +500,8 @@ void SettingsDialog::ApplySettings()
 void SettingsDialog::ReadSettings()
 {
 	assert(!!mGameController);
+
+    mUltraViolentCheckBox->SetValue(mGameController->GetUltraViolentMode());
 
 	mQuickWaterFixCheckBox->SetValue(mGameController->GetShowShipThroughWater());
 

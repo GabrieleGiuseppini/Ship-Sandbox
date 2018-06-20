@@ -32,6 +32,8 @@ public:
 
 private:
 
+    void OnUltraViolentCheckBoxClick(wxCommandEvent & event);
+
     void OnQuickWaterFixCheckBoxClick(wxCommandEvent & event);
     void OnShipRenderModeRadioBox(wxCommandEvent & event);
     void OnShowStressCheckBoxClick(wxCommandEvent & event);
@@ -53,6 +55,8 @@ private:
     std::unique_ptr<SliderControl> mSeaDepthSlider;
     std::unique_ptr<SliderControl> mDestroyRadiusSlider;
     std::unique_ptr<SliderControl> mBombBlastRadiusSlider;
+
+    wxCheckBox * mUltraViolentCheckBox;
 
     wxCheckBox * mQuickWaterFixCheckBox;
     wxRadioBox * mShipRenderModeRadioBox;

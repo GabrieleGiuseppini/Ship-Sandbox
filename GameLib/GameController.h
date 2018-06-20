@@ -161,6 +161,9 @@ public:
     float GetLightDiffusionAdjustment() const { return mGameParameters.LightDiffusionAdjustment; }
     void SetLightDiffusionAdjustment(float value) { mGameParameters.LightDiffusionAdjustment = value; }
 
+    bool GetUltraViolentMode() const { return mGameParameters.IsUltraViolentMode; }
+    void SetUltraViolentMode(bool value) { mGameParameters.IsUltraViolentMode = value; }
+
     bool GetShowShipThroughWater() const { return mRenderContext->GetShowShipThroughWater();  }
     void SetShowShipThroughWater(bool value) { mRenderContext->SetShowShipThroughWater(value); }
 

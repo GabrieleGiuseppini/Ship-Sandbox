@@ -99,6 +99,9 @@ struct GameParameters
 
     float WindSpeed;
 
+    bool IsUltraViolentMode;
+
+
     //
     // Limits
     //

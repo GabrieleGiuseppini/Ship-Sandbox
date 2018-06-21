@@ -7,6 +7,7 @@
 
 #include "Buffer.h"
 #include "ElementContainer.h"
+#include "EnumFlags.h"
 #include "FixedSizeVector.h"
 #include "GameParameters.h"
 #include "IGameEventHandler.h"
@@ -14,6 +15,7 @@
 #include "RenderContext.h"
 
 #include <cassert>
+#include <functional>
 #include <limits>
 
 namespace Physics
@@ -22,6 +24,17 @@ namespace Physics
 class Springs : public ElementContainer
 {
 public:
+
+    enum class DestroyOptions
+    {
+        DoNotFireBreakEvent = 0,
+        FireBreakEvent = 1,
+
+        DestroyOnlyConnectedTriangle = 0,
+        DestroyAllTriangles = 2
+    };
+
+    using DestroyHandler = std::function<void(ElementIndex, DestroyOptions)>;
 
     enum class Characteristics : uint8_t
     {
@@ -68,6 +81,9 @@ public:
 
     Springs(ElementCount elementCount)
         : ElementContainer(elementCount)
+        //////////////////////////////////
+        // Buffers
+        //////////////////////////////////
         , mIsDeletedBuffer(elementCount)
         // Endpoints
         , mEndpointsBuffer(elementCount)
@@ -82,12 +98,33 @@ public:
         , mIsStressedBuffer(elementCount)
         // Bombs
         , mIsBombAttachedBuffer(elementCount)
-        // Container state
+        //////////////////////////////////
+        // Container
+        //////////////////////////////////
+        , mDestroyHandler()
         , mCurrentStiffnessAdjustment(std::numeric_limits<float>::lowest())
     {
     }
 
     Springs(Springs && other) = default;
+
+    /*
+     * Sets a (single) handler that is invoked whenever a spring is destroyed.
+     *
+     * The handler is invoked right before the spring is marked as deleted. However,
+     * other elements connected to the soon-to-be-deleted spring might already have been
+     * deleted.
+     *
+     * The handler is not re-entrant: destroying other springs from it is not supported 
+     * and leads to undefined behavior.
+     *
+     * Setting more than one handler is not supported and leads to undefined behavior.
+     */
+    void RegisterDestroyHandler(DestroyHandler destroyHandler)
+    {
+        assert(!mDestroyHandler);
+        mDestroyHandler = std::move(destroyHandler);
+    }
 
     void Add(
         ElementIndex pointAIndex,
@@ -96,7 +133,9 @@ public:
         Material const * material,
         Points const & points);
 
-    void Destroy(ElementIndex springElementIndex);
+    void Destroy(
+        ElementIndex springElementIndex,
+        DestroyOptions destroyOptions);
 
     void SetStiffnessAdjustment(
         float stiffnessAdjustment,
@@ -221,16 +260,15 @@ public:
         return mCoefficientsBuffer[springElementIndex].DampingCoefficient;
     }
 
-    inline bool IsHull(ElementIndex springElementIndex) const;
-
-    inline bool IsRope(ElementIndex springElementIndex) const;
-
     inline Material const * GetMaterial(ElementIndex springElementIndex) const
     {
         assert(springElementIndex < mElementCount);
 
         return mMaterialBuffer[springElementIndex];
     }
+
+    inline bool IsHull(ElementIndex springElementIndex) const;
+    inline bool IsRope(ElementIndex springElementIndex) const;
 
     //
     // Water characteristics
@@ -307,6 +345,10 @@ private:
 
 private:
 
+    //////////////////////////////////////////////////////////
+    // Buffers
+    //////////////////////////////////////////////////////////
+
     // Deletion
     Buffer<bool> mIsDeletedBuffer;
 
@@ -343,9 +385,12 @@ private:
 
     Buffer<bool> mIsBombAttachedBuffer;
 
-    //
-    // Container state
-    //
+    //////////////////////////////////////////////////////////
+    // Container 
+    //////////////////////////////////////////////////////////
+
+    // The handler registered for spring deletions
+    DestroyHandler mDestroyHandler;
 
     // The current stiffness adjustment
     float mCurrentStiffnessAdjustment;
@@ -353,21 +398,19 @@ private:
 
 }
 
-constexpr Physics::Springs::Characteristics operator&(Physics::Springs::Characteristics a, Physics::Springs::Characteristics b)
-{
-    return static_cast<Physics::Springs::Characteristics>(static_cast<int>(a) & static_cast<int>(b));
-}
+template <> struct is_flag<Physics::Springs::DestroyOptions> : std::true_type {};
+template <> struct is_flag<Physics::Springs::Characteristics> : std::true_type {};
 
 inline bool Physics::Springs::IsHull(ElementIndex springElementIndex) const
 {
     assert(springElementIndex < mElementCount);
 
-    return Physics::Springs::Characteristics::None != (mCharacteristicsBuffer[springElementIndex] & Physics::Springs::Characteristics::Hull);
+    return !!(mCharacteristicsBuffer[springElementIndex] & Physics::Springs::Characteristics::Hull);
 }
 
 inline bool Physics::Springs::IsRope(ElementIndex springElementIndex) const
 {
     assert(springElementIndex < mElementCount);
 
-    return Physics::Springs::Characteristics::None != (mCharacteristicsBuffer[springElementIndex] & Physics::Springs::Characteristics::Rope);
+    return !!(mCharacteristicsBuffer[springElementIndex] & Physics::Springs::Characteristics::Rope);
 }

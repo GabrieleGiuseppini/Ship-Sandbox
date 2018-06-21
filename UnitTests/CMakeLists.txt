@@ -9,6 +9,7 @@ add_subdirectory("C:/Users/Neurodancer/source/repos/googletest" gtest)
 
 set (UNIT_TEST_SOURCES
 	CircularListTests.cpp
+	EnumFlagsTests.cpp
 	FixedSizeVectorTests.cpp
 	GameEventDispatcherTests.cpp
 	SegmentTests.cpp

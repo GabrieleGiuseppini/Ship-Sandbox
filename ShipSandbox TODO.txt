@@ -47,7 +47,7 @@ Prev perf (before point et al destructuring)
 	- RenderContext::RenderCloudsEnd: 1.69%
 =================================================
 
-- Code:
+- Technical Debt:
 	+ Move definition of ElementIndex et al into GameTypes.h
 	- Textures are json files, with world sizes, offset, and lighting boolean
 		- SEE MOLESKINE
@@ -60,6 +60,12 @@ Prev perf (before point et al destructuring)
 				- Bombs sizes and offsets
 	- Move also pinned points to a PinnedPoints class, just like Bombs
 	+ CircularList::Erase unit test: complete verification of returned iterator
+	- Containers::Destroy and GameEventHandler::OnDestroy rearc:
+		- 3 containers are given shared_ptr<GameEventHandler> at cctor
+		- Each Destroy() fires event (after invoking DestroyHandler), unless otherwise specified
+		  via DestroyOptions
+		- Ship's DestroyHandlers don't fire events anymore, and Ship::SpringDestroyHandler takes boolean
+		  for triangles (translated from Springs::DetroyOptions)
 
 - Titanic:
 	- Introduce weak metal
@@ -150,14 +156,15 @@ Prev perf (before point et al destructuring)
 						+ GameController->Saw(prevMousePos, current)
 					+ prevMousePos = current
 			= Ship:
-				- Make sure Spring::Destroy only deletes triangles that share one edge with the spring
-					- TODOHERE: Requires parameters at Spring::Destroy: FromPointDestroy vs FromSpringDestroy 
-					  (for OnBreak notifications) and DestroySingleTriangle vs DestroyAllTriangles
-				- Test whether should fire the Break event even if only springs are deleted 
-					- For points we fire the event in the ship's PointDestroyHandler; if we
+				+ Do EnumFlags class in EnumFlags.h
+					+ Use it 2 X in Springs
+				= Make sure Spring::Destroy only deletes triangles that share one edge with the spring
+					- Nuke Point::Breach and do everything instead in Ship's destroy handler
+				+ Test whether should fire the Break event even if only springs are deleted 
+					+ For points we fire the event in the ship's PointDestroyHandler; if we
 					  want to fire now from ship's SpringDestroyHandler, we must be told whether 
 					  the spring destruction comes from a point destruction or not: FromPointDestroy vs FromSpringDestroy
-					  - If we do this, we can now also remove firing of break from within Springs::UpdateStrains,
+					  + If we do this, we can now also remove firing of break from within Springs::UpdateStrains,
 					    as the ship's SpringDestroyHandler would be invoked with FromSpringDestroy
 				+ Use Geometry::Segment::TestIntersect()
 					+ Also add to it GetAngle...

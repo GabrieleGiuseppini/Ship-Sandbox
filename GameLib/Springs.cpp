@@ -34,7 +34,9 @@ void Springs::Add(
     mIsBombAttachedBuffer.emplace_back(false);
 }
 
-void Springs::Destroy(ElementIndex springElementIndex)
+void Springs::Destroy(
+    ElementIndex springElementIndex,
+    DestroyOptions destroyOptions)
 {
     assert(springElementIndex < mElementCount);
     assert(!IsDeleted(springElementIndex));
@@ -42,7 +44,7 @@ void Springs::Destroy(ElementIndex springElementIndex)
     // Invoke destroy handler
     if (!!mDestroyHandler)
     {
-        mDestroyHandler(springElementIndex);
+        mDestroyHandler(springElementIndex, destroyOptions);
     }
 
     // Zero out our coefficients, so that we can still calculate Hooke's 
@@ -160,13 +162,12 @@ bool Springs::UpdateStrains(
             if (strain > effectiveStrength)
             {
                 // It's broken!
-                this->Destroy(i);
 
-                // Notify
-                gameEventHandler.OnBreak(
-                    mMaterialBuffer[i],
-                    parentWorld.IsUnderwater(points.GetPosition(mEndpointsBuffer[i].PointAIndex)),
-                    1);
+                // Destroy this spring
+                this->Destroy(
+                    i,
+                    DestroyOptions::FireBreakEvent // Notify Break
+                    | DestroyOptions::DestroyAllTriangles);
 
                 isAtLeastOneBroken = true;
             }
@@ -177,7 +178,7 @@ bool Springs::UpdateStrains(
                 {
                     mIsStressedBuffer[i] = true;
 
-                    // Notify
+                    // Notify stress
                     gameEventHandler.OnStress(
                         mMaterialBuffer[i],
                         parentWorld.IsUnderwater(points.GetPosition(mEndpointsBuffer[i].PointAIndex)),

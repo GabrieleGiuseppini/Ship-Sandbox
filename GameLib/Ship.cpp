@@ -73,10 +73,10 @@ Ship::Ship(
     , mCurrentToolForce(std::nullopt)
 {
     // Set destroy handlers
-    mPoints.SetDestroyHandler([this](auto idx) { this->PointDestroyHandler(idx); });
-    mSprings.SetDestroyHandler([this](auto idx) { this->SpringDestroyHandler(idx); });
-    mTriangles.SetDestroyHandler([this](auto idx) { this->TriangleDestroyHandler(idx); });
-    mElectricalElements.SetDestroyHandler([this](auto idx) { this->ElectricalElementDestroyHandler(idx); });
+    mPoints.RegisterDestroyHandler(std::bind(&Ship::PointDestroyHandler, this, std::placeholders::_1));
+    mSprings.RegisterDestroyHandler(std::bind(&Ship::SpringDestroyHandler, this, std::placeholders::_1, std::placeholders::_2));
+    mTriangles.RegisterDestroyHandler(std::bind(&Ship::TriangleDestroyHandler, this, std::placeholders::_1));
+    mElectricalElements.RegisterDestroyHandler(std::bind(&Ship::ElectricalElementDestroyHandler, this, std::placeholders::_1));
 
     // Do a first connected component detection pass 
     DetectConnectedComponents(currentStepSequenceNumber);
@@ -119,15 +119,16 @@ void Ship::SawThrough(
         if (!mSprings.IsDeleted(springIndex))
         {
             if (Geometry::Segment::ProperIntersectionTest(
-                startPos, 
+                startPos,
                 endPos,
                 mSprings.GetPointAPosition(springIndex, mPoints),
                 mSprings.GetPointBPosition(springIndex, mPoints)))
             {
                 // Destroy spring
-                // TODO: The handler currently at Springs destroys all triangles, while
-                // we only want to destroy affected triangles
-                mSprings.Destroy(springIndex);
+                mSprings.Destroy(
+                    springIndex,
+                    Springs::DestroyOptions::FireBreakEvent
+                    | Springs::DestroyOptions::DestroyOnlyConnectedTriangle);
             }
         }
     }
@@ -1014,7 +1015,11 @@ void Ship::PointDestroyHandler(ElementIndex pointElementIndex)
     while (!connectedSprings.empty())
     {
         assert(!mSprings.IsDeleted(connectedSprings.back()));
-        mSprings.Destroy(connectedSprings.back());
+
+        mSprings.Destroy(
+            connectedSprings.back(),
+            Springs::DestroyOptions::DoNotFireBreakEvent // We're already firing the Destroy event for the point
+            | Springs::DestroyOptions::DestroyAllTriangles);
     }
 
     assert(mPoints.GetConnectedSprings(pointElementIndex).empty());
@@ -1030,6 +1035,7 @@ void Ship::PointDestroyHandler(ElementIndex pointElementIndex)
     while(!connectedTriangles.empty())
     {
         assert(!mTriangles.IsDeleted(connectedTriangles.back()));
+
         mTriangles.Destroy(connectedTriangles.back());
     }
 
@@ -1042,6 +1048,8 @@ void Ship::PointDestroyHandler(ElementIndex pointElementIndex)
 
     if (NoneElementIndex != mPoints.GetConnectedElectricalElement(pointElementIndex))
     {
+        assert(!mElectricalElements.IsDeleted(mPoints.GetConnectedElectricalElement(pointElementIndex)));
+
         mElectricalElements.Destroy(mPoints.GetConnectedElectricalElement(pointElementIndex));
     }
 
@@ -1067,28 +1075,26 @@ void Ship::PointDestroyHandler(ElementIndex pointElementIndex)
     // Notify bombs
     mBombs.OnPointDestroyed(pointElementIndex);
 
-    //
     // Notify point destruction
-    //
-
     mGameEventHandler->OnDestroy(
         mPoints.GetMaterial(pointElementIndex),
         mParentWorld.IsUnderwater(mPoints.GetPosition(pointElementIndex)),
         1u);
 
-
-    //
     // Remember our elements are now dirty
-    //
-
     mAreElementsDirty = true;
 }
 
-void Ship::SpringDestroyHandler(ElementIndex springElementIndex)
+void Ship::SpringDestroyHandler(
+    ElementIndex springElementIndex,
+    Springs::DestroyOptions destroyOptions)
 {
     auto const pointAIndex = mSprings.GetPointAIndex(springElementIndex);
     auto const pointBIndex = mSprings.GetPointBIndex(springElementIndex);
 
+    // TODOHERE: move content of Breach here, and do triangles based off options
+    //  - and nuke from Points
+    //
     // Make endpoints leak and destroy their triangles.
     // Note: technically, should only destroy those triangles that contain the A-B side (and definitely
     // still make both A and B leak), but destroying everything seems to yield a nicer effect
@@ -1099,8 +1105,10 @@ void Ship::SpringDestroyHandler(ElementIndex springElementIndex)
     mPoints.RemoveConnectedSpring(pointAIndex, springElementIndex);
     mPoints.RemoveConnectedSpring(pointBIndex, springElementIndex);
 
+    //
     // If an endpoint was pinned and it has now lost all of its springs, then make 
     // it unpinned
+    //
 
     if (mPoints.IsPinned(pointAIndex)
         && mPoints.GetConnectedSprings(pointAIndex).empty())
@@ -1130,6 +1138,15 @@ void Ship::SpringDestroyHandler(ElementIndex springElementIndex)
 
     // Notify bombs
     mBombs.OnSpringDestroyed(springElementIndex);
+
+    // Notify spring break
+    if (!!(destroyOptions & Springs::DestroyOptions::FireBreakEvent))
+    {
+        mGameEventHandler->OnBreak(
+            mSprings.GetMaterial(springElementIndex),
+            mParentWorld.IsUnderwater(mPoints.GetPosition(pointAIndex)), // Arbitrary
+            1);
+    }
 
     // Remember our elements are now dirty
     mAreElementsDirty = true;

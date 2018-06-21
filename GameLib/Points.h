@@ -16,6 +16,7 @@
 #include "Vectors.h"
 
 #include <cassert>
+#include <functional>
 #include <vector>
 
 namespace Physics
@@ -23,6 +24,10 @@ namespace Physics
 
 class Points : public ElementContainer
 {
+public:
+
+    using DestroyHandler = std::function<void(ElementIndex)>;
+
 private:
 
     /*
@@ -46,6 +51,9 @@ public:
 
     Points(ElementCount elementCount)
         : ElementContainer(elementCount)
+        //////////////////////////////////
+        // Buffers
+        //////////////////////////////////
         , mIsDeletedBuffer(elementCount)
         , mMaterialBuffer(elementCount)
         // Dynamics
@@ -70,13 +78,34 @@ public:
         // Immutable render attributes
         , mColorBuffer(elementCount)
         , mTextureCoordinatesBuffer(elementCount)
-        // Container state
+        //////////////////////////////////
+        // Container
+        //////////////////////////////////
+        , mDestroyHandler()
         , mAreImmutableRenderAttributesUploaded(false)
     {
     }
 
     Points(Points && other) = default;
     
+    /*
+     * Sets a (single) handler that is invoked whenever a point is destroyed.
+     *
+     * The handler is invoked right before the point is marked as deleted. However,
+     * other elements connected to the soon-to-be-deleted point might already have been
+     * deleted.
+     *
+     * The handler is not re-entrant: destroying other points from it is not supported 
+     * and leads to undefined behavior.
+     *
+     * Setting more than one handler is not supported and leads to undefined behavior.
+     */
+    void RegisterDestroyHandler(DestroyHandler destroyHandler)
+    {
+        assert(!mDestroyHandler);
+        mDestroyHandler = std::move(destroyHandler);
+    }
+
     void Add(
         vec2 const & position,
         Material const * material,
@@ -448,6 +477,10 @@ private:
 
 private:
 
+    //////////////////////////////////////////////////////////
+    // Buffers
+    //////////////////////////////////////////////////////////
+
     // Deletion
     Buffer<bool> mIsDeletedBuffer;
 
@@ -509,9 +542,12 @@ private:
     Buffer<vec2f> mTextureCoordinatesBuffer;
 
 
-    //
-    // Container state
-    //
+    //////////////////////////////////////////////////////////
+    // Container
+    //////////////////////////////////////////////////////////
+
+    // The handler registered for point deletions
+    DestroyHandler mDestroyHandler;
 
     // Flag remembering whether or not we've already uploaded
     // the immutable render attributes

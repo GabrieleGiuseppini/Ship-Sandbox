@@ -142,7 +142,9 @@ private:
 
     void PointDestroyHandler(ElementIndex pointElementIndex);
 
-    void SpringDestroyHandler(ElementIndex springElementIndex);
+    void SpringDestroyHandler(
+        ElementIndex springElementIndex,
+        Springs::DestroyOptions destroyOptions);
 
     void TriangleDestroyHandler(ElementIndex triangleElementIndex);
 

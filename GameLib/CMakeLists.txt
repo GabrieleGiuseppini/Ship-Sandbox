@@ -7,6 +7,7 @@ set  (GAME_SOURCES
 	Buffer.h
 	CircularList.h
 	ElementContainer.h
+	EnumFlags.h
 	FixedSizeVector.h
 	GameController.cpp
 	GameController.h

@@ -26,14 +26,6 @@
 #include <map>
 #include <sstream>
 
-namespace /* anonymous */ {
-
-    std::string GetWindowTitle()
-    {
-        return std::string("Ship Sandbox ") + GetVersionInfo(VersionFormat::Short);
-    }
-}
-
 const long ID_MAIN_CANVAS = wxNewId();
 
 const long ID_LOAD_SHIP_MENUITEM = wxNewId();
@@ -89,7 +81,7 @@ MainFrame::MainFrame(wxApp * mainApp)
     Create(
         nullptr, 
         wxID_ANY,
-        GetWindowTitle(),       
+        GetVersionInfo(VersionFormat::Long),
         wxDefaultPosition, 
         wxDefaultSize, 
         wxDEFAULT_FRAME_STYLE, 
@@ -919,7 +911,7 @@ void MainFrame::SetFrameTitle()
 
     ss.fill('0');
 
-    ss << GetWindowTitle()
+    ss << GetVersionInfo(VersionFormat::Long)
         << "  FPS: " << std::fixed << std::setprecision(2) << totalFps << " (" << lastFps << ")"
         << " " << std::setw(2) << minutesGame << ":" << std::setw(2) << secondsGame;
 

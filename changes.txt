@@ -1,13 +1,19 @@
-Alpha 2.1.0 (Gabriele Giuseppini) - Changes:
+2.2.0 (Gabriele Giuseppini) - Changes:
+- Added ability to pin points - freezing them at their current position
+- Added ability to place remote-controlled and timer bombs (thanks Mart!)
+- Added chainsaw to cut ship in pieces 
+
+2.1.0 (Gabriele Giuseppini) - Changes:
  - Completely rewritten all data structures to maximize data locality - a performance gain of 50%!
+ - Rewritten dynamics integration step to make full use of packed SSE floating point instructions on Intel x86
  - Rewritten dynamics layer as force-based rather than position-based
  - Revisited tessellation algorithm, cutting in half the number of triangles that have to be rendered
 
-Alpha 2.0.1 (Gabriele Giuseppini) - Changes:
+2.0.1 (Gabriele Giuseppini) - Changes:
  - Ship and land textures are now mipmapped
  - Removed parallelism of spring relaxation, as it was inherently wrong
 
-Alpha 2.0 (Gabriele Giuseppini) - Changes:
+2.0 (Gabriele Giuseppini) - Changes:
  - Quite faster (on my single-core laptop: doubled from 7fps to 15fps)
  - Sounds and music (on cue)
  - Textures for ships, land, water, and clouds in the sky

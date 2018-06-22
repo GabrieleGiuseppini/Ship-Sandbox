@@ -8,12 +8,11 @@
 #include <cassert>
 #include <string>
 
-#define VERSION "2.0.1 Alpha"
+#define VERSION "2.2.0"
 
 enum class VersionFormat
 {
 	Short,
-    Medium,
 	Long
 };
 
@@ -26,15 +25,10 @@ inline std::string GetVersionInfo(VersionFormat versionFormat)
 			return std::string(VERSION);
 		}
 
-        case VersionFormat::Medium:
+        case VersionFormat::Long:
         {
             return std::string("Ship Sandbox v" VERSION);
         }
-
-		case VersionFormat::Long:
-		{
-			return std::string("Ship Sandbox v" VERSION "\n(c) Luke Wren 2013\n(c) Gabriele Giuseppini 2018\nThis version licensed to Mattia");
-		}
 
 		default:
 		{

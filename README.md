@@ -48,6 +48,7 @@ Here's a list of the major changes I've been doing:
 - Upgraded to C++17
 - Completely rewritten data structures to maximize data locality
 - Rewritten the physics layer as force-based rather than position-based
+- Rewritten dynamics integration step to make full use of packed SSE floating point instructions on Intel x86
 - Restructured interactions between the UI and the game, splitting settings between physics-related settings and render-related settings
 - Rearchitected lifetime management of elements - originally elements were removed from vectors while these are being iterated, and the entire "points-to" graph was a tad too complex 
 - Completely re-written the OpenGL interactions, targeting 2.0 "core profile" (i.e. no compatibility API) with custom shaders and adding texture mapping
@@ -61,6 +62,9 @@ Here's a list of the major changes I've been doing:
 	- Textures are mipmapped with box filtering
 - Added more realistic ropes, synthesised between two endpoints
 - Removed original parallelism of spring relaxation, as it was inherently wrong (there were race conditions in updating points caught in the boundary between parallel batches)
+- Added ability to pin points - freezing them at their current position
+- Added ability to place remote-controlled and timer bombs (thanks Mart!)
+- Added chainsaw to cut ship in pieces 
 
 After these changes, the fps rate on my laptop increased from 7fps to 27fps!
 
@@ -73,13 +77,10 @@ The game looks like this now:
 - Rewrite algorithms to favor vectorized code
 - Add directional water drag forces, to simulate underwater gliding 
 	- Requires maintaining convex hull and ship perimeter normals
-- Add ability to pin points - freezing them at their current position
 - Better waves, may be with shallow water equations and breaking wave fronts
 - Make lights turn off (after flickering) when generator is wet or when electrical cables break
 - Add time-of-day (i.e. day light change during the game)
 - Add multiple ships and collision detection
-- Place bombs that can later be triggered to explode (thanks Mart!)
-- Cut ship in pieces with a chainsaw
 
 I tried to do my best to craft the CMake files in a platform-independent way, but I'm working on this exclusively in Visual Studio, hence I'm sure some unportable features have slipped in. Feel free to send pull requests for CMake edits for other platforms.
 You'll need the following libraries in order to build the game:

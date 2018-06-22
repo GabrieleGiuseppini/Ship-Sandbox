@@ -47,6 +47,14 @@ Prev perf (before point et al destructuring)
 	- RenderContext::RenderCloudsEnd: 1.69%
 =================================================
 
+- Titanic:
+	- Introduce weak metal
+		- Use it underneath funnels
+
+- Redo perf profile (should be unchanged)
+
+- Release
+
 - Technical Debt:
 	+ Move definition of ElementIndex et al into GameTypes.h
 	- Textures are json files, with world sizes, offset, and lighting boolean
@@ -59,10 +67,6 @@ Prev perf (before point et al destructuring)
 				- Land size
 				- Bombs sizes and offsets
 	- Move also pinned points to a PinnedPoints class, just like Bombs
-
-- Titanic:
-	- Introduce weak metal
-		- Use it below funnels
 
 - Optimizations:	
 	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
@@ -266,12 +270,13 @@ Prev perf (before point et al destructuring)
 	+ class Lamp()
 		+ points to Point and Point points optionally to ElectricalElement (base abstract of Lamp, Cable, Generator)
 			+ ElectricalElement::GetType(){return mType;}: non-virtual, it's optimized by compiler
-	- Diffusion improvement: see if can simply add light (rather than max'ing it)
-		- Need to ensure sum is always < 1.0
-			- May be via adding +1 to distance?
-	- Move electrical components to ElectricalComponents class, just like bombs, with update and all
-		- See if it still makes sense for ship to have mAllElectricalComponents - might be able to get away with mAllLamps
-	- Current Propagation Algo:
+	- Move electrical components to ElectricalComponents class, an ElementContainer but also like bombs, with update and state machines
+	  (but no render)
+		- Buffer of pointers
+		- Buffer of ElementIndex of points
+			- Same at Points: electrical elements are indices
+		- Add additional buffers that might simplify electrical connectivity test, e.g. Type and VisitedGen
+	- Current Propagation Algo (Ship::UpdateCurrentConnectivity()):
 		+ create new generation seq number; if new is 0 => 1
 		- ElectricalElement has SetVisited(curGen), bool IsVisited(curGen)
 		- All of the following @ new ad-hoc update step
@@ -281,56 +286,43 @@ Prev perf (before point et al destructuring)
 					- for each node: set to visited
 					- No need to have a visited set, just call ElElement->IsVisited(curGen)
 			- Then, lamps will be considered lighted if visited at this generation
-		- OLD:
+		- OLD: generators and cumulative current calculation:
 			- visit all generator points and count the points in their graphs; for each connected component:
 				- # nodes in component => current
 				- propagate from each of these points to all adjacent cables until light
 				- at a light: add up all incoming currents (compare seq number to decide whether to zero or not) 
 				  and then lower them by distance(==ohm), and then update gen number of lamp
-		- then, visit all lamps:
-			- call Lamp->UpdateLightIntensity(currentGenerationNumber, IGameEventHandler) -> void
+		- Then, ElectricalElements::Update(currentGenerationNumber)
+			- Calls Lamp->Update(currentGenerationNumber):
+				- TODO: draw state machine
 				- Looks at own (generationVisitNumber, state) and:
 					- Updates state
 					- Eventually starts flicker state machine:
+						+ Based off clock time, not simulation step
 						- iff: state==On and generationVisitNumber != current
-						- Invokes IGameEventHandler->StartFlicker("whichOne")
-							- After choosing "whichOne" and compiling the plan
-							- OR: bytecode invokes IGameEventHandler->OnLightFlicker() for each peak
+						- Invokes IGameEventHandler->OnLightFlicker()
 						- Sets gen_number = 0
+							- If revisited, state machine will transition to lighted again
 						- Flicker state machine is based off clock time, not simulation step
-							- Use ByteCode pattern
+							- Use random choices
 					- Sets own lightIntensity = f(generationVisitNumber, state, flicker state machine)
-
-			TODOOLD:
-			- if gen number != current: just interrupted
-				- set gen_number = 0
-				- start flicker state machine (consumed by diffusion)
-					- based off clock time, not simulation step
-			- else: consider lighted:
 		- Then, go ahead with DiffuseLight as now
-	= Lamp render:
+	+ Diffusion:
 		+ Can test it by itself, by using light material and by cheating with current!
-		= After current propagation:
+		+ After current propagation:
 			+ Zero out mLight of each point (use generation sequence number? useful for other Point properties?)
 				+ No, easier and probably faster to do it in same pass as LeakWater - LeakWaterAndZeroLight()
-			- Visit all lamps:
-				- call Lamp->UpdateLightIntensity(IGameEventHandler) -> lightIntensity
-					- Looks at own (current, generationVisitNumber, state) and:
-						- Updates state
-						- Eventually invokes IGameEventHandler->StartFlicker("whichOne")
-							- After choosing "whichOne" and compiling the plan
-							- Plan based on sequence of time points with light at max, matching
-							  sound
-							- SoundController just has map from whichOne to sound
-						- Sets and returns own lightIntensity = f(incoming current, flicker state machine, ...)
-				+ Diffusion: propagate mLight to adjacent points (incl. other lamps),
-				  inv. proportional to distance^2, with a graph flood stopping at max distance
+		+ Diffusion: propagate mLight to adjacent points (incl. other lamps),
+		  inv. proportional to distance^2, with a graph flood stopping at max distance
 		+ Point.GetColour() takes also into account mLight (from itself, not from lamp) 
                   and makes alpha blend just like water
 		+ Need "off" color to use at lamp point when Lamp is off (different than structural color),
 		  used when rendering point in springs/triangles/points
 			+ Not used when using textures, of course
 			+ Needs material's Color to split in StructuralColor and RenderColor (set to the same except for lamps)
+	- Diffusion improvement: see if can simply add light (rather than max'ing it)
+		- Need to ensure sum is always < 1.0
+			- May be via adding +1 to distance? 
 	
 
 - Smoke

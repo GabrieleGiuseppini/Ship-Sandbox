@@ -24,7 +24,7 @@ AboutDialog::AboutDialog(
 	Create(
 		mParent,
 		wxID_ANY,
-		_("About " + GetVersionInfo(VersionFormat::Medium)),
+		_("About " + GetVersionInfo(VersionFormat::Long)),
 		wxDefaultPosition, 
 		wxSize(760, 450),
 		wxCAPTION | wxCLOSE_BOX | wxFRAME_SHAPED | wxSTAY_ON_TOP,
@@ -41,14 +41,14 @@ AboutDialog::AboutDialog(
     //
 
     wxStaticText * titleLabel = new wxStaticText(this, wxID_ANY, _(""));
-    titleLabel->SetLabelText(GetVersionInfo(VersionFormat::Medium));
+    titleLabel->SetLabelText(GetVersionInfo(VersionFormat::Long));
     titleLabel->SetFont(wxFont(wxFontInfo(14).Family(wxFONTFAMILY_MODERN)));
     mainSizer->Add(titleLabel, 0, wxALIGN_CENTRE);
 
     mainSizer->AddSpacer(1);
 
     wxStaticText * title2Label = new wxStaticText(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL);
-    title2Label->SetLabelText("Original Concept (c) Luke Wren 2013\n(c) Gabriele Giuseppini 2018\nThis version licensed to Mattia");
+    title2Label->SetLabelText("Original concept (c) Luke Wren 2013\n(c) Gabriele Giuseppini 2018\nThis version licensed to Mattia");
     mainSizer->Add(title2Label, 0, wxALIGN_CENTRE);
 
     mainSizer->AddSpacer(5);
@@ -80,7 +80,7 @@ AboutDialog::AboutDialog(
 
     std::vector<std::pair<std::string, std::string>> credits
     {
-        {"Covert art:", "Dimitar Katsarov - https://www.artstation.com/stukata/profile" },
+        {"Cover art:", "Dimitar Katsarov - https://www.artstation.com/stukata/profile" },
         {"Textures:", "Tune 'Prototstar' Katerungroch"},
         {"wxWidgets:", "Copyright (c) 1998-2005 Julian Smart, Robert Roebling et al - https://www.wxwidgets.org/"},
         {"SFML:", "Copyright (c) Laurent Gomila - https://www.sfml-dev.org/"},

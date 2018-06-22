@@ -55,6 +55,12 @@ void Points::Destroy(ElementIndex pointElementIndex)
         mDestroyHandler(pointElementIndex);
     }
 
+    // Fire point destroy event
+    mGameEventHandler->OnDestroy(
+        GetMaterial(pointElementIndex),
+        mParentWorld.IsUnderwater(GetPosition(pointElementIndex)),
+        1u);
+
     // Flag ourselves as deleted
     mIsDeletedBuffer[pointElementIndex] = true;
 }

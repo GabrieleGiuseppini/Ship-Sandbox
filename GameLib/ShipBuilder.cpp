@@ -164,7 +164,10 @@ std::unique_ptr<Ship> ShipBuilder::Create(
     // Visit all PointInfo's and create Points, i.e. the entire set of points
     //
 
-    Points points = CreatePoints(pointInfos);
+    Points points = CreatePoints(
+        pointInfos,
+        parentWorld,
+        gameEventHandler);
 
 
     //
@@ -209,7 +212,9 @@ std::unique_ptr<Ship> ShipBuilder::Create(
 
     Springs springs = CreateSprings(
         springInfos,
-        points);
+        points,
+        parentWorld,
+        gameEventHandler);
 
 
     //
@@ -361,9 +366,15 @@ void ShipBuilder::CreateRopeSegments(
     }
 }
 
-Points ShipBuilder::CreatePoints(std::vector<PointInfo> const & pointInfos)
+Points ShipBuilder::CreatePoints(
+    std::vector<PointInfo> const & pointInfos,
+    World & parentWorld,
+    std::shared_ptr<IGameEventHandler> gameEventHandler)
 {
-    Physics::Points points(static_cast<ElementIndex>(pointInfos.size()));
+    Physics::Points points(
+        static_cast<ElementIndex>(pointInfos.size()),
+        parentWorld,
+        std::move(gameEventHandler));
 
     for (size_t p = 0; p < pointInfos.size(); ++p)
     {
@@ -543,9 +554,14 @@ void ShipBuilder::CreateShipElementInfos(
 
 Physics::Springs ShipBuilder::CreateSprings(
     std::vector<SpringInfo> const & springInfos,
-    Physics::Points & points)
+    Physics::Points & points,
+    World & parentWorld,
+    std::shared_ptr<IGameEventHandler> gameEventHandler)
 {
-    Physics::Springs springs(static_cast<ElementIndex>(springInfos.size()));
+    Physics::Springs springs(
+        static_cast<ElementIndex>(springInfos.size()),
+        parentWorld,
+        std::move(gameEventHandler));
 
     for (ElementIndex s = 0; s < springInfos.size(); ++s)
     {

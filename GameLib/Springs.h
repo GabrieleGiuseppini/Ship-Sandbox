@@ -34,14 +34,14 @@ public:
         DestroyAllTriangles = 2
     };
 
-    using DestroyHandler = std::function<void(ElementIndex, DestroyOptions)>;
-
     enum class Characteristics : uint8_t
     {
         None = 0,
         Hull = 1,    // Does not take water
         Rope = 2     // Ropes are drawn differently
     };
+
+    using DestroyHandler = std::function<void(ElementIndex, bool)>;
 
 private:
 
@@ -79,7 +79,10 @@ private:
 
 public:
 
-    Springs(ElementCount elementCount)
+    Springs(
+        ElementCount elementCount,
+        World & parentWorld,
+        std::shared_ptr<IGameEventHandler> gameEventHandler)
         : ElementContainer(elementCount)
         //////////////////////////////////
         // Buffers
@@ -101,6 +104,8 @@ public:
         //////////////////////////////////
         // Container
         //////////////////////////////////
+        , mParentWorld(parentWorld)
+        , mGameEventHandler(std::move(gameEventHandler))
         , mDestroyHandler()
         , mCurrentStiffnessAdjustment(std::numeric_limits<float>::lowest())
     {
@@ -135,7 +140,8 @@ public:
 
     void Destroy(
         ElementIndex springElementIndex,
-        DestroyOptions destroyOptions);
+        DestroyOptions destroyOptions,
+        Points const & points);
 
     void SetStiffnessAdjustment(
         float stiffnessAdjustment,
@@ -172,8 +178,6 @@ public:
      */
     bool UpdateStrains(
         GameParameters const & gameParameters,
-        World const & parentWorld,
-        IGameEventHandler & gameEventHandler,
         Points & points);
 
 public:
@@ -388,6 +392,9 @@ private:
     //////////////////////////////////////////////////////////
     // Container 
     //////////////////////////////////////////////////////////
+
+    World & mParentWorld;
+    std::shared_ptr<IGameEventHandler> const mGameEventHandler;
 
     // The handler registered for spring deletions
     DestroyHandler mDestroyHandler;

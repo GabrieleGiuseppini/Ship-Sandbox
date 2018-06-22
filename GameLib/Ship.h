@@ -133,6 +133,12 @@ public:
 
 private:
 
+    void DestroyConnectedTriangles(ElementIndex pointElementIndex);
+
+    void DestroyConnectedTriangles(
+        ElementIndex pointAElementIndex,
+        ElementIndex pointBElementIndex);
+
     void BombBlastHandler(
         vec2f const & blastPosition,
         ConnectedComponentId connectedComponentId,
@@ -144,7 +150,7 @@ private:
 
     void SpringDestroyHandler(
         ElementIndex springElementIndex,
-        Springs::DestroyOptions destroyOptions);
+        bool destroyAllTriangles);
 
     void TriangleDestroyHandler(ElementIndex triangleElementIndex);
 

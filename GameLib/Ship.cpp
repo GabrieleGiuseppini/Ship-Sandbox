@@ -128,7 +128,8 @@ void Ship::SawThrough(
                 mSprings.Destroy(
                     springIndex,
                     Springs::DestroyOptions::FireBreakEvent
-                    | Springs::DestroyOptions::DestroyOnlyConnectedTriangle);
+                    | Springs::DestroyOptions::DestroyOnlyConnectedTriangle,
+                    mPoints);
             }
         }
     }
@@ -337,8 +338,6 @@ void Ship::Update(
 
     mSprings.UpdateStrains(
         gameParameters,
-        mParentWorld,
-        *mGameEventHandler,
         mPoints);
 
 
@@ -945,6 +944,53 @@ void Ship::DiffuseLight(GameParameters const & gameParameters)
 // Private helpers
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
+void Ship::DestroyConnectedTriangles(ElementIndex pointElementIndex)
+{
+    // 
+    // Destroy all triangles connected to the point
+    //
+
+    // Note: we can't simply iterate and destroy, as destroying a triangle causes
+    // that triangle to be removed from the vector being iterated
+    auto & connectedTriangles = mPoints.GetConnectedTriangles(pointElementIndex);
+    while (!connectedTriangles.empty())
+    {
+        assert(!mTriangles.IsDeleted(connectedTriangles.back()));
+        mTriangles.Destroy(connectedTriangles.back());
+    }
+
+    assert(mPoints.GetConnectedTriangles(pointElementIndex).empty());
+}
+
+void Ship::DestroyConnectedTriangles(
+    ElementIndex pointAElementIndex,
+    ElementIndex pointBElementIndex)
+{
+    //
+    // Destroy the triangles that have an edge among the two points
+    //
+
+    auto & connectedTriangles = mPoints.GetConnectedTriangles(pointAElementIndex);
+    if (!connectedTriangles.empty())
+    {
+        for (size_t t = connectedTriangles.size() - 1; ;--t)
+        {
+            assert(!mTriangles.IsDeleted(connectedTriangles[t]));
+
+            if (mTriangles.GetPointAIndex(connectedTriangles[t]) == pointBElementIndex
+                || mTriangles.GetPointBIndex(connectedTriangles[t]) == pointBElementIndex
+                || mTriangles.GetPointCIndex(connectedTriangles[t]) == pointBElementIndex)
+            {
+                // Erase it                
+                mTriangles.Destroy(connectedTriangles[t]);
+            }
+
+            if (t == 0)
+                break;
+        }
+    }
+}
+
 void Ship::BombBlastHandler(
     vec2f const & blastPosition,
     ConnectedComponentId connectedComponentId,
@@ -1019,7 +1065,8 @@ void Ship::PointDestroyHandler(ElementIndex pointElementIndex)
         mSprings.Destroy(
             connectedSprings.back(),
             Springs::DestroyOptions::DoNotFireBreakEvent // We're already firing the Destroy event for the point
-            | Springs::DestroyOptions::DestroyAllTriangles);
+            | Springs::DestroyOptions::DestroyAllTriangles,
+            mPoints);
     }
 
     assert(mPoints.GetConnectedSprings(pointElementIndex).empty());
@@ -1075,31 +1122,32 @@ void Ship::PointDestroyHandler(ElementIndex pointElementIndex)
     // Notify bombs
     mBombs.OnPointDestroyed(pointElementIndex);
 
-    // Notify point destruction
-    mGameEventHandler->OnDestroy(
-        mPoints.GetMaterial(pointElementIndex),
-        mParentWorld.IsUnderwater(mPoints.GetPosition(pointElementIndex)),
-        1u);
-
     // Remember our elements are now dirty
     mAreElementsDirty = true;
 }
 
 void Ship::SpringDestroyHandler(
     ElementIndex springElementIndex,
-    Springs::DestroyOptions destroyOptions)
+    bool destroyAllTriangles)
 {
     auto const pointAIndex = mSprings.GetPointAIndex(springElementIndex);
     auto const pointBIndex = mSprings.GetPointBIndex(springElementIndex);
 
-    // TODOHERE: move content of Breach here, and do triangles based off options
-    //  - and nuke from Points
-    //
-    // Make endpoints leak and destroy their triangles.
-    // Note: technically, should only destroy those triangles that contain the A-B side (and definitely
-    // still make both A and B leak), but destroying everything seems to yield a nicer effect
-    mPoints.Breach(pointAIndex, mTriangles);
-    mPoints.Breach(pointBIndex, mTriangles);
+    // Make endpoints leak
+    mPoints.SetLeaking(pointAIndex);
+    mPoints.SetLeaking(pointBIndex);
+
+    // Destroy connected triangles
+    if (destroyAllTriangles)
+    {
+        // We destroy all triangles connected to each endpoint
+        DestroyConnectedTriangles(pointAIndex);
+        DestroyConnectedTriangles(pointBIndex);
+    }
+    else
+    {
+        DestroyConnectedTriangles(pointAIndex, pointBIndex);
+    }
 
     // Remove the spring from its endpoints
     mPoints.RemoveConnectedSpring(pointAIndex, springElementIndex);
@@ -1138,15 +1186,6 @@ void Ship::SpringDestroyHandler(
 
     // Notify bombs
     mBombs.OnSpringDestroyed(springElementIndex);
-
-    // Notify spring break
-    if (!!(destroyOptions & Springs::DestroyOptions::FireBreakEvent))
-    {
-        mGameEventHandler->OnBreak(
-            mSprings.GetMaterial(springElementIndex),
-            mParentWorld.IsUnderwater(mPoints.GetPosition(pointAIndex)), // Arbitrary
-            1);
-    }
 
     // Remember our elements are now dirty
     mAreElementsDirty = true;

@@ -110,7 +110,9 @@ private:
         std::vector<SpringInfo> & springInfos);
 
     static Physics::Points CreatePoints(
-        std::vector<PointInfo> const & pointInfos);
+        std::vector<PointInfo> const & pointInfos,
+        Physics::World & parentWorld,
+        std::shared_ptr<IGameEventHandler> gameEventHandler);
 
     static void CreateShipElementInfos(
         std::unique_ptr<std::unique_ptr<std::optional<ElementIndex>[]>[]> const & pointIndexMatrix,
@@ -122,7 +124,9 @@ private:
 
     static Physics::Springs CreateSprings(
         std::vector<SpringInfo> const & springInfos,
-        Physics::Points & points);
+        Physics::Points & points,
+        Physics::World & parentWorld,
+        std::shared_ptr<IGameEventHandler> gameEventHandler);
 
     static Physics::Triangles CreateTriangles(
         std::vector<TriangleInfo> const & triangleInfos,

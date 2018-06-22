@@ -49,7 +49,10 @@ private:
 
 public:
 
-    Points(ElementCount elementCount)
+    Points(
+        ElementCount elementCount,
+        World & parentWorld,
+        std::shared_ptr<IGameEventHandler> gameEventHandler)
         : ElementContainer(elementCount)
         //////////////////////////////////
         // Buffers
@@ -81,6 +84,8 @@ public:
         //////////////////////////////////
         // Container
         //////////////////////////////////
+        , mParentWorld(parentWorld)
+        , mGameEventHandler(std::move(gameEventHandler))
         , mDestroyHandler()
         , mAreImmutableRenderAttributesUploaded(false)
     {
@@ -545,6 +550,9 @@ private:
     //////////////////////////////////////////////////////////
     // Container
     //////////////////////////////////////////////////////////
+
+    World & mParentWorld;
+    std::shared_ptr<IGameEventHandler> const mGameEventHandler;
 
     // The handler registered for point deletions
     DestroyHandler mDestroyHandler;

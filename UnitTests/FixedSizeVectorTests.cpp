@@ -173,7 +173,63 @@ TEST(FixedSizeVectorTests, ThrowsExceptionOnMaxSize)
         std::runtime_error);    
 }
 
-TEST(FixedSizeVectorTests, Erases_Empty)
+TEST(FixedSizeVectorTests, Erase_BecomesEmpty)
+{
+    FixedSizeVector<int, 6> vec;
+
+    vec.push_back(3);
+
+    vec.erase(0);
+
+    EXPECT_EQ(0u, vec.size());
+}
+
+TEST(FixedSizeVectorTests, Erase_Copies_First)
+{
+    FixedSizeVector<int, 6> vec;
+
+    vec.push_back(1);
+    vec.push_back(2);
+    vec.push_back(3);
+
+    vec.erase(0);
+
+    ASSERT_EQ(2u, vec.size());
+    EXPECT_EQ(2, vec[0]);
+    EXPECT_EQ(3, vec[1]);
+}
+
+TEST(FixedSizeVectorTests, Erase_Copies_Middle)
+{
+    FixedSizeVector<int, 6> vec;
+
+    vec.push_back(1);
+    vec.push_back(2);
+    vec.push_back(3);
+
+    vec.erase(1);
+
+    ASSERT_EQ(2u, vec.size());
+    EXPECT_EQ(1, vec[0]);
+    EXPECT_EQ(3, vec[1]);
+}
+
+TEST(FixedSizeVectorTests, Erase_Copies_Last)
+{
+    FixedSizeVector<int, 6> vec;
+
+    vec.push_back(1);
+    vec.push_back(2);
+    vec.push_back(3);
+
+    vec.erase(2);
+
+    ASSERT_EQ(2u, vec.size());
+    EXPECT_EQ(1, vec[0]);
+    EXPECT_EQ(2, vec[1]);
+}
+
+TEST(FixedSizeVectorTests, EraseFirst_Empty)
 {
     FixedSizeVector<int, 6> vec;
 
@@ -183,7 +239,7 @@ TEST(FixedSizeVectorTests, Erases_Empty)
     EXPECT_EQ(0u, vec.size());
 }
 
-TEST(FixedSizeVectorTests, Erases_BecomesEmpty)
+TEST(FixedSizeVectorTests, EraseFirst_BecomesEmpty)
 {
     FixedSizeVector<int, 6> vec;
 
@@ -195,7 +251,7 @@ TEST(FixedSizeVectorTests, Erases_BecomesEmpty)
     EXPECT_EQ(0u, vec.size());
 }
 
-TEST(FixedSizeVectorTests, Erases_NotFound)
+TEST(FixedSizeVectorTests, EraseFirst_NotFound)
 {
     FixedSizeVector<int, 6> vec;
 
@@ -207,7 +263,7 @@ TEST(FixedSizeVectorTests, Erases_NotFound)
     EXPECT_EQ(1u, vec.size());
 }
 
-TEST(FixedSizeVectorTests, Erases_Copies_First)
+TEST(FixedSizeVectorTests, EraseFirst_Copies_First)
 {
     FixedSizeVector<int, 6> vec;
 
@@ -224,7 +280,7 @@ TEST(FixedSizeVectorTests, Erases_Copies_First)
     EXPECT_EQ(3, vec[1]);
 }
 
-TEST(FixedSizeVectorTests, Erases_Copies_Middle)
+TEST(FixedSizeVectorTests, EraseFirst_Copies_Middle)
 {
     FixedSizeVector<int, 6> vec;
 
@@ -241,7 +297,7 @@ TEST(FixedSizeVectorTests, Erases_Copies_Middle)
     EXPECT_EQ(3, vec[1]);
 }
 
-TEST(FixedSizeVectorTests, Erases_Copies_Last)
+TEST(FixedSizeVectorTests, EraseFirst_Copies_Last)
 {
     FixedSizeVector<int, 6> vec;
 

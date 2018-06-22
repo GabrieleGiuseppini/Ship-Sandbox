@@ -59,13 +59,6 @@ Prev perf (before point et al destructuring)
 				- Land size
 				- Bombs sizes and offsets
 	- Move also pinned points to a PinnedPoints class, just like Bombs
-	+ CircularList::Erase unit test: complete verification of returned iterator
-	- Containers::Destroy and GameEventHandler::OnDestroy rearc:
-		- 3 containers are given shared_ptr<GameEventHandler> at cctor
-		- Each Destroy() fires event (after invoking DestroyHandler), unless otherwise specified
-		  via DestroyOptions
-		- Ship's DestroyHandlers don't fire events anymore, and Ship::SpringDestroyHandler takes boolean
-		  for triangles (translated from Springs::DetroyOptions)
 
 - Titanic:
 	- Introduce weak metal
@@ -130,51 +123,6 @@ Prev perf (before point et al destructuring)
 		- see https://github.com/wxWidgets/wxWidgets/blob/master/samples/opengl/pyramid/pyramid.cpp
 
 - Dynamics:
-
-	- Saw
-		= Spec:
-			- Deletes springs (and affected triangles) that cross the *path* of the tool
-			+ Continuous sound, overwater and underwater, depending on where x,y is
-
-		= Impl:
-			+ Media:
-				+ Cursor up and down
-				+ Sound
-			+ Events:
-				+ Need boolean true/false for sawing
-			+ Tool:
-				+ L-Down: 
-					+ prevMousePos = mouse X, Y
-					+ Fire event (asking GameController for game event handler)
-					+ Set new cursor
-				+ L-Up: 
-					+ Reset prevMousePos
-					+ Fire event (asking GameController for game event handler)
-					+ Set new cursor
-				+ Move: if l-down:
-					+ if has prevMousePos:
-						+ GameController->Saw(prevMousePos, current)
-					+ prevMousePos = current
-			= Ship:
-				+ Do EnumFlags class in EnumFlags.h
-					+ Use it 2 X in Springs
-				= Make sure Spring::Destroy only deletes triangles that share one edge with the spring
-					- Nuke Point::Breach and do everything instead in Ship's destroy handler
-				+ Test whether should fire the Break event even if only springs are deleted 
-					+ For points we fire the event in the ship's PointDestroyHandler; if we
-					  want to fire now from ship's SpringDestroyHandler, we must be told whether 
-					  the spring destruction comes from a point destruction or not: FromPointDestroy vs FromSpringDestroy
-					  + If we do this, we can now also remove firing of break from within Springs::UpdateStrains,
-					    as the ship's SpringDestroyHandler would be invoked with FromSpringDestroy
-				+ Use Geometry::Segment::TestIntersect()
-					+ Also add to it GetAngle...
-						+ Move from Texture Rotation
-					+ Move also AABB to Geometry
-
-			+ SoundController: new continuous sound
-				+ Also underwater
-
-	+ Ultra-violent flag: very strong Draw and Swirl forces
 
 	- Ephemeral Particles:
 		- Carve out room at tail of Points for ephemeral particles
@@ -1556,6 +1504,49 @@ IF WX:
 		+ Need own sound - replicate Draw infrastructure and use different drill
 	+ Fix power bar room at all cursors
 		+ Try: MakeCursors: make non-transparent pixels green or red, multiplying
+	+ Saw
+		+ Spec:
+			+ Deletes springs (and affected triangles) that cross the *path* of the tool
+			+ Continuous sound, overwater and underwater, depending on where x,y is
+		+ Impl:
+			+ Media:
+				+ Cursor up and down
+				+ Sound
+			+ Events:
+				+ Need boolean true/false for sawing
+			+ Tool:
+				+ L-Down: 
+					+ prevMousePos = mouse X, Y
+					+ Fire event (asking GameController for game event handler)
+					+ Set new cursor
+				+ L-Up: 
+					+ Reset prevMousePos
+					+ Fire event (asking GameController for game event handler)
+					+ Set new cursor
+				+ Move: if l-down:
+					+ if has prevMousePos:
+						+ GameController->Saw(prevMousePos, current)
+					+ prevMousePos = current
+			+ Ship:
+				+ Do EnumFlags class in EnumFlags.h
+					+ Use it 2 X in Springs
+				+ Make sure Spring::Destroy only deletes triangles that share one edge with the spring
+					= Nuke Point::Breach and do everything instead in Ship's destroy handler, driven off
+					  Springs::DestroyOptions
+				+ Test whether should fire the Break event even if only springs are deleted 
+					+ For points we fire the event in the ship's PointDestroyHandler; if we
+					  want to fire now from ship's SpringDestroyHandler, we must be told whether 
+					  the spring destruction comes from a point destruction or not: FromPointDestroy vs FromSpringDestroy
+					  + If we do this, we can now also remove firing of break from within Springs::UpdateStrains,
+					    as the ship's SpringDestroyHandler would be invoked with FromSpringDestroy
+				+ Use Geometry::Segment::TestIntersect()
+					+ Also add to it GetAngle...
+						+ Move from Texture Rotation
+					+ Move also AABB to Geometry
+			+ SoundController: new continuous sound
+				+ Also underwater
+
+	+ Ultra-violent flag: very strong Draw and Swirl forces
 
 + Debug light/drag issue
 	+ Could be due to distance too close and shooting light to sky
@@ -1723,7 +1714,7 @@ IF WX:
 		+ Do for springs
 		+ Each connected component must be drawn together - its springs then its triangles
 
-+ Code:
++ Technical Debt:
 	+ Resources: lowercase filenames
 		+ git
 		+ code
@@ -1750,6 +1741,14 @@ IF WX:
 		+ See if also whole logic of point<->spring<->triangle can be done in handler
 			+ If so, don't pass containers at various Destroy()'s
 		+ Test
+	+ CircularList::Erase unit test: complete verification of returned iterator
+	+ Containers::Destroy and GameEventHandler::OnDestroy rearc:
+		+ 3 containers are given shared_ptr<GameEventHandler> and ParentWorld & at cctor
+		+ The 2 Destroy()'s fire events (after invoking DestroyHandler), unless otherwise specified
+		  via DestroyOptions
+		+ Ship's DestroyHandlers don't fire events anymore, and Ship::SpringDestroyHandler takes boolean
+		  for triangles (translated from Springs::DetroyOptions)
+		+ Test assert's with Debug build
 
 + Fix bug: when you reload ship when paused, no clouds & no ship are visible until resumed
 	+ World::Initialize():

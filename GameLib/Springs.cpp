@@ -36,7 +36,8 @@ void Springs::Add(
 
 void Springs::Destroy(
     ElementIndex springElementIndex,
-    DestroyOptions destroyOptions)
+    DestroyOptions destroyOptions,
+    Points const & points)
 {
     assert(springElementIndex < mElementCount);
     assert(!IsDeleted(springElementIndex));
@@ -44,8 +45,20 @@ void Springs::Destroy(
     // Invoke destroy handler
     if (!!mDestroyHandler)
     {
-        mDestroyHandler(springElementIndex, destroyOptions);
+        mDestroyHandler(
+            springElementIndex, 
+            !!(destroyOptions & Springs::DestroyOptions::DestroyAllTriangles));
     }
+
+    // Fire spring break event, unless told otherwise
+    if (!!(destroyOptions & Springs::DestroyOptions::FireBreakEvent))
+    {
+        mGameEventHandler->OnBreak(
+            GetMaterial(springElementIndex),
+            mParentWorld.IsUnderwater(GetPointAPosition(springElementIndex, points)), // Arbitrary
+            1);
+    }
+
 
     // Zero out our coefficients, so that we can still calculate Hooke's 
     // and damping forces for this spring without running the risk of 
@@ -142,8 +155,6 @@ void Springs::UploadStressedSpringElements(
 
 bool Springs::UpdateStrains(
     GameParameters const & gameParameters,
-    World const & parentWorld,    
-    IGameEventHandler & gameEventHandler,
     Points & points)
 {
     bool isAtLeastOneBroken = false;
@@ -167,7 +178,8 @@ bool Springs::UpdateStrains(
                 this->Destroy(
                     i,
                     DestroyOptions::FireBreakEvent // Notify Break
-                    | DestroyOptions::DestroyAllTriangles);
+                    | DestroyOptions::DestroyAllTriangles,
+                    points);
 
                 isAtLeastOneBroken = true;
             }
@@ -179,9 +191,9 @@ bool Springs::UpdateStrains(
                     mIsStressedBuffer[i] = true;
 
                     // Notify stress
-                    gameEventHandler.OnStress(
+                    mGameEventHandler->OnStress(
                         mMaterialBuffer[i],
-                        parentWorld.IsUnderwater(points.GetPosition(mEndpointsBuffer[i].PointAIndex)),
+                        mParentWorld.IsUnderwater(points.GetPosition(mEndpointsBuffer[i].PointAIndex)),
                         1);
                 }
             }

@@ -184,12 +184,26 @@ public:
         }
     }
 
+    void erase(size_t index)
+    {
+        assert(index < mCurrentSize);
+
+        // Shift remaining elements
+        for (; index < mCurrentSize - 1; ++index)
+        {
+            mArray[index] = std::move(mArray[index + 1]);
+        }
+
+        --mCurrentSize;
+    }
+
     bool erase_first(TElement const & element)
     {
         for (size_t i = 0; i < mCurrentSize; /* incremented in loop */)
         {
             if (mArray[i] == element)
             {
+                // Shift remaining elements
                 for (size_t j = i; j < mCurrentSize - 1; ++j)
                 {
                     mArray[j] = std::move(mArray[j + 1]);

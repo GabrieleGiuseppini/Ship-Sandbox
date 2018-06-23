@@ -47,16 +47,15 @@ Prev perf (before point et al destructuring)
 	- RenderContext::RenderCloudsEnd: 1.69%
 =================================================
 
-- Titanic:
-	- Introduce weak metal
-		- Use it underneath funnels
-
 - Redo perf profile (should be unchanged)
 
 - Release
 
++++++++++++++++++++++++++++++++++++++++++++++++
+
 - Technical Debt:
 	+ Move definition of ElementIndex et al into GameTypes.h
+	- Move also pinned points to a PinnedPoints class, just like Bombs
 	- Textures are json files, with world sizes, offset, and lighting boolean
 		- SEE MOLESKINE
 		- Then:
@@ -66,7 +65,6 @@ Prev perf (before point et al destructuring)
 				- Water size
 				- Land size
 				- Bombs sizes and offsets
-	- Move also pinned points to a PinnedPoints class, just like Bombs
 
 - Optimizations:	
 	- See if can avoid other IsDeleted checks, via zero'ing of coefficients
@@ -278,9 +276,16 @@ Prev perf (before point et al destructuring)
 		- Add additional buffers that might simplify electrical connectivity test, e.g. Type and VisitedGen
 	- Current Propagation Algo (Ship::UpdateCurrentConnectivity()):
 		+ create new generation seq number; if new is 0 => 1
-		- ElectricalElement has SetVisited(curGen), bool IsVisited(curGen)
-		- All of the following @ new ad-hoc update step
-		- If mAreElementsDirty: Visit whole electrical graph, as:
+		- Consider adding a new "ConductsElectricity" buffer to Springs, set to true or folse at Add() depending
+		  on whether or not both endpoints' materials have ConductsElectricity=true
+			- ConductsElectricity replaces all the other useless electrical properties
+			- This simplifies current connectivity graph visit
+			- Alternative is to check at visit time whether other endpoint has a non-None attached ElectricalElement index,
+			  but this means lots of useless cache misses for getting point's buffer content (only a small percentage of points
+			  have an ElectricalElement attached)
+		- ElectricalElement has SetVisited(curGen), bool IsVisited(curGen), operating on buffers
+		- @Sip::Update, electrical section: if mAreElementsDirty: invoke UpdateCurrentConnectivity()
+			- Visit whole electrical graph, as:
 			- For each generator point:
 				- if not visited=>flood all connected ElectricalElements from here
 					- for each node: set to visited
@@ -1741,6 +1746,11 @@ IF WX:
 		+ Ship's DestroyHandlers don't fire events anymore, and Ship::SpringDestroyHandler takes boolean
 		  for triangles (translated from Springs::DetroyOptions)
 		+ Test assert's with Debug build
+
++ Ships:
+	+ Titanic:
+		+ Introduce weak metal
+			+ Use it underneath funnels
 
 + Fix bug: when you reload ship when paused, no clouds & no ship are visible until resumed
 	+ World::Initialize():

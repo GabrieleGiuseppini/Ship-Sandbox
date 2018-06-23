@@ -13,7 +13,8 @@
 enum class VersionFormat
 {
 	Short,
-	Long
+	Long,
+    LongWithDate
 };
 
 inline std::string GetVersionInfo(VersionFormat versionFormat)
@@ -28,6 +29,11 @@ inline std::string GetVersionInfo(VersionFormat versionFormat)
         case VersionFormat::Long:
         {
             return std::string("Ship Sandbox v" VERSION);
+        }
+
+        case VersionFormat::LongWithDate:
+        {
+            return std::string("Ship Sandbox v" VERSION " (" __DATE__ ")");
         }
 
 		default:

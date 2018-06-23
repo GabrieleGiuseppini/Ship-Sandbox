@@ -23,6 +23,29 @@
 	}
     },
     {
+        "name": "Titanium Hull",
+        "strength": 150,
+        "mass": 4600,
+	"stiffness": 1,
+        "structural_colour": "#565663",
+	"render_colour": "#565663",
+        "isHull": true,
+	"sound_properties": {
+		"element_type": "Metal"
+	}
+    },
+    {
+        "name": "Titanium",
+        "strength": 140,
+        "mass": 4500,
+	"stiffness": 1,
+        "structural_colour": "#787896",
+	"render_colour": "#787896",
+	"sound_properties": {
+		"element_type": "Metal"
+	}
+    },
+    {
         "name": "Iron Hull",
         "strength": 110,
         "mass": 7950,
@@ -69,24 +92,12 @@
 	}
     },
     {
-        "name": "Titanium Hull",
-        "strength": 150,
-        "mass": 4600,
-	"stiffness": 1,
-        "structural_colour": "#565663",
-	"render_colour": "#565663",
-        "isHull": true,
-	"sound_properties": {
-		"element_type": "Metal"
-	}
-    },
-    {
-        "name": "Titanium",
-        "strength": 140,
-        "mass": 4500,
-	"stiffness": 1,
-        "structural_colour": "#787896",
-	"render_colour": "#787896",
+        "name": "Tin",
+        "strength": 20,
+        "mass": 300,
+	"stiffness": 0.5,
+        "structural_colour": "#D0D0D0",
+	"render_colour": "#D0D0D0",
 	"sound_properties": {
 		"element_type": "Metal"
 	}

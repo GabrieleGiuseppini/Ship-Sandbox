@@ -41,7 +41,7 @@ AboutDialog::AboutDialog(
     //
 
     wxStaticText * titleLabel = new wxStaticText(this, wxID_ANY, _(""));
-    titleLabel->SetLabelText(GetVersionInfo(VersionFormat::Long));
+    titleLabel->SetLabelText(GetVersionInfo(VersionFormat::LongWithDate));
     titleLabel->SetFont(wxFont(wxFontInfo(14).Family(wxFONTFAMILY_MODERN)));
     mainSizer->Add(titleLabel, 0, wxALIGN_CENTRE);
 

@@ -568,9 +568,9 @@ Physics::Springs ShipBuilder::CreateSprings(
         Material const * pointAMaterial = points.GetMaterial(springInfos[s].PointAIndex);
         Material const * pointBMaterial = points.GetMaterial(springInfos[s].PointBIndex);
 
-        // We choose the spring to be as strong as its strongest point
-        Material const * const strongestMaterial = 
-            pointAMaterial->Strength > pointBMaterial->Strength? pointAMaterial : pointBMaterial;
+        // We choose the spring to be as weak as its weakest point
+        Material const * const weakestMaterial = 
+            pointAMaterial->Strength < pointBMaterial->Strength? pointAMaterial : pointBMaterial;
 
         int characteristics = 0;
 
@@ -589,7 +589,7 @@ Physics::Springs ShipBuilder::CreateSprings(
             springInfos[s].PointAIndex,
             springInfos[s].PointBIndex,
             static_cast<Springs::Characteristics>(characteristics),
-            strongestMaterial,
+            weakestMaterial,
             points);
 
         // Add spring to its endpoints

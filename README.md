@@ -1,5 +1,8 @@
 Ship Sandbox
 ============
+
+> NOTE: this repository has migrated to [Floating-Sandbox](https://github.com/GabrieleGiuseppini/Floating-Sandbox). No more development will take place in this repository.
+
 This game was originally written in 2013 by Luke Wren. After becoming fascinated by it, I (Gabriele Giuseppini) forked the GitHub repo
 and started playing with the source code.
 
@@ -65,6 +68,7 @@ Here's a list of the major changes I've been doing:
 - Added ability to pin points - freezing them at their current position
 - Added ability to place remote-controlled and timer bombs (thanks Mart!)
 - Added chainsaw to cut ship in pieces 
+- Added magic swirl force
 
 After these changes, the fps rate on my laptop increased from 7fps to 27fps!
 
